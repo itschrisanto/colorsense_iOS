@@ -54,8 +54,11 @@ Since then (all verified on a physical iPhone 17 Pro Max, iOS 26.6.1): the real 
 shows up on colorsense.online, the brand fonts are in, and the app icon is wired.
 
 Still open:
-- **Google sign-in** — blocked on allowlisting `online.colorsense.ios://callback`, which needs
-  Clerk dashboard access (see "Auth" below). Email sign-in is unaffected.
+- **Sign in with Apple** — the native entitlement is attached to Release in `project.yml`; Apple still needs
+  to be enabled for the `online.colorsense.ios` App ID and on the existing production Clerk
+  instance. ClerkKitUI's `AuthView` will show it automatically once the provider is enabled.
+- **Google sign-in works** — `online.colorsense.ios://callback` is allowlisted on the production
+  Clerk instance and was verified end to end on Chris's physical iPhone.
 - **`clerk.colorsense.online` fails TLS** — worked around by the proxy on both platforms, but
   worth a Clerk support ticket. See "Auth" below.
 - **No StoreKit**, so Subscription is read-only and the web's AI-harmonies Pro button is absent.
@@ -111,6 +114,13 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
   Application Support. First launch lands on `ExtractedPalette.brandDefault` (the brand kit
   colors), never an empty state. This reverses the earlier "no persistence in v1" position —
   only the *current* palette is stored; a saved-palettes Library is still out of scope.
+- **The current palette is directly editable from 1–8 colors** (asked for 2026-09-02). Small
+  seam controls insert either a custom color or a named color from the user's account; trash
+  removes a swatch and offers Undo. A reusable saved color is deliberately represented by the
+  existing `/api/saved-palettes` contract as a named one-swatch palette, keeping it compatible
+  with the existing Clerk account and web Library without adding a second storage system. The
+  custom editor starts with a blend of the two colors around the selected seam and provides the
+  native Grid/Spectrum/Sliders picker plus a validated, paste-aware six-digit hex field.
 - **Generate is a port of the web's `relatedPalette()`** (decided 2026-09-02, replaces an
   earlier drift-from-previous implementation). Every tap re-derives from *anchors* — the locked
   swatches if the user has locked any, otherwise the original extract — with `iteration`
@@ -370,11 +380,28 @@ Clerk's iOS SDK defaults its redirect to `{bundleIdentifier}://callback` — for
 `online.colorsense.ios://callback`. Two halves, and both are required:
 
 1. The app owns the scheme (`CFBundleURLTypes` in `project.yml`) — done.
-2. The URL is allowlisted on the Clerk instance — **not** done; needs dashboard access.
+2. The URL is allowlisted on the production Clerk instance — done through its Backend API.
 
-Until (2), Google sign-in errors with "does not match an authorized redirect URI". Email-code
-sign-in is unaffected and lands in the *same* account, because Clerk matches users by email —
-verified by signing in with email on iOS and finding palettes saved earlier from the web.
+Google sign-in now completes on a physical iPhone. Email-code sign-in also lands in the *same*
+account, because Clerk matches users by email — verified by signing in with email on iOS and
+finding palettes saved earlier from the web.
+
+### Native Sign in with Apple
+
+The Sign in with Apple entitlement lives in `Config/ColorSense.entitlements` and is attached by
+`project.yml`. It is enabled for Release but deliberately omitted from
+Debug while this project uses a Personal Team: Apple refuses to provision this capability for
+Personal Teams, and enabling it for Debug would prevent every physical-device build. Once a paid
+Apple Developer team is selected, enable the entitlement for Debug too so the native flow can be
+tested before release. ClerkKitUI's existing `AuthView` automatically uses
+`clerk.auth.signInWithApple()` and shows the Apple button when Apple appears in the Clerk
+environment's enabled social providers. It does not use the browser OAuth redirect above.
+
+The remaining account-side setup is to enable Sign in with Apple for the
+`online.colorsense.ios` App ID, register the Team ID and bundle ID as a Clerk Native Application,
+and enable Apple for sign-up and sign-in on the production Clerk instance. Do not add a custom
+Apple button to work around missing provider configuration; it would only expose a flow the
+backend is not ready to accept.
 
 There is no public API to hide a single social provider from `AuthView`; providers come straight
 from the environment. Hiding the Google button would mean replacing `AuthView` with a custom
