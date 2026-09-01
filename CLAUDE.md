@@ -287,14 +287,27 @@ different machine, repeat: install Xcode from the App Store, install Homebrew, `
 install xcodegen`, copy the secrets file, `xcodegen generate`, `open ColorSense.xcodeproj`
 — and do it on local disk, not inside a synced folder (see "Location" above).
 
-## Fonts (manual step, not yet done)
+## Fonts (done 2026-09-02)
 
-`ColorSense/Resources/Fonts/` is empty. `project.yml` already declares
-`BebasNeue-Regular.ttf`, `DMSans-Regular.ttf`, `DMSans-Medium.ttf`, `DMSans-Bold.ttf` in
-`UIAppFonts`, and `BrandFont.swift` already references them by PostScript name — but the
-actual font files aren't in the repo. Download Bebas Neue and DM Sans (both on Google
-Fonts) and drop the `.ttf` files into that folder. Until then, `Font.custom` calls will
-silently fall back to the system font at runtime rather than crash.
+`ColorSense/Resources/Fonts/` holds the four faces `project.yml` declares in `UIAppFonts` and
+`BrandFont.swift` references: `BebasNeue-Regular`, `DMSans-Regular`, `DMSans-Medium`,
+`DMSans-Bold`. Verified rendering on device and in the simulator.
+
+Two things to get right if these are ever replaced:
+
+- **DM Sans ships in many optical sizes.** Use the `static/` files with *no* size suffix
+  (`DMSans-Regular.ttf`), not `DMSans_18pt-Regular.ttf` or the variable-font builds. The
+  suffixed ones carry different PostScript names and `Font.custom` silently falls back to the
+  system font rather than failing.
+- **`Font.custom` matches on PostScript name, not filename.** Check the name inside the file
+  before trusting it — a `.ttf` can be named anything. There is no tooling for this on the
+  machine, but the TrueType `name` table (nameID 6) is parseable in a few lines of plain Python.
+
+A missing or misnamed font never crashes; it silently renders as system font, which is exactly
+why this went unnoticed for several sessions of screenshots.
+
+Hex codes deliberately use `BrandFont.mono` (system monospaced) rather than a brand face —
+there is no brand mono, and digits need to align down a stack of bands.
 
 ## Auth (Clerk) — verified API surface, 2026-09-02
 
