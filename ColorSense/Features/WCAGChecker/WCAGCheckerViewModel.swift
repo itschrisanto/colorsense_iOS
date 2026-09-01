@@ -61,6 +61,37 @@ final class WCAGCheckerViewModel {
         foreground = background
         background = previousForeground
     }
+
+    enum Role { case text, background }
+
+    /// Which role, if any, a palette swatch currently fills. Compared by hex rather than by
+    /// identity so a colour chosen through the system picker still lights up its matching
+    /// swatch — and so a swatch stops being marked as soon as the picker moves off it.
+    ///
+    /// Deliberately does not build a `PaletteColor` to read `.hex`: that would run the
+    /// 1,566-entry name lookup once per swatch on every redraw.
+    func role(of swatch: PaletteColor) -> Role? {
+        if Self.hexString(of: foreground) == swatch.hex { return .text }
+        if Self.hexString(of: background) == swatch.hex { return .background }
+        return nil
+    }
+
+    func assign(_ swatch: PaletteColor, to role: Role) {
+        switch role {
+        case .text: foreground = swatch.color
+        case .background: background = swatch.color
+        }
+    }
+
+    private static func hexString(of color: Color) -> String {
+        let rgb = color.resolveRGBA()
+        return String(
+            format: "#%02X%02X%02X",
+            Int((rgb.red * 255).rounded()),
+            Int((rgb.green * 255).rounded()),
+            Int((rgb.blue * 255).rounded())
+        )
+    }
 }
 
 extension Color {

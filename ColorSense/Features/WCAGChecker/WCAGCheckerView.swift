@@ -17,20 +17,14 @@ struct WCAGCheckerView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    paletteAssigner
                     preview
                     verdict
-                    VStack(spacing: 18) {
-                        colorRow(
-                            title: "Text",
-                            selection: $viewModel.foreground,
-                            assign: { viewModel.foreground = $0 }
-                        )
-                        colorRow(
-                            title: "Background",
-                            selection: $viewModel.background,
-                            assign: { viewModel.background = $0 }
-                        )
+                    VStack(spacing: 14) {
+                        ColorPicker("Text", selection: $viewModel.foreground, supportsOpacity: false)
+                        ColorPicker("Background", selection: $viewModel.background, supportsOpacity: false)
                     }
+                    .font(BrandFont.ui(16, weight: .medium))
                     .padding(.horizontal, 20)
                     .padding(.bottom, 8)
                 }
@@ -148,37 +142,99 @@ struct WCAGCheckerView: View {
         .accessibilityElement(children: .combine)
     }
 
-    // MARK: - Pickers
+    // MARK: - Palette assigner
 
-    /// A system colour picker plus one-tap shortcuts for the colours already in the palette —
-    /// the checker works on the same palette as every other tool.
-    private func colorRow(
-        title: String,
-        selection: Binding<Color>,
-        assign: @escaping (Color) -> Void
-    ) -> some View {
+    /// Each palette colour with its own Text and BG buttons, ported from the web panel. Two
+    /// separate swatch rows made you hunt for the same colour twice and never showed which
+    /// pairing was currently on screen; here every swatch states its own role.
+    ///
+    /// Scrolls horizontally because the palette can hold up to eight colours, which will not fit
+    /// across a phone at a legible size.
+    private var paletteAssigner: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ColorPicker(title, selection: selection, supportsOpacity: false)
-                .font(BrandFont.ui(16, weight: .medium))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("YOUR PALETTE · \(viewModel.paletteColors.count) COLORS")
+                    .font(BrandFont.ui(11, weight: .bold))
+                    .foregroundStyle(BrandColor.coral)
+                Text("Tap Text or BG to swap any color in.")
+                    .font(BrandFont.ui(12))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 20)
 
-            HStack(spacing: 8) {
-                ForEach(viewModel.paletteColors) { swatch in
-                    Button {
-                        assign(swatch.color)
-                    } label: {
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(swatch.color)
-                            .frame(height: 38)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 9)
-                                    .strokeBorder(.primary.opacity(0.15), lineWidth: 1)
-                            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(viewModel.paletteColors) { swatch in
+                        assignerCard(swatch)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Use \(swatch.name) as \(title.lowercased())")
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private func assignerCard(_ swatch: PaletteColor) -> some View {
+        let role = viewModel.role(of: swatch)
+        return VStack(spacing: 0) {
+            swatch.color
+                .frame(height: 54)
+            Text(swatch.hex)
+                .font(BrandFont.mono(11, weight: .medium))
+                .padding(.vertical, 6)
+            HStack(spacing: 0) {
+                roleButton(
+                    "Text",
+                    isActive: role == .text,
+                    activeTint: BrandColor.coral,
+                    accessibilityLabel: "Use \(swatch.name) as text color"
+                ) {
+                    viewModel.assign(swatch, to: .text)
+                }
+                roleButton(
+                    "BG",
+                    isActive: role == .background,
+                    activeTint: .primary,
+                    accessibilityLabel: "Use \(swatch.name) as background color"
+                ) {
+                    viewModel.assign(swatch, to: .background)
                 }
             }
         }
+        .frame(width: 116)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(.primary.opacity(0.12), lineWidth: 1)
+        }
+    }
+
+    private func roleButton(
+        _ title: String,
+        isActive: Bool,
+        activeTint: Color,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Text(title)
+                    .font(BrandFont.ui(11, weight: .bold))
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(isActive ? activeTint : Color.clear)
+            .foregroundStyle(isActive ? Color(.systemBackground) : .secondary)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
     }
 
     // MARK: - Labels
