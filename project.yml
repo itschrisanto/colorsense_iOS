@@ -52,6 +52,11 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: online.colorsense.ios
         TARGETED_DEVICE_FAMILY: "1"
+        # Device builds need a real signing team; the simulator signs locally and ignores this.
+        # Sourced from Secrets.xcconfig (gitignored) so a team ID is never committed and so
+        # `xcodegen generate` doesn't wipe what you set in Xcode's Signing tab.
+        DEVELOPMENT_TEAM: "$(DEVELOPMENT_TEAM)"
+        CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: NO

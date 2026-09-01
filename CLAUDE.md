@@ -156,6 +156,29 @@ Scripts/
   run-sim.sh        Build + install + launch + screenshot on a simulator, one command
 ```
 
+## Running on a physical iPhone
+
+The simulator signs locally and needs no Apple account. A real device needs a signing team,
+which `project.yml` reads from `DEVELOPMENT_TEAM` in `Config/Secrets.xcconfig` — so it is never
+committed, and `xcodegen generate` does not wipe it the way editing Xcode's Signing tab would.
+
+1. Xcode ▸ Settings ▸ Accounts ▸ **+** ▸ Apple ID. A free Apple ID is enough; it creates a
+   "Personal Team".
+2. Copy the 10-character Team ID from that account's team list into `Config/Secrets.xcconfig`
+   as `DEVELOPMENT_TEAM = ...`, then re-run `xcodegen generate`.
+3. Connect the iPhone by cable, unlock it, tap **Trust This Computer**.
+4. Pick the device in Xcode's run destination menu and hit Run.
+5. First launch only: on the iPhone, Settings ▸ General ▸ VPN & Device Management ▸ trust the
+   developer certificate.
+
+Constraints worth knowing before promising anything:
+- The device must be on **iOS 17 or later** (the deployment target, driven by Clerk's own minimum).
+- A **free** Apple ID signs for **7 days**, then the app stops launching until it is rebuilt from
+  Xcode. A paid Developer Program membership ($99/yr) extends that to a year and unlocks TestFlight.
+- Haptics only exist on hardware — the simulator has none, so device is the only way to check them.
+- Sign-in and account-saved palettes still will not work on device: `CLERK_PUBLISHABLE_KEY` is
+  still the placeholder.
+
 ## Measuring UI alignment
 
 Icon alignment complaints have come up twice and eyeballing got it wrong both times — one
