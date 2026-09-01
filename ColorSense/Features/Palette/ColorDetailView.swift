@@ -35,7 +35,17 @@ struct ColorDetailView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .scrollContentBackground(.hidden)
         }
+        // Translucent sheet so the palette stays visible behind the card — the color you tapped
+        // reads through rather than being replaced by an opaque panel.
+        .presentationBackground(.ultraThinMaterial)
+        .presentationCornerRadius(28)
+        .presentationDragIndicator(.visible)
+        // Opens full height because the card is long, but can be dragged down to a half sheet
+        // to compare the color against the rest of the palette behind it.
+        .presentationDetents([.large, .medium])
     }
 
     // MARK: - Header
@@ -112,7 +122,7 @@ struct ColorDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 8)
-                        .background(Color(.secondarySystemBackground))
+                        .background(.primary.opacity(0.06))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
@@ -189,7 +199,7 @@ struct ColorDetailView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color(.secondarySystemBackground))
+                .background(.primary.opacity(0.06))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
@@ -205,7 +215,7 @@ struct ColorDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(.secondarySystemBackground))
+        .background(.primary.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 

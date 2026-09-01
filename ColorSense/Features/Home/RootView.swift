@@ -25,32 +25,33 @@ struct RootView: View {
                 .overlay { if isExtracting { extractingOverlay } }
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
-                // The bands run edge to edge, so the bar needs its own opaque surface. Without an
-                // explicit color the glass toolbar tints itself from the first swatch, which
-                // leaves the title unreadable whenever that swatch is dark.
+                // The bands stop below the bar rather than running under it, so there is nothing
+                // for a material to blur — it just renders as grey haze. An explicit surface is
+                // both cleaner and keeps the title legible over any first swatch.
                 .toolbarBackground(Color(.systemBackground), for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button { accountIsPresented = true } label: {
-                            Image(systemName: "person.circle")
+                            ToolbarIcon("person.circle")
                         }
                         .accessibilityLabel("Account")
+                    }
+                    // Extracting from a photo is the app's primary entry point, so it stays one
+                    // tap away here as well as inside the Tools sheet. Reaching it only through
+                    // Tools buries the main thing the app does. It leads Export because input
+                    // comes before output.
+                    ToolbarItem(placement: .topBarTrailing) {
+                        PhotosPicker(selection: $selectedItem, matching: .images) {
+                            ToolbarIcon("photo.badge.plus")
+                        }
+                        .accessibilityLabel("Extract colors from a photo")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         exportMenu
                     }
-                    // Extracting from a photo is the app's primary entry point, so it stays one
-                    // tap away here as well as inside the Tools sheet. Reaching it only through
-                    // Tools buries the main thing the app does.
-                    ToolbarItem(placement: .topBarTrailing) {
-                        PhotosPicker(selection: $selectedItem, matching: .images) {
-                            Image(systemName: "photo.badge.plus")
-                        }
-                        .accessibilityLabel("Extract colors from a photo")
-                    }
                 }
-                .safeAreaInset(edge: .bottom) { bottomBar }
+                .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
         }
         .photosPicker(isPresented: $photoPickerIsPresented, selection: $selectedItem, matching: .images)
         .onChange(of: selectedItem) { _, item in
@@ -77,16 +78,21 @@ struct RootView: View {
         store.isShowingDefault ? "ColorSense" : "Your palette"
     }
 
+    /// Floating glass capsules rather than a filled bar, so the palette stays the full screen and
+    /// the controls read as sitting on top of it. Both hug their content instead of splitting the
+    /// width — two stretched slabs was the least compact arrangement available.
     private var bottomBar: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button { toolsArePresented = true } label: {
                 Label("Tools", systemImage: "square.grid.2x2")
                     .font(BrandFont.ui(15, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color(.secondarySystemBackground))
                     .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay {
+                        Capsule().strokeBorder(.primary.opacity(0.12), lineWidth: 0.5)
+                    }
             }
             // Without .plain the button's tint repaints the label system-blue, overriding
             // the neutral foreground this secondary control is supposed to have.
@@ -94,9 +100,16 @@ struct RootView: View {
 
             generateButton
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.bar)
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .padding(.top, 10)
+        .frame(maxWidth: .infinity)
+        // Continue the last swatch behind the bar instead of letting a slab of system chrome
+        // show through. The palette reads as running to the bottom edge, but the bar still
+        // reserves its own space so it never covers that swatch's label.
+        .background {
+            (store.palette.colors.last?.color ?? Color(.systemBackground))
+                .ignoresSafeArea(edges: .bottom)
+        }
     }
 
     /// Regenerates the unlocked swatches. No count is surfaced: the run never dead-ends, it just
@@ -108,11 +121,10 @@ struct RootView: View {
         } label: {
             Label("Generate", systemImage: "arrow.triangle.2.circlepath")
                 .font(BrandFont.ui(15, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(BrandColor.coral)
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(BrandColor.coral, in: Capsule())
         }
         .buttonStyle(.plain)
     }
@@ -135,7 +147,9 @@ struct RootView: View {
                 }
             }
         } label: {
-            Image(systemName: "square.and.arrow.up")
+            // Nudged down because the share glyph's arrow extends above its baseline box, so
+            // centering it against the other toolbar icons leaves it visibly high.
+            ToolbarIcon("square.and.arrow.up", baselineNudge: 1)
         }
     }
 
@@ -172,6 +186,27 @@ struct RootView: View {
                 store.replace(with: palette)
             }
         }
+    }
+}
+
+/// Toolbar glyphs at one size in one box. SF Symbols have different bounding boxes — the share
+/// glyph is taller than the photo one — so laying them out raw leaves them visibly unaligned.
+/// A view rather than a method on `RootView` so it can be built inside `PhotosPicker` and `Menu`
+/// label closures, which are not main-actor isolated.
+private struct ToolbarIcon: View {
+    let systemName: String
+    var baselineNudge: CGFloat = 0
+
+    init(_ systemName: String, baselineNudge: CGFloat = 0) {
+        self.systemName = systemName
+        self.baselineNudge = baselineNudge
+    }
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 17, weight: .regular))
+            .frame(width: 26, height: 26)
+            .offset(y: baselineNudge)
     }
 }
 
