@@ -88,6 +88,14 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
   app states outright in its own Tools sheet ("All work on the same palette"). A sheet was
   chosen over tabs specifically so the tool list can grow past the three or four items a tab
   bar tolerates. `PaletteStore` owns the palette; `RootView` is the screen.
+- **All chrome is one floating glass dock** (decided 2026-09-02, from a reference Chris supplied).
+  Share · Tools · **+** · Generate · Account, icon-only, in a single `.ultraThinMaterial` capsule.
+  There is no navigation bar — once every action moved into the dock, the bar held only a title,
+  which was not worth a full bar of chrome. The centre **+** is the only coral item; an icon-only
+  row needs exactly one focal point, and giving Generate a second accent left neither reading as
+  primary. Bands run full-bleed under the status bar; iOS was observed adapting the status bar
+  between light and dark automatically (verified on both a near-black and a coral first swatch),
+  so don't add a manual override unless a real device proves otherwise.
 - **The app opens on the user's last palette** (asked for 2026-09-02). Persisted as JSON to
   Application Support. First launch lands on `ExtractedPalette.brandDefault` (the brand kit
   colors), never an empty state. This reverses the earlier "no persistence in v1" position —
@@ -142,6 +150,27 @@ ColorSenseTests/
 Scripts/
   run-sim.sh        Build + install + launch + screenshot on a simulator, one command
 ```
+
+## Measuring UI alignment
+
+Icon alignment complaints have come up twice and eyeballing got it wrong both times — one
+"fix" moved a glyph further out of line. Measure instead:
+
+```bash
+sips -s format bmp --cropToHeightWidth <h> <w> --cropOffset <top> <left> shot.png --out c.bmp
+```
+
+then parse the BMP in Python (no PIL on this machine), threshold the dark pixels, group them
+into columns per glyph, and compare each glyph's bounding-box centre. Screenshots are 3x, so
+divide pixel deltas by 3 for points.
+
+Two things that matter and are easy to get wrong:
+- Size SF Symbols by **point size**, not by scaling each into an identical box. They are drawn
+  to look balanced at a common point size; normalising bounding boxes renders tall glyphs (like
+  `square.and.arrow.up`) visibly narrower than the rest.
+- A residual offset remains because a symbol's *ink* can sit off-centre inside its own layout
+  box. That is what `DockIcon.opticalOffset` is for — one measured value per symbol, with the
+  measurement recorded in a comment, never a guess.
 
 ## Running the app
 

@@ -25,35 +25,12 @@ struct RootView: View {
             )
                 .overlay { if isExtracting { extractingOverlay } }
                 .overlay(alignment: .top) { if let toast { toastView(toast) } }
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.inline)
-                // The bands stop below the bar rather than running under it, so there is nothing
-                // for a material to blur — it just renders as grey haze. An explicit surface is
-                // both cleaner and keeps the title legible over any first swatch.
-                .toolbarBackground(Color(.systemBackground), for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button { accountIsPresented = true } label: {
-                            ToolbarIcon("person.circle")
-                        }
-                        .accessibilityLabel("Account")
-                    }
-                    // Extracting from a photo is the app's primary entry point, so it stays one
-                    // tap away here as well as inside the Tools sheet. Reaching it only through
-                    // Tools buries the main thing the app does. It leads Export because input
-                    // comes before output.
-                    ToolbarItem(placement: .topBarTrailing) {
-                        PhotosPicker(selection: $selectedItem, matching: .images) {
-                            ToolbarIcon("photo.badge.plus")
-                        }
-                        .accessibilityLabel("Extract colors from a photo")
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        exportMenu
-                    }
-                }
-                .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+                // No nav bar: with every action in the dock it would hold nothing but a title,
+                // and a whole bar of chrome for one label is space the palette can use. The
+                // bands still respect the top safe area, so the status bar keeps a clean strip
+                // to sit on rather than landing on an arbitrary swatch.
+                .toolbar(.hidden, for: .navigationBar)
+                .safeAreaInset(edge: .bottom, spacing: 0) { dock }
         }
         .photosPicker(isPresented: $photoPickerIsPresented, selection: $selectedItem, matching: .images)
         .onChange(of: selectedItem) { _, item in
@@ -76,62 +53,48 @@ struct RootView: View {
 
     // MARK: - Chrome
 
-    private var title: String {
-        store.isShowingDefault ? "ColorSense" : "Your palette"
-    }
 
-    /// Floating glass capsules rather than a filled bar, so the palette stays the full screen and
-    /// the controls read as sitting on top of it. Both capsules are the same width — sizing each
-    /// to its own label made the pair look accidental rather than designed.
-    private var bottomBar: some View {
-        HStack(spacing: 10) {
-            Button { toolsArePresented = true } label: {
-                Label("Tools", systemImage: "square.grid.2x2")
-                    .font(BrandFont.ui(15, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay {
-                        Capsule().strokeBorder(.primary.opacity(0.12), lineWidth: 0.5)
-                    }
+    /// A single floating glass dock holding every action, so the palette owns the whole screen
+    /// and there is no top bar at all. Adding a photo sits in the centre and is the only coral
+    /// item: it is the app's entry point, and an icon-only row needs one clear focal point or it
+    /// reads as five equal-weight mystery glyphs.
+    ///
+    /// Generate deliberately does *not* also take an accent — two competing highlights in a
+    /// five-item row leaves neither reading as primary.
+    private var dock: some View {
+        HStack(spacing: 0) {
+            exportMenu
+
+            DockButton("square.grid.2x2", label: "Tools") { toolsArePresented = true }
+
+            PhotosPicker(selection: $selectedItem, matching: .images) {
+                DockIcon("plus", size: 21)
+                    .foregroundStyle(.white)
+                    .frame(width: 46, height: 46)
+                    .background(BrandColor.coral, in: Circle())
             }
-            // Without .plain the button's tint repaints the label system-blue, overriding
-            // the neutral foreground this secondary control is supposed to have.
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel("Extract colors from a photo")
 
-            generateButton
+            DockButton("arrow.triangle.2.circlepath", label: "Generate") { store.generate() }
+
+            DockButton("person.circle", label: "Account") { accountIsPresented = true }
         }
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
-        // Inset rather than edge-to-edge: equal halves of a narrower strip stays compact while
-        // keeping the two controls symmetrical.
-        .padding(.horizontal, 36)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay { Capsule().strokeBorder(.primary.opacity(0.14), lineWidth: 0.5) }
+        .shadow(color: .black.opacity(0.2), radius: 14, y: 5)
+        .padding(.horizontal, 20)
         .padding(.top, 10)
         .frame(maxWidth: .infinity)
-        // Continue the last swatch behind the bar instead of letting a slab of system chrome
-        // show through. The palette reads as running to the bottom edge, but the bar still
+        // Continue the last swatch behind the dock instead of letting a slab of system chrome
+        // show through. The palette reads as running to the bottom edge, but the dock still
         // reserves its own space so it never covers that swatch's label.
         .background {
             (store.palette.colors.last?.color ?? Color(.systemBackground))
                 .ignoresSafeArea(edges: .bottom)
         }
-    }
-
-    /// Regenerates the unlocked swatches. No count is surfaced: the run never dead-ends, it just
-    /// shifts to bolder schemes past `PaletteGenerator.wideningIteration`, so a number would be
-    /// noise rather than information.
-    private var generateButton: some View {
-        Button {
-            store.generate()
-        } label: {
-            Label("Generate", systemImage: "arrow.triangle.2.circlepath")
-                .font(BrandFont.ui(15, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .background(BrandColor.coral, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     private var exportMenu: some View {
@@ -162,9 +125,18 @@ struct RootView: View {
                 }
             }
         } label: {
-            // Measured 1pt low against the photo glyph even after scaling both to one box.
-            ToolbarIcon("square.and.arrow.up", opticalOffset: -1)
+            // The share glyph's rising arrow makes it taller than the rest, which leaves its
+            // ink centre sitting 1pt below theirs at the same point size. Measured, not guessed:
+            // crop the dock from a screenshot, threshold the dark pixels inside the capsule, and
+            // compare each glyph's bounding-box centre.
+            DockIcon("square.and.arrow.up", opticalOffset: -1)
+                .frame(maxWidth: .infinity)
+                .contentShape(.rect)
         }
+        // Menu ignores .buttonStyle(.plain), so without an explicit tint its glyph renders
+        // system-blue while every other dock icon is neutral.
+        .tint(.primary)
+        .accessibilityLabel("Share and export")
     }
 
     /// Brief confirmation for actions with no visible result of their own, like saving to Photos.
@@ -224,34 +196,62 @@ struct RootView: View {
     }
 }
 
-/// Toolbar glyphs normalised into one box.
+/// Dock glyphs normalised into one box.
 ///
-/// SF Symbols have different bounding boxes — `square.and.arrow.up` is taller than
-/// `photo.badge.plus` because of its rising arrow — so setting them at a common font size still
-/// leaves them optically misaligned (measured: 2.7pt apart). Scaling each symbol to fit the same
-/// square makes the centering structural instead of a per-symbol fudge factor.
+/// SF Symbols have different bounding boxes — `square.and.arrow.up` is taller than the others
+/// because of its rising arrow — so setting them at a common font size still leaves them
+/// optically misaligned (measured: 2.7pt apart). Scaling each symbol to fit the same square makes
+/// the centering structural instead of a per-symbol fudge factor.
 ///
 /// A view rather than a method on `RootView` so it can be built inside `PhotosPicker` and `Menu`
 /// label closures, which are not main-actor isolated.
-private struct ToolbarIcon: View {
+private struct DockIcon: View {
     let systemName: String
+    var size: CGFloat = 19
     /// Residual correction for symbols whose *ink* sits off-centre inside their own layout box,
     /// which scaling cannot fix. Measure it from a screenshot rather than eyeballing: crop the
-    /// bar, threshold the dark pixels, and compare each glyph's bounding-box centre.
+    /// dock, threshold the dark pixels, and compare each glyph's bounding-box centre.
     var opticalOffset: CGFloat = 0
 
-    init(_ systemName: String, opticalOffset: CGFloat = 0) {
+    init(_ systemName: String, size: CGFloat = 21, opticalOffset: CGFloat = 0) {
         self.systemName = systemName
+        self.size = size
         self.opticalOffset = opticalOffset
     }
 
     var body: some View {
+        // Point size, not a normalised box: SF Symbols are drawn to look balanced against each
+        // other at a common point size, and scaling each to fit an identical square undoes that
+        // — it renders tall glyphs like the share icon visibly narrower than the rest.
         Image(systemName: systemName)
-            .resizable()
-            .scaledToFit()
-            .frame(width: 19, height: 19)
+            .font(.system(size: size, weight: .regular))
             .offset(y: opticalOffset)
-            .frame(width: 30, height: 30)
+            .frame(height: 46)
+    }
+}
+
+/// One neutral action in the dock. `.plain` keeps the button's tint from repainting the glyph
+/// system-blue over the glass.
+private struct DockButton: View {
+    let systemName: String
+    let label: String
+    let action: () -> Void
+
+    init(_ systemName: String, label: String, action: @escaping () -> Void) {
+        self.systemName = systemName
+        self.label = label
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            DockIcon(systemName)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
