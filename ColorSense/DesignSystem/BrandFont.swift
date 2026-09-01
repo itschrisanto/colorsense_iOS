@@ -17,4 +17,10 @@ enum BrandFont {
         }
         return .custom(name, size: size)
     }
+
+    /// Hex codes are set in a monospaced face so digits align down a stack of palette bands,
+    /// matching the web app. There is no brand mono, so this is the system monospace on purpose.
+    static func mono(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        .system(size: size, weight: weight, design: .monospaced)
+    }
 }

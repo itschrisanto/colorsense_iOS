@@ -7,6 +7,7 @@ import ClerkKitUI
 /// without an account. This screen is where plan status will surface once Pro features land on iOS.
 struct AccountView: View {
     @Environment(Clerk.self) private var clerk
+    @Environment(\.dismiss) private var dismiss
     @State private var authIsPresented = false
 
     var body: some View {
@@ -30,6 +31,12 @@ struct AccountView: View {
             }
             .padding(.top, 40)
             .navigationTitle("Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
             .sheet(isPresented: $authIsPresented) {
                 AuthView()
             }

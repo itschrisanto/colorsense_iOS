@@ -45,4 +45,30 @@ enum ContrastCalculator {
     static func nonTextPasses(_ ratio: Double) -> Bool {
         ratio >= 3.0
     }
+
+    /// Whether white text out-contrasts black text on the given background, channels 0...1.
+    /// Drives the label color on palette bands so it flips automatically per swatch.
+    static func prefersLightText(onRed red: Double, green: Double, blue: Double) -> Bool {
+        let againstWhite = ratio(r1: red, g1: green, b1: blue, r2: 1, g2: 1, b2: 1)
+        let againstBlack = ratio(r1: red, g1: green, b1: blue, r2: 0, g2: 0, b2: 0)
+        return againstWhite > againstBlack
+    }
+
+    /// The five-point plain-language grade shown on the color detail card, ported from
+    /// `rateContrast()` in the web app's labColor.ts. It is a friendlier restatement of the same
+    /// WCAG thresholds `normalTextLevel` uses (7.0 and 4.5), not a separate standard — keep the
+    /// two in step, and keep these labels identical to the web's.
+    struct Rating: Equatable {
+        enum Tone: Equatable { case good, warning, bad }
+        let label: String
+        let tone: Tone
+    }
+
+    static func rating(for ratio: Double) -> Rating {
+        if ratio >= 7.0 { return Rating(label: "GREAT 5/5", tone: .good) }
+        if ratio >= 4.5 { return Rating(label: "GOOD 4/5", tone: .good) }
+        if ratio >= 3.0 { return Rating(label: "OK 3/5", tone: .warning) }
+        if ratio >= 2.0 { return Rating(label: "POOR 2/5", tone: .bad) }
+        return Rating(label: "POOR 1/5", tone: .bad)
+    }
 }

@@ -29,4 +29,28 @@ struct ContrastCalculatorTests {
         #expect(ContrastCalculator.largeTextLevel(for: 3.0) == .aa)
         #expect(ContrastCalculator.largeTextLevel(for: 2.99) == .fail)
     }
+
+    /// The five swatches from the web app's mobile palette view, with the label color the web
+    /// app actually renders on each. iOS picks its band label the same way, so these must agree.
+    @Test(arguments: [
+        (0x2A2C32, true),  // Charade      — white label
+        (0xB0ACA1, false), // Cloudy       — dark label
+        (0x666770, true),  // Shuttle Gray — white label
+        (0x99ABB3, false), // Gull Gray    — dark label
+        (0x2D292B, true),  // Baltic Sea   — white label
+    ])
+    func bandLabelMatchesWebApp(hex: Int, expectsLightText: Bool) {
+        let red = Double((hex >> 16) & 0xFF) / 255
+        let green = Double((hex >> 8) & 0xFF) / 255
+        let blue = Double(hex & 0xFF) / 255
+        #expect(
+            ContrastCalculator.prefersLightText(onRed: red, green: green, blue: blue)
+                == expectsLightText
+        )
+    }
+
+    @Test func pureExtremesPickOpposingLabels() {
+        #expect(ContrastCalculator.prefersLightText(onRed: 0, green: 0, blue: 0))
+        #expect(!ContrastCalculator.prefersLightText(onRed: 1, green: 1, blue: 1))
+    }
 }

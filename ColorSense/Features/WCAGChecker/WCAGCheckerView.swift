@@ -1,25 +1,44 @@
 import SwiftUI
 
+/// Presented as a tool sheet from `RootView`, seeded with the app's current palette.
 struct WCAGCheckerView: View {
-    @State private var viewModel = WCAGCheckerViewModel()
+    @State private var viewModel: WCAGCheckerViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    init(palette: ExtractedPalette = .sample) {
+        _viewModel = State(initialValue: WCAGCheckerViewModel(palette: palette))
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     preview
-                    VStack(spacing: 16) {
-                        ColorPicker("Text color", selection: $viewModel.foreground, supportsOpacity: false)
-                        ColorPicker("Background color", selection: $viewModel.background, supportsOpacity: false)
-                    }
-                    .font(BrandFont.ui(16))
-                    .padding(.horizontal)
-
                     ratioCard
+
+                    VStack(spacing: 20) {
+                        pickerRow(
+                            title: "Text color",
+                            selection: $viewModel.foreground,
+                            assign: { viewModel.foreground = $0 }
+                        )
+                        pickerRow(
+                            title: "Background color",
+                            selection: $viewModel.background,
+                            assign: { viewModel.background = $0 }
+                        )
+                    }
+                    .padding(.horizontal)
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("WCAG Checker")
+            .navigationTitle("Contrast")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 
@@ -28,9 +47,13 @@ struct WCAGCheckerView: View {
             .fill(viewModel.background)
             .frame(height: 140)
             .overlay {
-                Text("Sample text")
-                    .font(BrandFont.ui(22, weight: .medium))
-                    .foregroundStyle(viewModel.foreground)
+                VStack(spacing: 6) {
+                    Text("Large text")
+                        .font(BrandFont.ui(24, weight: .bold))
+                    Text("Normal body text")
+                        .font(BrandFont.ui(15))
+                }
+                .foregroundStyle(viewModel.foreground)
             }
             .padding(.horizontal)
     }
@@ -45,9 +68,39 @@ struct WCAGCheckerView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.quaternary.opacity(0.4))
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .padding(.horizontal)
+    }
+
+    /// A system color picker plus one-tap shortcuts for the colors already in the palette.
+    private func pickerRow(
+        title: String,
+        selection: Binding<Color>,
+        assign: @escaping (Color) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ColorPicker(title, selection: selection, supportsOpacity: false)
+                .font(BrandFont.ui(16))
+
+            HStack(spacing: 8) {
+                ForEach(viewModel.paletteColors) { swatch in
+                    Button {
+                        assign(swatch.color)
+                    } label: {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(swatch.color)
+                            .frame(height: 34)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(.primary.opacity(0.15), lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Use \(swatch.name) as \(title.lowercased())")
+                }
+            }
+        }
     }
 
     private func levelRow(title: String, level: ContrastCalculator.Level) -> some View {
@@ -83,5 +136,5 @@ struct WCAGCheckerView: View {
 }
 
 #Preview {
-    WCAGCheckerView()
+    WCAGCheckerView(palette: .sample)
 }

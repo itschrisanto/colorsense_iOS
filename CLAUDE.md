@@ -77,9 +77,33 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
   Pro Annual ($39/yr) / Pro Pass ($9 one-time) plans as the web app, even though v1's
   own tools don't gate on it. This is forward-positioning for when Pro features
   (e.g. Brand Kit Creator, AI brand analysis) land on iOS.
-- **Design: no mockups exist.** Screens are designed directly from the brand kit
-  (colors/fonts below) using standard iOS/HIG patterns, not translated pixel-for-pixel
-  from the web app.
+- **Design: follow the web app's mobile layout** (decided 2026-09-02, supersedes the earlier
+  "no mockups exist, design from the brand kit" note). Chris supplied mobile screenshots of
+  colorsense.online; the palette screen matches them — full-bleed color bands splitting the
+  screen, large mono hex, ntc color name beneath, label color flipping per swatch via
+  `ContrastCalculator`.
+- **One palette, many tools** (decided 2026-09-02, replaces the original tab-bar navigation).
+  The app *is* the current palette; there is no tab bar and no landing/upload screen. Tools
+  are actions on that one palette, reached from a collapsed Tools sheet — the model the web
+  app states outright in its own Tools sheet ("All work on the same palette"). A sheet was
+  chosen over tabs specifically so the tool list can grow past the three or four items a tab
+  bar tolerates. `PaletteStore` owns the palette; `RootView` is the screen.
+- **The app opens on the user's last palette** (asked for 2026-09-02). Persisted as JSON to
+  Application Support. First launch lands on `ExtractedPalette.brandDefault` (the brand kit
+  colors), never an empty state. This reverses the earlier "no persistence in v1" position —
+  only the *current* palette is stored; a saved-palettes Library is still out of scope.
+- **Generate is a port of the web's `relatedPalette()`** (decided 2026-09-02, replaces an
+  earlier drift-from-previous implementation). Every tap re-derives from *anchors* — the locked
+  swatches if the user has locked any, otherwise the original extract — with `iteration`
+  selecting the hue scheme. Iterations 0-9 cycle tight schemes (monochromatic, analogous,
+  complementary); from 10 the pool widens to triadic/split-complementary/broad with bigger
+  jitter. There is no cap and no countdown in the UI: the run never dead-ends, so a number
+  would be noise. This mirrors `shuffle()` in the web's LabContext.tsx exactly.
+  Note this is adjacent to the Color Scheme Generator tool that "MVP scope" above cuts — it
+  was requested directly and is a control on the existing palette, not a new tool screen.
+  It does not reopen the rest of that scope decision.
+- **Locking steers generation.** A locked swatch survives Generate and becomes an anchor for the
+  regenerated ones. Lock state persists with the palette.
 - **Minimum iOS version: 17.0.** Not asked explicitly — chosen because the Clerk iOS SDK
   itself requires iOS 17+, so there was no lower option once Clerk was in scope.
 
@@ -87,20 +111,101 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
 
 ```
 ColorSense/
-  App/              ColorSenseApp.swift (entry point, Clerk.configure), AppConfig.swift
+  App/              ColorSenseApp.swift (entry point, Clerk.configure, owns PaletteStore), AppConfig.swift
   DesignSystem/      BrandColor.swift, BrandFont.swift — brand kit as Swift, not hardcoded per-view
-  Models/            PaletteColor, ExtractedPalette
+  Models/            PaletteColor, ExtractedPalette (+ .brandDefault, .sample)
+  Services/
+    ColorNameService.swift   Nearest Name That Color match
+    PaletteStore.swift       THE palette: current state, generation count, JSON persistence
   Features/
-    Extractor/       PhotosPicker -> ColorExtractionService (on-device k-means) -> palette grid
-    WCAGChecker/      Two ColorPickers -> ContrastCalculator (WCAG 2.x luminance formula) -> AA/AAA badges
-    Auth/             AccountView wraps Clerk's AuthView/UserButton
-    Home/             RootTabView (Extractor / WCAG / Account tabs)
+    Home/
+      RootView.swift         The app's only screen — bands + Tools/Generate bar + nav actions
+      ToolsSheet.swift       Collapsed tool picker; add a `Tool` case to add a tool
+    Palette/
+      PaletteBandsView.swift Full-bleed bands, tap to copy
+    Extractor/
+      PhotoExtractor.swift   PhotosPickerItem -> palette (an action, not a screen)
+      ColorExtractionService.swift  On-device k-means
+      PaletteGenerator.swift Drift for Generate, plus the fresh-palette suggestion
+      PaletteExportService.swift    Hex list / CSS vars / shareable PNG
+    WCAGChecker/      ContrastCalculator (WCAG 2.x luminance) + a sheet seeded from the palette
+    Auth/             AccountView wraps Clerk's AuthView/UserButton, presented as a sheet
   Resources/
     Assets.xcassets/  AppIcon (needs a real 1024x1024 icon — placeholder slot only), AccentColor (set to Coral)
+    ColorNames.json   1,566 ntc color names, ported from the web app — see "Color names" below
     Fonts/            EMPTY — see "Fonts" below, this is a manual step
 ColorSenseTests/
-  ContrastCalculatorTests.swift   Verifies the WCAG math against known values (black/white = 21:1, etc.)
+  ContrastCalculatorTests.swift   WCAG math against known values (black/white = 21:1, etc.) plus
+                                  band-label checks pinned to what the web app renders
+  PaletteGenerationTests.swift    Drift bounds over a full 10-generation run, the generation cap,
+                                  and store persistence across simulated relaunches
+Scripts/
+  run-sim.sh        Build + install + launch + screenshot on a simulator, one command
 ```
+
+## Running the app
+
+`./Scripts/run-sim.sh` builds, installs, launches, and writes `.build/sim-screenshot.png`. It
+boots iPhone 17 if no simulator is already running. This is the way to actually *see* a change —
+use it rather than reasoning about whether the layout is right.
+
+Launch with `-sample-palette` (`xcrun simctl launch booted online.colorsense.ios -sample-palette`)
+to open on `ExtractedPalette.sample` regardless of what is stored. Those five swatches are the
+ones in the web app's mobile palette view, so a screenshot is a direct side-by-side check.
+
+To test first-launch behaviour, `xcrun simctl uninstall booted online.colorsense.ios` first —
+otherwise the persisted palette is restored and you'll never see `.brandDefault`.
+
+First paint lags launch by several seconds (Clerk's placeholder-key requests run during
+startup). Screenshotting sooner captures a blank white frame that looks like a crash but isn't;
+`run-sim.sh` already waits.
+
+Expect a stream of `[Clerk] ❌ host_invalid` errors in the log on every launch. That is the
+placeholder publishable key failing against a fake host, is documented under "Status" below,
+and is not a crash — don't chase it.
+
+## Ported from the web app — keep in step
+
+The web source is **not** in this repo. It lives at `~/Documents/Codex/ColorSense/ColorSense`
+(a second, older copy is in iCloud). These files are line-for-line ports; if you change the math
+or copy on one side, change it on the other in the same pass, or the two products start
+disagreeing about the same hex.
+
+| iOS | Web source | What must stay identical |
+|---|---|---|
+| `Services/ColorNameService.swift` + `Resources/ColorNames.json` | `lib/colorNames.ts` | 1,566 ntc names; nearest match by squared RGB distance |
+| `Services/ColorMath.swift` | `lib/labColor.ts`, `lib/colorHarmony.ts` | HSL/CMYK/LAB(D65)/LCH formulas, rounding, and conversion row order |
+| `Services/ColorHarmony.swift` | `harmoniesFor()` in labColor.ts | Four harmonies, ±30/180/150/210/120/240 offsets, the near-grey guard (s < 0.05 → s 0.6, l 0.55) |
+| `Services/ColorInsights.swift` | `colorInsights()` in labColor.ts | Psychology/Meaning/Applications copy **verbatim**, hue boundaries, the s < 0.12 neutral cutoff |
+| `ContrastCalculator.rating(for:)` | `rateContrast()` in labColor.ts | The 5-point labels and their 7 / 4.5 / 3 / 2 thresholds |
+| `Features/Extractor/PaletteGenerator.swift` | `relatedPalette()` in labColor.ts | Scheme tables, jitter magnitudes, clamps, `widen = iteration >= 10` |
+| `Features/Palette/ColorDetailView.swift` | `components/lab/ColorDetailCard.tsx` | Section order and labels |
+
+`ColorMathTests.swift` pins the whole chain to values read off the web's own detail card for
+#666770 — if a port drifts, those fail. Extend that fixture rather than trusting a visual check.
+
+Two deliberate divergences:
+- The web's "Generate Harmonies · AI · Pro" button is **not** on iOS. There is no StoreKit here,
+  and App Store review rejects digital-goods upsells that route around IAP. Revisit when Pro
+  actually ships on iOS.
+- Tapping a harmony swatch copies its hex. On the web it *adds* the color to the palette;
+  iOS has no add-color affordance yet.
+
+Also note `isDark()` in labColor.ts picks label color by perceived luminance
+(0.299/0.587/0.114), while iOS uses `ContrastCalculator.prefersLightText` (WCAG ratio), because
+CLAUDE.md requires contrast decisions to route through `ContrastCalculator`. They agree on every
+color tested so far, but they *can* disagree on mid-tones. Deliberate, not an oversight.
+
+## Color names (ported from the web app, 2026-09-02)
+
+`Resources/ColorNames.json` is the same 1,566-entry Name That Color dataset the web app bundles
+at `artifacts/color-palette/src/lib/colorNames.ts` (web source lives outside this repo, at
+`~/Documents/Codex/ColorSense/ColorSense`). `ColorNameService` matches with the same rule the web
+app uses: smallest squared Euclidean distance in 0...255 RGB.
+
+Plain RGB distance is not perceptually ideal — Lab would name some colors better. It is used
+anyway so a given hex gets the *same* name on iOS and the web. Don't switch the metric here
+without changing the web app in the same pass.
 
 No `.xcodeproj` is committed. This project is managed with
 [XcodeGen](https://github.com/yonaskolb/XcodeGen) via `project.yml` — the project file is
@@ -154,8 +259,11 @@ trusting this:
 - Don't paywall the Extractor or WCAG Checker. The vault is explicit that these are free/
   unlimited/no-signup forever on the web app; the iOS versions inherit that rule.
 - Don't add the other 5 web tools (Brand Kit Creator, Palette Health Score, Website
-  Analyzer, Scheme Generator, Color Picker from Image) as new tabs/screens without asking —
-  that reopens the MVP scope decision above.
+  Analyzer, Scheme Generator, Color Picker from Image) as `Tool` cases without asking —
+  that reopens the MVP scope decision above. `ToolsSheet` makes adding one mechanically
+  trivial, which is exactly why the restraint has to be deliberate.
+- Don't reintroduce a tab bar or a separate upload/landing screen. The app opens on the
+  user's palette by design — see "One palette, many tools" above.
 - Don't invent or hand-calculate WCAG contrast ratios in code comments, sample data, or
   docs — always route through `ContrastCalculator`, same rule the web app's content follows.
 - Don't hardcode brand hex values or font names outside `DesignSystem/` — extend
