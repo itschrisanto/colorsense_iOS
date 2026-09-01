@@ -1,5 +1,4 @@
 import SwiftUI
-import Photos
 
 /// Builds the shareable representations of a palette offered by the Extractor's Export menu.
 /// Everything here is generated on-device — exporting never touches the network.
@@ -29,38 +28,10 @@ enum PaletteExportService {
         uiImage(for: palette).map(Image.init(uiImage:))
     }
 
-    /// Writes the rendered palette into the user's photo library. Requests add-only access —
-    /// the app never needs to read the library, only contribute to it.
-    @MainActor
-    static func saveToPhotos(_ palette: ExtractedPalette) async -> Result<Void, SaveError> {
-        guard let data = uiImage(for: palette)?.pngData() else { return .failure(.renderFailed) }
-
-        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-        guard status == .authorized || status == .limited else { return .failure(.notPermitted) }
-
-        do {
-            try await PHPhotoLibrary.shared().performChanges {
-                PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
-            }
-            return .success(())
-        } catch {
-            return .failure(.writeFailed)
-        }
-    }
-
-    enum SaveError: Error {
-        case renderFailed
-        case notPermitted
-        case writeFailed
-
-        var message: String {
-            switch self {
-            case .renderFailed: return "Couldn't render the palette."
-            case .notPermitted: return "Allow photo access in Settings to save palettes."
-            case .writeFailed: return "Couldn't save the palette."
-            }
-        }
-    }
+    // There is deliberately no save-to-Photos of our own: the system share sheet already offers
+    // Save Image alongside AirDrop, Messages and Copy, so a dedicated item duplicated it with
+    // strictly fewer capabilities — and dropping it also drops a photo-library add permission
+    // the app no longer has to ask for.
 
     /// The band stack as it appears when exported. Kept separate from `ExtractorView` so the
     /// shared image has fixed dimensions instead of inheriting whatever the screen happens to be.

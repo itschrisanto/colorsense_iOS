@@ -121,16 +121,6 @@ struct RootView: View {
                     }
                 }
                 Button {
-                    Task {
-                        switch await PaletteExportService.saveToPhotos(store.palette) {
-                        case .success: showToast("Saved to Photos")
-                        case .failure(let error): showToast(error.message)
-                        }
-                    }
-                } label: {
-                    Label("Save image to Photos", systemImage: "photo.badge.arrow.down")
-                }
-                Button {
                     UIPasteboard.general.string = PaletteExportService.hexList(store.palette)
                     showToast("Hex codes copied")
                 } label: {
