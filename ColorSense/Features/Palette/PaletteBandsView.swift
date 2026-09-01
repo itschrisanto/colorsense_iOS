@@ -8,6 +8,9 @@ struct PaletteBandsView: View {
     let onToggleLock: (PaletteColor.ID) -> Void
     let onOpenDetail: (PaletteColor) -> Void
 
+    /// Hex of the swatch most recently copied, so its button can confirm with a checkmark.
+    @State private var copiedHex: String?
+
     var body: some View {
         VStack(spacing: 0) {
             ForEach(palette.colors) { swatch in
@@ -26,6 +29,18 @@ struct PaletteBandsView: View {
                     .opacity(0.75)
             }
             Spacer()
+
+            Button {
+                copy(swatch)
+            } label: {
+                Image(systemName: copiedHex == swatch.hex ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 17))
+                    .opacity(copiedHex == swatch.hex ? 1 : 0.55)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Copy \(swatch.hex)")
 
             Button {
                 onToggleLock(swatch.id)
@@ -50,6 +65,17 @@ struct PaletteBandsView: View {
         .onTapGesture { onOpenDetail(swatch) }
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: "Show color details") { onOpenDetail(swatch) }
+    }
+
+    private func copy(_ swatch: PaletteColor) {
+        UIPasteboard.general.string = swatch.hex
+        withAnimation(.easeOut(duration: 0.15)) { copiedHex = swatch.hex }
+        Task {
+            try? await Task.sleep(for: .seconds(1.4))
+            withAnimation(.easeOut(duration: 0.2)) {
+                if copiedHex == swatch.hex { copiedHex = nil }
+            }
+        }
     }
 }
 

@@ -39,8 +39,9 @@ targets:
         CFBundleDisplayName: ColorSense
         UILaunchScreen: {}
         ITSAppUsesNonExemptEncryption: false
-        NSCameraUsageDescription: "ColorSense needs camera access so you can extract colors from a photo you take."
-        NSPhotoLibraryUsageDescription: "ColorSense needs photo library access so you can extract colors from your images."
+        # No camera or photo-library usage strings: the app has no camera code, and PhotosPicker
+        # runs out of process so it needs no library permission. Add them back only alongside
+        # code that actually requires them — unused permission strings invite review questions.
         CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
         UIAppFonts:
           - BebasNeue-Regular.ttf

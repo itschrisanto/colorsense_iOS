@@ -15,6 +15,9 @@ struct RootView: View {
     @State private var isExtracting = false
     @State private var detailSwatch: PaletteColor?
     @State private var toast: String?
+    /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
+    /// also fire on extraction, which resets it to zero — a change, but not a tap.
+    @State private var generateTaps = 0
 
     var body: some View {
         NavigationStack {
@@ -49,6 +52,9 @@ struct RootView: View {
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(swatch: swatch)
         }
+        // A soft tap on Generate: the whole screen recolours at once, and a light physical
+        // confirmation makes that land as something you did rather than something that happened.
+        .sensoryFeedback(.impact(flexibility: .soft), trigger: generateTaps)
     }
 
     // MARK: - Chrome
@@ -76,7 +82,10 @@ struct RootView: View {
             .frame(maxWidth: .infinity)
             .accessibilityLabel("Extract colors from a photo")
 
-            DockButton("arrow.triangle.2.circlepath", label: "Generate") { store.generate() }
+            DockButton("arrow.triangle.2.circlepath", label: "Generate") {
+                store.generate()
+                generateTaps += 1
+            }
 
             DockButton("person.circle", label: "Account") { accountIsPresented = true }
         }
