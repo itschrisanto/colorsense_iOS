@@ -43,6 +43,14 @@ targets:
         # runs out of process so it needs no library permission. Add them back only alongside
         # code that actually requires them — unused permission strings invite review questions.
         CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
+        # OAuth callback scheme. Clerk's iOS SDK defaults its redirect to
+        # "<bundle id>://callback", so the app has to own that scheme or the browser has
+        # nothing to hand the result back to. The same URL must also be listed as an
+        # authorized redirect URI on the Clerk instance.
+        CFBundleURLTypes:
+          - CFBundleURLName: online.colorsense.ios
+            CFBundleURLSchemes:
+              - online.colorsense.ios
         UIAppFonts:
           - BebasNeue-Regular.ttf
           - DMSans-Regular.ttf

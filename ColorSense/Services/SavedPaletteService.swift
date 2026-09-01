@@ -34,7 +34,52 @@ enum SavedPaletteService {
         let colors: [String]
     }
 
-    static func save(_ palette: ExtractedPalette, name: String? = nil) async -> Result<Void, SaveError> {
+    /// One row of `GET /saved-palettes`, matching the `SavedPalette` interface in the web
+    /// client's lib/savedPalettes.ts.
+    struct SavedPalette: Identifiable, Decodable, Equatable {
+        let id: Int
+        let name: String
+        let colors: [String]
+        let createdAt: String
+
+        /// The stored hexes as palette swatches. Dominance is not persisted server-side — the
+        /// web app stores colours only — so an even split is the honest reconstruction.
+        var paletteColors: [PaletteColor] {
+            let share = colors.isEmpty ? 0 : 1.0 / Double(colors.count)
+            return colors.compactMap { hex in
+                guard let value = UInt32(hex.replacingOccurrences(of: "#", with: ""), radix: 16)
+                else { return nil }
+                return PaletteColor(hex: value, dominance: share)
+            }
+        }
+
+        var asExtractedPalette: ExtractedPalette {
+            ExtractedPalette(colors: paletteColors, createdAt: Date())
+        }
+    }
+
+    private struct ListResponse: Decodable {
+        let palettes: [SavedPalette]
+    }
+
+    /// Fetches the signed-in user's saved palettes — the same list the web app's Library shows.
+    static func list() async -> Result<[SavedPalette], SaveError> {
+        await authorizedRequest(path: "saved-palettes", method: "GET") { data in
+            (try? JSONDecoder().decode(ListResponse.self, from: data))?.palettes ?? []
+        }
+    }
+
+    static func delete(id: Int) async -> Result<Void, SaveError> {
+        await authorizedRequest(path: "saved-palettes/\(id)", method: "DELETE") { _ in () }
+    }
+
+    /// Shared token-fetch, request and status handling for the saved-palette endpoints.
+    private static func authorizedRequest<T>(
+        path: String,
+        method: String,
+        body: Data? = nil,
+        decode: @escaping (Data) -> T
+    ) async -> Result<T, SaveError> {
         // Clerk.shared is actor-isolated, so reading the session has to be awaited.
         guard let session = await Clerk.shared.session else { return .failure(.notSignedIn) }
 
@@ -46,28 +91,37 @@ enum SavedPaletteService {
         }
         guard let token else { return .failure(.unauthorized) }
 
-        var request = URLRequest(url: AppConfig.apiBaseURL.appendingPathComponent("saved-palettes"))
-        request.httpMethod = "POST"
+        var request = URLRequest(url: AppConfig.apiBaseURL.appendingPathComponent(path))
+        request.httpMethod = method
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let body = SaveRequest(
-            name: name ?? defaultName(),
-            colors: palette.colors.map { $0.hex.uppercased() }
-        )
-        request.httpBody = try? JSONEncoder().encode(body)
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = body
+        }
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { return .failure(.rejected(status: 0)) }
             switch http.statusCode {
-            case 200..<300: return .success(())
+            case 200..<300: return .success(decode(data))
             case 401: return .failure(.unauthorized)
             default: return .failure(.rejected(status: http.statusCode))
             }
         } catch {
             return .failure(.offline)
         }
+    }
+
+    static func save(_ palette: ExtractedPalette, name: String? = nil) async -> Result<Void, SaveError> {
+        let body = SaveRequest(
+            name: name ?? defaultName(),
+            colors: palette.colors.map { $0.hex.uppercased() }
+        )
+        return await authorizedRequest(
+            path: "saved-palettes",
+            method: "POST",
+            body: try? JSONEncoder().encode(body)
+        ) { _ in () }
     }
 
     /// Mirrors the server's own fallback (`Palette of <date>`) so a palette saved from iOS is

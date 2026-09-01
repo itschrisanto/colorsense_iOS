@@ -28,6 +28,29 @@ enum AppConfig {
         return key
     }
 
+    /// Clerk's Frontend API is reached through the web app's own reverse proxy rather than the
+    /// host encoded in the publishable key.
+    ///
+    /// `clerk.colorsense.online` — the key's own host — does not complete a TLS handshake from
+    /// any client tested (iOS, and macOS on two TLS stacks): the connection opens and the server
+    /// answers with a protocol-version alert. The web app is unaffected because ClerkJS is
+    /// configured to proxy through `colorsense.online/api/__clerk`, which serves the real
+    /// environment. iOS has to be pointed at the same proxy or `Clerk.environment` never loads,
+    /// and `AuthView` then renders a sign-in form with no fields in it.
+    ///
+    /// If the custom domain's certificate is ever fixed, this can go away — but while the web
+    /// depends on the proxy, iOS should use it too, so both platforms fail and recover together.
+    static var clerkProxyURL: String {
+        if
+            let override = Bundle.main.object(forInfoDictionaryKey: "CLERK_PROXY_URL") as? String,
+            !override.isEmpty,
+            override != "$(CLERK_PROXY_URL)"
+        {
+            return override
+        }
+        return "https://colorsense.online/api/__clerk"
+    }
+
     /// Base for the ColorSense API, which backs account-saved palettes. Overridable from
     /// Secrets.xcconfig (`API_BASE_URL`) so a local api-server can be pointed at during
     /// development; defaults to production. The web client uses a same-origin relative path,

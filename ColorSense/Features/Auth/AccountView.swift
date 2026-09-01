@@ -9,6 +9,7 @@ struct AccountView: View {
     @Environment(Clerk.self) private var clerk
     @Environment(\.dismiss) private var dismiss
     @State private var authIsPresented = false
+    @State private var savedPalettesArePresented = false
 
     var body: some View {
         NavigationStack {
@@ -27,6 +28,30 @@ struct AccountView: View {
                 .prefetchClerkImages()
                 .padding(.horizontal)
 
+                // Saved palettes live behind the account because that is what they belong to,
+                // and it mirrors where the web app puts its Library. Hidden when signed out —
+                // there is nothing to show and no token to fetch it with.
+                if clerk.user != nil {
+                    Button {
+                        savedPalettesArePresented = true
+                    } label: {
+                        HStack {
+                            Label("Saved palettes", systemImage: "bookmark")
+                                .font(BrandFont.ui(16))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                }
+
                 Spacer()
             }
             .padding(.top, 40)
@@ -39,6 +64,9 @@ struct AccountView: View {
             }
             .sheet(isPresented: $authIsPresented) {
                 AuthView()
+            }
+            .sheet(isPresented: $savedPalettesArePresented) {
+                SavedPalettesView()
             }
         }
     }
