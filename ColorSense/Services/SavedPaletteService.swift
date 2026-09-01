@@ -73,6 +73,19 @@ enum SavedPaletteService {
         await authorizedRequest(path: "saved-palettes/\(id)", method: "DELETE") { _ in () }
     }
 
+    private struct MeResponse: Decodable {
+        struct User: Decodable { let plan: String? }
+        let user: User
+    }
+
+    /// The signed-in user's effective plan from `GET /api/me`. The server recomputes this per
+    /// request so trial and voucher Pro grants lapse without a cron job — don't cache it.
+    static func currentPlan() async -> Result<String?, SaveError> {
+        await authorizedRequest(path: "me", method: "GET") { data in
+            (try? JSONDecoder().decode(MeResponse.self, from: data))?.user.plan
+        }
+    }
+
     /// Shared token-fetch, request and status handling for the saved-palette endpoints.
     private static func authorizedRequest<T>(
         path: String,
