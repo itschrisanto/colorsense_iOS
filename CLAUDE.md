@@ -49,10 +49,16 @@ build/run, not just "code looks right" — three actual bugs were found and fixe
    so `configure()` succeeds locally. Sign-in will still fail once it tries to actually
    reach that fake host — which is correct, since there's no real key yet.
 
-Not yet done: the real `CLERK_PUBLISHABLE_KEY` has never been set (still the local
-placeholder in `Config/Secrets.xcconfig`), so sign-in itself is unverified. Bebas
-Neue/DM Sans font files are still not in the repo (see "Fonts" below), so the simulator
-screenshot shows system-font fallback, not the real brand type.
+Since then (all verified on a physical iPhone 17 Pro Max, iOS 26.6.1): the real production
+`CLERK_PUBLISHABLE_KEY` is set, email sign-in works, saving a palette to the account works and
+shows up on colorsense.online, the brand fonts are in, and the app icon is wired.
+
+Still open:
+- **Google sign-in** — blocked on allowlisting `online.colorsense.ios://callback`, which needs
+  Clerk dashboard access (see "Auth" below). Email sign-in is unaffected.
+- **`clerk.colorsense.online` fails TLS** — worked around by the proxy on both platforms, but
+  worth a Clerk support ticket. See "Auth" below.
+- **No StoreKit**, so Subscription is read-only and the web's AI-harmonies Pro button is absent.
 
 ## Scoping decisions (locked in 2026-09-02)
 
@@ -281,11 +287,14 @@ installed, `Config/Secrets.xcconfig` exists (copied from the `.example`, still h
 dashboard before auth will actually work), and `xcodegen generate` has produced a working
 `ColorSense.xcodeproj` in this location.
 
-Still outstanding: confirm Swift Package resolution (Clerk SDK) completes cleanly here,
-then do a real `xcodebuild` and run in a simulator. If setting this up again on a
-different machine, repeat: install Xcode from the App Store, install Homebrew, `brew
-install xcodegen`, copy the secrets file, `xcodegen generate`, `open ColorSense.xcodeproj`
-— and do it on local disk, not inside a synced folder (see "Location" above).
+If setting this up again on a different machine, repeat: install Xcode from the App Store,
+install Homebrew, `brew install xcodegen`, copy the secrets file, `xcodegen generate`,
+`open ColorSense.xcodeproj` — and do it on local disk, not inside a synced folder (see
+"Location" above).
+
+`Config/Secrets.xcconfig` (gitignored) now carries three values: `CLERK_PUBLISHABLE_KEY`
+(production, `pk_live_…`, the same key colorsense.online serves), `DEVELOPMENT_TEAM` for device
+signing, and optionally `API_BASE_URL` / `CLERK_PROXY_URL` to point at a local api-server.
 
 ## Fonts (done 2026-09-02)
 
@@ -324,6 +333,58 @@ trusting this:
   when signed out.
 - Clerk SDK's own minimum deployment target is iOS 17, which is part of why this project's
   deployment target is 17.0.
+
+### The Clerk tenant is Replit-managed (learned 2026-09-02)
+
+There is no standalone ColorSense Clerk account. Replit provisions the instance and injects
+`CLERK_SECRET_KEY` / `CLERK_PUBLISHABLE_KEY` / `VITE_CLERK_PUBLISHABLE_KEY`; Google sign-in was
+enabled through Replit's workspace Auth pane, not a Clerk dashboard. Signing in to
+dashboard.clerk.com with a personal email just creates a new, empty org — that is not the
+ColorSense tenant. Dashboard access requires an active Replit Pro subscription.
+
+**Never create a separate Clerk application or swap the publishable key.** That disconnects iOS
+from the production user store, and every existing account with it.
+
+Development and Production have **separate user stores**. iOS uses the production key, which is
+the same one colorsense.online serves — so the two share accounts, which is the point.
+
+### Sign-in goes through the web app's proxy, not the key's own host
+
+`clerk.colorsense.online` — the host encoded in the publishable key — **does not complete a TLS
+handshake**. TCP connects, then the server answers with a protocol-version alert. Reproduced from
+iOS (`-9824`) and macOS/LibreSSL (`tlsv1 alert protocol version`), on two networks, Wi-Fi and
+cellular. DNS is fine; it CNAMEs correctly through `frontend-api.clerk.services`. This reads as a
+custom domain whose certificate was never provisioned.
+
+The web app is unaffected because ClerkJS is configured with `proxyUrl`, routing through
+`colorsense.online/api/__clerk` (`clerkProxyMiddleware()` in the api-server). iOS does the same
+via `Clerk.Options(proxyUrl:)` — see `AppConfig.clerkProxyURL`.
+
+Symptom if this ever regresses: `AuthView` renders its header and **no form fields at all**.
+`AuthStartView` derives every field from `clerk.environment?.enabledFirstFactorAttributes`, so a
+nil environment silently produces an empty sign-in screen rather than an error.
+
+### OAuth redirect
+
+Clerk's iOS SDK defaults its redirect to `{bundleIdentifier}://callback` — for us,
+`online.colorsense.ios://callback`. Two halves, and both are required:
+
+1. The app owns the scheme (`CFBundleURLTypes` in `project.yml`) — done.
+2. The URL is allowlisted on the Clerk instance — **not** done; needs dashboard access.
+
+Until (2), Google sign-in errors with "does not match an authorized redirect URI". Email-code
+sign-in is unaffected and lands in the *same* account, because Clerk matches users by email —
+verified by signing in with email on iOS and finding palettes saved earlier from the web.
+
+There is no public API to hide a single social provider from `AuthView`; providers come straight
+from the environment. Hiding the Google button would mean replacing `AuthView` with a custom
+email-only screen built on ClerkKit's lower-level API.
+
+### API calls need an explicit bearer token
+
+The web relies on Clerk session cookies. Mobile does not — every call to the ColorSense API must
+attach `Authorization: Bearer <session token>` from `session.getToken()`. `SavedPaletteService`
+does this in one shared helper; route new endpoints through it rather than repeating it.
 
 ## What NOT to do without asking
 
