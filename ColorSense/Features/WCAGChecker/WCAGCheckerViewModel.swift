@@ -48,6 +48,16 @@ final class WCAGCheckerViewModel {
 
     var normalTextLevel: ContrastCalculator.Level { ContrastCalculator.normalTextLevel(for: ratio) }
     var largeTextLevel: ContrastCalculator.Level { ContrastCalculator.largeTextLevel(for: ratio) }
+
+    /// The same plain-language grade the colour detail card shows, so one pairing doesn't get
+    /// described two different ways in two places.
+    var rating: ContrastCalculator.Rating { ContrastCalculator.rating(for: ratio) }
+
+    func swap() {
+        let previousForeground = foreground
+        foreground = background
+        background = previousForeground
+    }
 }
 
 extension Color {
