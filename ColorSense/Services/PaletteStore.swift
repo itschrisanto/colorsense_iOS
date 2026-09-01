@@ -11,6 +11,14 @@ import Observation
 @MainActor
 @Observable
 final class PaletteStore {
+    static let maximumColorCount = 8
+    static let minimumColorCount = 1
+
+    struct Removal {
+        let swatch: PaletteColor
+        let index: Int
+    }
+
     private(set) var palette: ExtractedPalette
     /// True when the user has only ever seen the default palette, so the UI can invite them to
     /// extract from a photo without resorting to an empty state.
@@ -25,7 +33,7 @@ final class PaletteStore {
             palette = .sample
             isShowingDefault = false
         } else if let stored = Self.load(from: self.fileURL) {
-            palette = stored
+            palette = Self.normalized(stored)
             isShowingDefault = false
         } else {
             palette = .brandDefault
@@ -35,7 +43,7 @@ final class PaletteStore {
 
     /// Replaces the palette with a freshly extracted one, resetting the generation run.
     func replace(with palette: ExtractedPalette) {
-        self.palette = palette
+        self.palette = Self.normalized(palette)
         isShowingDefault = false
         persist()
     }
@@ -66,6 +74,36 @@ final class PaletteStore {
         persist()
     }
 
+    @discardableResult
+    func insert(_ swatch: PaletteColor, at requestedIndex: Int) -> Bool {
+        guard palette.colors.count < Self.maximumColorCount else { return false }
+        let index = min(max(requestedIndex, 0), palette.colors.count)
+        palette.colors.insert(swatch, at: index)
+        palette.anchors.insert(swatch, at: min(index, palette.anchors.count))
+        palette.generation = 0
+        isShowingDefault = false
+        persist()
+        return true
+    }
+
+    @discardableResult
+    func remove(swatchID: PaletteColor.ID) -> Removal? {
+        guard palette.colors.count > Self.minimumColorCount,
+              let index = palette.colors.firstIndex(where: { $0.id == swatchID })
+        else { return nil }
+
+        let swatch = palette.colors.remove(at: index)
+        if palette.anchors.indices.contains(index) { palette.anchors.remove(at: index) }
+        palette.generation = 0
+        isShowingDefault = false
+        persist()
+        return Removal(swatch: swatch, index: index)
+    }
+
+    func restore(_ removal: Removal) {
+        _ = insert(removal.swatch, at: removal.index)
+    }
+
     // MARK: - Persistence
 
     private static var defaultFileURL: URL {
@@ -77,6 +115,17 @@ final class PaletteStore {
     private static func load(from url: URL) -> ExtractedPalette? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(ExtractedPalette.self, from: data)
+    }
+
+    private static func normalized(_ palette: ExtractedPalette) -> ExtractedPalette {
+        let colors = Array(palette.colors.prefix(maximumColorCount))
+        let anchors = Array(palette.anchors.prefix(maximumColorCount))
+        return ExtractedPalette(
+            colors: colors,
+            createdAt: palette.createdAt,
+            anchors: anchors.isEmpty ? colors : anchors,
+            generation: palette.generation
+        )
     }
 
     private func persist() {

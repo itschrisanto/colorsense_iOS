@@ -60,6 +60,12 @@ struct AccountView: View {
             }
             .sheet(isPresented: $authIsPresented) {
                 AuthView()
+                    // The Clerk dashboard logo is a light-only bitmap with an opaque white
+                    // canvas. Drawing the mark locally keeps it crisp and transparent in both
+                    // appearances, while leaving Clerk's auth flow and provider buttons intact.
+                    .clerkAppIconView {
+                        ColorSenseAuthLogo()
+                    }
             }
             .sheet(item: $route) { destination in
                 switch destination {
@@ -193,6 +199,38 @@ struct AccountView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// The four-tile ColorSense mark used above Clerk's authentication form.
+///
+/// This intentionally has no background so it blends into both Light and Dark Mode. At 53 points
+/// it is slightly larger than ClerkKitUI's 44-point default logo slot without competing with the
+/// authentication heading.
+private struct ColorSenseAuthLogo: View {
+    private let tileSize: CGFloat = 24
+    private let spacing: CGFloat = 5
+
+    var body: some View {
+        VStack(spacing: spacing) {
+            HStack(spacing: spacing) {
+                tile(BrandColor.coral)
+                tile(BrandColor.teal)
+            }
+            HStack(spacing: spacing) {
+                tile(BrandColor.yellow)
+                tile(BrandColor.purple)
+            }
+        }
+        .padding(.bottom, 24)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("ColorSense")
+    }
+
+    private func tile(_ color: Color) -> some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(color)
+            .frame(width: tileSize, height: tileSize)
     }
 }
 

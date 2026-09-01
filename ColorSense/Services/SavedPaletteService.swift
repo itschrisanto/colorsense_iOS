@@ -56,6 +56,32 @@ enum SavedPaletteService {
         var asExtractedPalette: ExtractedPalette {
             ExtractedPalette(colors: paletteColors, createdAt: Date())
         }
+
+        /// A named one-swatch palette is the backward-compatible account representation of a
+        /// reusable color. It stays visible to the existing web and iOS libraries without a
+        /// second storage system or API migration.
+        var savedColor: SavedColor? {
+            guard paletteColors.count == 1, let swatch = paletteColors.first else { return nil }
+            return SavedColor(
+                id: id,
+                name: name,
+                swatch: PaletteColor(
+                    red: swatch.red,
+                    green: swatch.green,
+                    blue: swatch.blue,
+                    dominance: 1,
+                    customName: name
+                ),
+                createdAt: createdAt
+            )
+        }
+    }
+
+    struct SavedColor: Identifiable, Equatable {
+        let id: Int
+        let name: String
+        let swatch: PaletteColor
+        let createdAt: String
     }
 
     private struct ListResponse: Decodable {
@@ -67,6 +93,10 @@ enum SavedPaletteService {
         await authorizedRequest(path: "saved-palettes", method: "GET") { data in
             (try? JSONDecoder().decode(ListResponse.self, from: data))?.palettes ?? []
         }
+    }
+
+    static func listColors() async -> Result<[SavedColor], SaveError> {
+        await list().map { palettes in palettes.compactMap(\.savedColor) }
     }
 
     static func delete(id: Int) async -> Result<Void, SaveError> {
@@ -129,6 +159,19 @@ enum SavedPaletteService {
         let body = SaveRequest(
             name: name ?? defaultName(),
             colors: palette.colors.map { $0.hex.uppercased() }
+        )
+        return await authorizedRequest(
+            path: "saved-palettes",
+            method: "POST",
+            body: try? JSONEncoder().encode(body)
+        ) { _ in () }
+    }
+
+    static func save(_ swatch: PaletteColor, name: String) async -> Result<Void, SaveError> {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = SaveRequest(
+            name: trimmedName.isEmpty ? swatch.name : trimmedName,
+            colors: [swatch.hex.uppercased()]
         )
         return await authorizedRequest(
             path: "saved-palettes",

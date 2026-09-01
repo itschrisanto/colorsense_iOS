@@ -14,7 +14,9 @@ struct RootView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var isExtracting = false
     @State private var detailSwatch: PaletteColor?
+    @State private var addColorDestination: AddColorDestination?
     @State private var toast: String?
+    @State private var pendingRemoval: PaletteStore.Removal?
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
@@ -24,6 +26,17 @@ struct RootView: View {
             PaletteBandsView(
                 palette: store.palette,
                 onToggleLock: { store.toggleLock(for: $0) },
+                onAddColor: { index in
+                    guard store.palette.colors.count < PaletteStore.maximumColorCount else {
+                        showToast("A palette can contain up to 8 colors")
+                        return
+                    }
+                    addColorDestination = AddColorDestination(
+                        index: index,
+                        suggestedSwatch: suggestedColor(at: index)
+                    )
+                },
+                onDelete: { removeColor($0) },
                 onOpenDetail: { detailSwatch = $0 }
             )
                 .overlay { if isExtracting { extractingOverlay } }
@@ -51,6 +64,12 @@ struct RootView: View {
         }
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(swatch: swatch)
+        }
+        .sheet(item: $addColorDestination) { destination in
+            AddColorView(
+                insertionIndex: destination.index,
+                initialSwatch: destination.suggestedSwatch
+            )
         }
         // A soft tap on Generate: the whole screen recolours at once, and a light physical
         // confirmation makes that land as something you did rather than something that happened.
@@ -159,8 +178,15 @@ struct RootView: View {
 
     /// Brief confirmation for actions with no visible result of their own, like saving to Photos.
     private func toastView(_ message: String) -> some View {
-        Text(message)
-            .font(BrandFont.ui(14, weight: .medium))
+        HStack(spacing: 12) {
+            Text(message)
+                .font(BrandFont.ui(14, weight: .medium))
+            if pendingRemoval != nil {
+                Button("Undo") { undoRemoval() }
+                    .font(BrandFont.ui(14, weight: .bold))
+                    .foregroundStyle(BrandColor.coral)
+            }
+        }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(.ultraThinMaterial, in: Capsule())
@@ -170,11 +196,17 @@ struct RootView: View {
             .transition(.move(edge: .top).combined(with: .opacity))
     }
 
-    private func showToast(_ message: String) {
+    private func showToast(_ message: String, removal: PaletteStore.Removal? = nil) {
+        pendingRemoval = removal
         withAnimation(.snappy) { toast = message }
         Task {
             try? await Task.sleep(for: .seconds(2.2))
-            withAnimation(.snappy) { if toast == message { toast = nil } }
+            withAnimation(.snappy) {
+                if toast == message {
+                    toast = nil
+                    pendingRemoval = nil
+                }
+            }
         }
     }
 
@@ -212,6 +244,47 @@ struct RootView: View {
             }
         }
     }
+
+    private func removeColor(_ swatchID: PaletteColor.ID) {
+        guard let removal = store.remove(swatchID: swatchID) else { return }
+        showToast("Color removed", removal: removal)
+    }
+
+    /// Start the editor with a color related to the seam the user tapped instead of always
+    /// presenting the brand coral. It is only a suggestion; the wheel and hex field remain the
+    /// source of truth for what is inserted.
+    private func suggestedColor(at requestedIndex: Int) -> PaletteColor {
+        let colors = store.palette.colors
+        let index = min(max(requestedIndex, 0), colors.count)
+
+        if index > 0, index < colors.count {
+            let before = colors[index - 1]
+            let after = colors[index]
+            return PaletteColor(
+                red: (before.red + after.red) / 2,
+                green: (before.green + after.green) / 2,
+                blue: (before.blue + after.blue) / 2,
+                dominance: 0
+            )
+        }
+
+        if index > 0 { return colors[index - 1] }
+        if let first = colors.first { return first }
+        return PaletteColor(hex: 0x808080, dominance: 0)
+    }
+
+    private func undoRemoval() {
+        guard let pendingRemoval else { return }
+        store.restore(pendingRemoval)
+        withAnimation(.snappy) { toast = nil }
+        self.pendingRemoval = nil
+    }
+}
+
+private struct AddColorDestination: Identifiable {
+    let index: Int
+    let suggestedSwatch: PaletteColor
+    var id: Int { index }
 }
 
 /// Dock glyphs normalised into one box.
@@ -231,7 +304,7 @@ private struct DockIcon: View {
     /// dock, threshold the dark pixels, and compare each glyph's bounding-box centre.
     var opticalOffset: CGFloat = 0
 
-    init(_ systemName: String, size: CGFloat = 21, opticalOffset: CGFloat = 0) {
+    nonisolated init(_ systemName: String, size: CGFloat = 21, opticalOffset: CGFloat = 0) {
         self.systemName = systemName
         self.size = size
         self.opticalOffset = opticalOffset

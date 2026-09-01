@@ -144,4 +144,111 @@ struct PaletteStoreTests {
         store.toggleLock(for: id)
         #expect(!store.palette.colors[0].isLocked)
     }
+
+    @Test func insertingAtASeamPersistsTheColorAndItsCustomName() {
+        let (store, url) = temporaryStore()
+        store.replace(with: .sample)
+        let savedColor = PaletteColor(hex: 0x123456, dominance: 0, customName: "Deep Harbor")
+
+        #expect(store.insert(savedColor, at: 2))
+        #expect(store.palette.colors[2].hex == "#123456")
+        #expect(store.palette.colors[2].name == "Deep Harbor")
+        #expect(store.palette.anchors[2].hex == "#123456")
+
+        let relaunched = PaletteStore(fileURL: url)
+        #expect(relaunched.palette.colors[2].name == "Deep Harbor")
+    }
+
+    @Test func paletteCannotGrowPastEightColors() {
+        let (store, _) = temporaryStore()
+        store.replace(with: .sample)
+
+        while store.palette.colors.count < PaletteStore.maximumColorCount {
+            #expect(store.insert(PaletteColor(hex: 0xABCDEF, dominance: 0), at: 1))
+        }
+
+        #expect(store.palette.colors.count == 8)
+        #expect(!store.insert(PaletteColor(hex: 0x111111, dominance: 0), at: 1))
+        #expect(store.palette.colors.count == 8)
+    }
+
+    @Test func oversizedImportedPaletteIsClampedToTheWorkspaceLimit() {
+        let (store, _) = temporaryStore()
+        let colors = (0..<10).map { index in
+            PaletteColor(hex: UInt32(index * 0x111111), dominance: 0.1)
+        }
+
+        store.replace(with: ExtractedPalette(colors: colors, createdAt: Date()))
+
+        #expect(store.palette.colors.count == PaletteStore.maximumColorCount)
+        #expect(store.palette.anchors.count == PaletteStore.maximumColorCount)
+    }
+
+    @Test func removingAndRestoringAColorKeepsItsPosition() {
+        let (store, _) = temporaryStore()
+        store.replace(with: .sample)
+        let target = store.palette.colors[2]
+
+        let removal = store.remove(swatchID: target.id)
+        #expect(removal?.index == 2)
+        #expect(store.palette.colors.count == 4)
+        #expect(store.palette.anchors.count == 4)
+
+        if let removal { store.restore(removal) }
+        #expect(store.palette.colors[2].hex == target.hex)
+        #expect(store.palette.colors.count == 5)
+    }
+
+    @Test func finalColorCannotBeRemoved() {
+        let (store, _) = temporaryStore()
+        store.replace(
+            with: ExtractedPalette(
+                colors: [PaletteColor(hex: 0xFF6B6B, dominance: 1)],
+                createdAt: Date()
+            )
+        )
+
+        #expect(store.remove(swatchID: store.palette.colors[0].id) == nil)
+        #expect(store.palette.colors.count == PaletteStore.minimumColorCount)
+    }
+}
+
+struct SavedColorTests {
+    @Test func oneSwatchSavedPaletteBecomesAReusableNamedColor() {
+        let saved = SavedPaletteService.SavedPalette(
+            id: 42,
+            name: "Product Coral",
+            colors: ["#FF6B6B"],
+            createdAt: "2026-09-02"
+        )
+
+        #expect(saved.savedColor?.name == "Product Coral")
+        #expect(saved.savedColor?.swatch.name == "Product Coral")
+        #expect(saved.savedColor?.swatch.hex == "#FF6B6B")
+    }
+
+    @Test func multiSwatchSavedPaletteDoesNotMasqueradeAsAColor() {
+        let saved = SavedPaletteService.SavedPalette(
+            id: 43,
+            name: "Brand palette",
+            colors: ["#FF6B6B", "#4ECDC4"],
+            createdAt: "2026-09-02"
+        )
+
+        #expect(saved.savedColor == nil)
+    }
+}
+
+struct PaletteColorHexParsingTests {
+    @Test func acceptsCommonSixDigitHexFormats() {
+        #expect(PaletteColor(hexString: "#FF6B6B", dominance: 0)?.hex == "#FF6B6B")
+        #expect(PaletteColor(hexString: "4ecdc4", dominance: 0)?.hex == "#4ECDC4")
+        #expect(PaletteColor(hexString: "  0xFFD93D  ", dominance: 0)?.hex == "#FFD93D")
+    }
+
+    @Test func rejectsIncompleteOrMalformedHexValues() {
+        #expect(PaletteColor(hexString: "#FFF", dominance: 0) == nil)
+        #expect(PaletteColor(hexString: "#GGGGGG", dominance: 0) == nil)
+        #expect(PaletteColor(hexString: "#12345678", dominance: 0) == nil)
+    }
 }

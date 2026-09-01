@@ -11,25 +11,38 @@ struct PaletteColor: Identifiable, Equatable, Codable {
     /// Closest Name That Color match, e.g. "Shuttle Gray". Resolved once here rather than as a
     /// computed property, since naming scans the whole 1,566-entry dataset and SwiftUI would
     /// otherwise redo that scan on every body evaluation.
-    let name: String
+    private let inferredName: String
+    /// A name supplied by the user when the color is saved to their account. Extracted and
+    /// generated colors keep using the nearest Name That Color match.
+    let customName: String?
     /// Locked swatches survive Generate untouched, and become the anchors the regenerated
     /// swatches are derived from — locking is how the user steers a run.
     var isLocked: Bool = false
 
-    init(red: Double, green: Double, blue: Double, dominance: Double, isLocked: Bool = false) {
+    init(
+        red: Double,
+        green: Double,
+        blue: Double,
+        dominance: Double,
+        isLocked: Bool = false,
+        customName: String? = nil
+    ) {
         self.red = red.clampedToUnit
         self.green = green.clampedToUnit
         self.blue = blue.clampedToUnit
         self.dominance = dominance
         self.isLocked = isLocked
-        self.name = ColorNameService.name(red: self.red, green: self.green, blue: self.blue)
+        self.inferredName = ColorNameService.name(red: self.red, green: self.green, blue: self.blue)
+        self.customName = customName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     }
 
-    /// `id` and `name` are deliberately not persisted — `id` is per-run identity for SwiftUI, and
-    /// `name` is derived, so re-resolving it on load keeps stored palettes correct if the name
-    /// dataset is ever updated.
+    var name: String { customName ?? inferredName }
+
+    /// `id` and the inferred name are deliberately not persisted — `id` is per-run identity for
+    /// SwiftUI, and the inferred name is derived. A user-supplied name is persisted so a saved
+    /// color keeps its identity when reused in the workspace.
     private enum CodingKeys: String, CodingKey {
-        case red, green, blue, dominance, isLocked
+        case red, green, blue, dominance, isLocked, customName
     }
 
     init(from decoder: Decoder) throws {
@@ -39,7 +52,8 @@ struct PaletteColor: Identifiable, Equatable, Codable {
             green: try container.decode(Double.self, forKey: .green),
             blue: try container.decode(Double.self, forKey: .blue),
             dominance: try container.decode(Double.self, forKey: .dominance),
-            isLocked: try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+            isLocked: try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false,
+            customName: try container.decodeIfPresent(String.self, forKey: .customName)
         )
     }
 
@@ -62,13 +76,60 @@ struct PaletteColor: Identifiable, Equatable, Codable {
 }
 
 extension PaletteColor {
-    init(hex: UInt32, dominance: Double, isLocked: Bool = false) {
+    init?(
+        hexString: String,
+        dominance: Double,
+        isLocked: Bool = false,
+        customName: String? = nil
+    ) {
+        var value = hexString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.hasPrefix("#") {
+            value.removeFirst()
+        } else if value.lowercased().hasPrefix("0x") {
+            value.removeFirst(2)
+        }
+
+        guard value.count == 6, let hex = UInt32(value, radix: 16) else { return nil }
+        self.init(
+            hex: hex,
+            dominance: dominance,
+            isLocked: isLocked,
+            customName: customName
+        )
+    }
+
+    init(
+        hex: UInt32,
+        dominance: Double,
+        isLocked: Bool = false,
+        customName: String? = nil
+    ) {
         self.init(
             red: Double((hex >> 16) & 0xFF) / 255,
             green: Double((hex >> 8) & 0xFF) / 255,
             blue: Double(hex & 0xFF) / 255,
             dominance: dominance,
-            isLocked: isLocked
+            isLocked: isLocked,
+            customName: customName
+        )
+    }
+
+    init(color: Color, dominance: Double = 0, customName: String? = nil) {
+        let uiColor = UIColor(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+            self.init(hex: 0x808080, dominance: dominance, customName: customName)
+            return
+        }
+        self.init(
+            red: Double(red),
+            green: Double(green),
+            blue: Double(blue),
+            dominance: dominance,
+            customName: customName
         )
     }
 
@@ -89,4 +150,8 @@ extension PaletteColor {
 
 private extension Double {
     var clampedToUnit: Double { min(max(self, 0), 1) }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

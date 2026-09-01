@@ -9,6 +9,8 @@ struct ColorDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var copiedValue: String?
+    @State private var saveColorIsPresented = false
+    @State private var savedColorName: String?
 
     private var insight: ColorInsight { ColorInsights.insight(for: swatch) }
 
@@ -25,6 +27,7 @@ struct ColorDetailView: View {
                         harmonies
                         accessibility
                         footnote
+                        saveColorButton
                     }
                     .padding(20)
                 }
@@ -37,6 +40,11 @@ struct ColorDetailView: View {
             }
             .toolbarBackground(.hidden, for: .navigationBar)
             .scrollContentBackground(.hidden)
+        }
+        .sheet(isPresented: $saveColorIsPresented) {
+            SaveColorView(swatch: swatch) { name in
+                savedColorName = name
+            }
         }
         // Translucent sheet so the palette stays visible behind the card — the color you tapped
         // reads through rather than being replaced by an opaque panel.
@@ -219,6 +227,26 @@ struct ColorDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    private var saveColorButton: some View {
+        Button {
+            saveColorIsPresented = true
+        } label: {
+            Label(
+                savedColorName.map { "Saved as \($0)" } ?? "Save color to my account",
+                systemImage: savedColorName == nil ? "bookmark" : "checkmark.circle.fill"
+            )
+            .font(BrandFont.ui(15, weight: .medium))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(savedColorName == nil ? .white : BrandColor.coral)
+        .background {
+            RoundedRectangle(cornerRadius: 13)
+                .fill(savedColorName == nil ? BrandColor.coral : BrandColor.coral.opacity(0.12))
+        }
+    }
+
     private func tint(for tone: ContrastCalculator.Rating.Tone) -> Color {
         switch tone {
         case .good: return .green
@@ -234,6 +262,119 @@ struct ColorDetailView: View {
             try? await Task.sleep(for: .seconds(1.4))
             withAnimation(.easeOut(duration: 0.2)) {
                 if copiedValue == value { copiedValue = nil }
+            }
+        }
+    }
+}
+
+private struct SaveColorView: View {
+    let swatch: PaletteColor
+    let onSaved: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @FocusState private var nameIsFocused: Bool
+
+    init(swatch: PaletteColor, onSaved: @escaping (String) -> Void) {
+        self.swatch = swatch
+        self.onSaved = onSaved
+        _name = State(initialValue: swatch.customName ?? swatch.name)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                HStack(spacing: 14) {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(swatch.color)
+                        .frame(width: 72, height: 72)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14)
+                                .strokeBorder(.primary.opacity(0.1), lineWidth: 1)
+                        }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(swatch.hex)
+                            .font(BrandFont.mono(15, weight: .medium))
+                        Text("Give this color a name you will recognize later.")
+                            .font(BrandFont.ui(13))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                TextField("Color name", text: $name)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.done)
+                    .focused($nameIsFocused)
+                    .padding(.horizontal, 14)
+                    .frame(height: 50)
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .onSubmit { save() }
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(BrandFont.ui(13))
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                Button {
+                    save()
+                } label: {
+                    Group {
+                        if isSaving {
+                            ProgressView().tint(.white)
+                        } else {
+                            Label("Save color", systemImage: "bookmark")
+                        }
+                    }
+                    .font(BrandFont.ui(15, weight: .medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .background(BrandColor.coral, in: RoundedRectangle(cornerRadius: 13))
+                .disabled(isSaving || trimmedName.isEmpty)
+                .opacity(trimmedName.isEmpty ? 0.55 : 1)
+
+                Spacer(minLength: 0)
+            }
+            .padding(20)
+            .navigationTitle("Save color")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .task { nameIsFocused = true }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func save() {
+        guard !isSaving, !trimmedName.isEmpty else { return }
+        isSaving = true
+        errorMessage = nil
+        Task {
+            switch await SavedPaletteService.save(swatch, name: trimmedName) {
+            case .success:
+                onSaved(trimmedName)
+                dismiss()
+            case .failure(.notSignedIn):
+                errorMessage = "Sign in from Account to save this color."
+                isSaving = false
+            case .failure(let error):
+                errorMessage = error.message
+                isSaving = false
             }
         }
     }
