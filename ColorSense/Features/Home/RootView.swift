@@ -14,6 +14,7 @@ struct RootView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var isExtracting = false
     @State private var detailSwatch: PaletteColor?
+    @State private var toast: String?
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,7 @@ struct RootView: View {
                 onOpenDetail: { detailSwatch = $0 }
             )
                 .overlay { if isExtracting { extractingOverlay } }
+                .overlay(alignment: .top) { if let toast { toastView(toast) } }
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 // The bands stop below the bar rather than running under it, so there is nothing
@@ -79,16 +81,16 @@ struct RootView: View {
     }
 
     /// Floating glass capsules rather than a filled bar, so the palette stays the full screen and
-    /// the controls read as sitting on top of it. Both hug their content instead of splitting the
-    /// width — two stretched slabs was the least compact arrangement available.
+    /// the controls read as sitting on top of it. Both capsules are the same width — sizing each
+    /// to its own label made the pair look accidental rather than designed.
     private var bottomBar: some View {
         HStack(spacing: 10) {
             Button { toolsArePresented = true } label: {
                 Label("Tools", systemImage: "square.grid.2x2")
                     .font(BrandFont.ui(15, weight: .medium))
                     .foregroundStyle(.primary)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
                     .background(.ultraThinMaterial, in: Capsule())
                     .overlay {
                         Capsule().strokeBorder(.primary.opacity(0.12), lineWidth: 0.5)
@@ -101,6 +103,9 @@ struct RootView: View {
             generateButton
         }
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        // Inset rather than edge-to-edge: equal halves of a narrower strip stays compact while
+        // keeping the two controls symmetrical.
+        .padding(.horizontal, 36)
         .padding(.top, 10)
         .frame(maxWidth: .infinity)
         // Continue the last swatch behind the bar instead of letting a slab of system chrome
@@ -122,8 +127,8 @@ struct RootView: View {
             Label("Generate", systemImage: "arrow.triangle.2.circlepath")
                 .font(BrandFont.ui(15, weight: .medium))
                 .foregroundStyle(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
                 .background(BrandColor.coral, in: Capsule())
         }
         .buttonStyle(.plain)
@@ -131,6 +136,16 @@ struct RootView: View {
 
     private var exportMenu: some View {
         Menu {
+            Button {
+                Task {
+                    switch await PaletteExportService.saveToPhotos(store.palette) {
+                    case .success: showToast("Palette saved to Photos")
+                    case .failure(let error): showToast(error.message)
+                    }
+                }
+            } label: {
+                Label("Save to Photos", systemImage: "square.and.arrow.down")
+            }
             Button {
                 UIPasteboard.general.string = PaletteExportService.hexList(store.palette)
             } label: {
@@ -147,9 +162,29 @@ struct RootView: View {
                 }
             }
         } label: {
-            // Nudged down because the share glyph's arrow extends above its baseline box, so
-            // centering it against the other toolbar icons leaves it visibly high.
-            ToolbarIcon("square.and.arrow.up", baselineNudge: 1)
+            // Measured 1pt low against the photo glyph even after scaling both to one box.
+            ToolbarIcon("square.and.arrow.up", opticalOffset: -1)
+        }
+    }
+
+    /// Brief confirmation for actions with no visible result of their own, like saving to Photos.
+    private func toastView(_ message: String) -> some View {
+        Text(message)
+            .font(BrandFont.ui(14, weight: .medium))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay { Capsule().strokeBorder(.primary.opacity(0.12), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.15), radius: 10, y: 3)
+            .padding(.top, 10)
+            .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    private func showToast(_ message: String) {
+        withAnimation(.snappy) { toast = message }
+        Task {
+            try? await Task.sleep(for: .seconds(2.2))
+            withAnimation(.snappy) { if toast == message { toast = nil } }
         }
     }
 
@@ -189,24 +224,34 @@ struct RootView: View {
     }
 }
 
-/// Toolbar glyphs at one size in one box. SF Symbols have different bounding boxes — the share
-/// glyph is taller than the photo one — so laying them out raw leaves them visibly unaligned.
+/// Toolbar glyphs normalised into one box.
+///
+/// SF Symbols have different bounding boxes — `square.and.arrow.up` is taller than
+/// `photo.badge.plus` because of its rising arrow — so setting them at a common font size still
+/// leaves them optically misaligned (measured: 2.7pt apart). Scaling each symbol to fit the same
+/// square makes the centering structural instead of a per-symbol fudge factor.
+///
 /// A view rather than a method on `RootView` so it can be built inside `PhotosPicker` and `Menu`
 /// label closures, which are not main-actor isolated.
 private struct ToolbarIcon: View {
     let systemName: String
-    var baselineNudge: CGFloat = 0
+    /// Residual correction for symbols whose *ink* sits off-centre inside their own layout box,
+    /// which scaling cannot fix. Measure it from a screenshot rather than eyeballing: crop the
+    /// bar, threshold the dark pixels, and compare each glyph's bounding-box centre.
+    var opticalOffset: CGFloat = 0
 
-    init(_ systemName: String, baselineNudge: CGFloat = 0) {
+    init(_ systemName: String, opticalOffset: CGFloat = 0) {
         self.systemName = systemName
-        self.baselineNudge = baselineNudge
+        self.opticalOffset = opticalOffset
     }
 
     var body: some View {
         Image(systemName: systemName)
-            .font(.system(size: 17, weight: .regular))
-            .frame(width: 26, height: 26)
-            .offset(y: baselineNudge)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 19, height: 19)
+            .offset(y: opticalOffset)
+            .frame(width: 30, height: 30)
     }
 }
 

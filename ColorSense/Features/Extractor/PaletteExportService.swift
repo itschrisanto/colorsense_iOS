@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 /// Builds the shareable representations of a palette offered by the Extractor's Export menu.
 /// Everything here is generated on-device — exporting never touches the network.
@@ -17,11 +18,48 @@ enum PaletteExportService {
     /// Renders the palette as a shareable card. Returns nil if the renderer produces nothing,
     /// which SwiftUI allows for an empty palette.
     @MainActor
-    static func image(for palette: ExtractedPalette) -> Image? {
+    static func uiImage(for palette: ExtractedPalette) -> UIImage? {
         let renderer = ImageRenderer(content: ExportCard(palette: palette))
         renderer.scale = 3
-        guard let uiImage = renderer.uiImage else { return nil }
-        return Image(uiImage: uiImage)
+        return renderer.uiImage
+    }
+
+    @MainActor
+    static func image(for palette: ExtractedPalette) -> Image? {
+        uiImage(for: palette).map(Image.init(uiImage:))
+    }
+
+    /// Writes the rendered palette into the user's photo library. Requests add-only access —
+    /// the app never needs to read the library, only contribute to it.
+    @MainActor
+    static func saveToPhotos(_ palette: ExtractedPalette) async -> Result<Void, SaveError> {
+        guard let data = uiImage(for: palette)?.pngData() else { return .failure(.renderFailed) }
+
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else { return .failure(.notPermitted) }
+
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
+            }
+            return .success(())
+        } catch {
+            return .failure(.writeFailed)
+        }
+    }
+
+    enum SaveError: Error {
+        case renderFailed
+        case notPermitted
+        case writeFailed
+
+        var message: String {
+            switch self {
+            case .renderFailed: return "Couldn't render the palette."
+            case .notPermitted: return "Allow photo access in Settings to save palettes."
+            case .writeFailed: return "Couldn't save the palette."
+            }
+        }
     }
 
     /// The band stack as it appears when exported. Kept separate from `ExtractorView` so the

@@ -41,6 +41,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: "ColorSense needs camera access so you can extract colors from a photo you take."
         NSPhotoLibraryUsageDescription: "ColorSense needs photo library access so you can extract colors from your images."
+        NSPhotoLibraryAddUsageDescription: "ColorSense saves palettes to your photo library so you can share or reuse them."
         CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
         UIAppFonts:
           - BebasNeue-Regular.ttf
