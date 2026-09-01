@@ -40,6 +40,15 @@ struct RootView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         exportMenu
                     }
+                    // Extracting from a photo is the app's primary entry point, so it stays one
+                    // tap away here as well as inside the Tools sheet. Reaching it only through
+                    // Tools buries the main thing the app does.
+                    ToolbarItem(placement: .topBarTrailing) {
+                        PhotosPicker(selection: $selectedItem, matching: .images) {
+                            Image(systemName: "photo.badge.plus")
+                        }
+                        .accessibilityLabel("Extract colors from a photo")
+                    }
                 }
                 .safeAreaInset(edge: .bottom) { bottomBar }
         }
