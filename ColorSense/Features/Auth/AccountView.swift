@@ -13,7 +13,7 @@ struct AccountView: View {
     @State private var route: Route?
 
     private enum Route: String, Identifiable {
-        case savedPalettes, profile, subscription, affiliate, deleteAccount
+        case savedPalettes, savedColors, profile, subscription, affiliate, deleteAccount
         var id: String { rawValue }
     }
 
@@ -40,6 +40,7 @@ struct AccountView: View {
                     if clerk.user != nil {
                         section(title: "Library") {
                             row("Saved palettes", "bookmark", .savedPalettes)
+                            row("Saved colors", "paintpalette", .savedColors)
                         }
                         section(title: "Account settings") {
                             row("Profile", "person", .profile)
@@ -70,6 +71,7 @@ struct AccountView: View {
             .sheet(item: $route) { destination in
                 switch destination {
                 case .savedPalettes: SavedPalettesView()
+                case .savedColors: SavedColorsView()
                 case .profile: UserProfileView()
                 case .subscription: SubscriptionView()
                 case .affiliate: AffiliateView()
