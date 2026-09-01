@@ -63,6 +63,9 @@ targets:
       - path: ColorSenseTests
     dependencies:
       - target: ColorSense
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
 
 schemes:
   ColorSense:

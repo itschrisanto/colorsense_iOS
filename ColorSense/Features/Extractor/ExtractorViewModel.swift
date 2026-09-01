@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import Observation
 
+@MainActor
 @Observable
 final class ExtractorViewModel {
     var selectedItem: PhotosPickerItem? {
@@ -11,7 +12,6 @@ final class ExtractorViewModel {
     var palette: ExtractedPalette?
     var isExtracting = false
 
-    @MainActor
     private func loadAndExtract() async {
         guard let selectedItem else { return }
         isExtracting = true

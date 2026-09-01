@@ -13,11 +13,46 @@ or copy rules are ever needed, go read that file fresh rather than trusting a st
 Any durable product/ops decision made in this repo that matters beyond code (like the
 scoping decisions below) should also be reflected back in that vault file, not just here.
 
+## Location
+
+This repo lives at `~/Developer/ColorSense-iOS` on local disk, deliberately **outside**
+Nextcloud sync. It started in the Nextcloud "ColorSense/ColorSense Mobile App Project"
+folder but had to move on 2026-09-02: Nextcloud's sync raced Xcode's writes to the
+`.xcodeproj` bundle and corrupted it (spawned duplicate "ColorSense 2.xcodeproj" etc. —
+a known bad interaction between Xcode and any live file-sync tool, same as Dropbox/iCloud
+Drive/OneDrive). A pointer note was left at the old Nextcloud path. Version control for
+this project is git, not file sync — don't move it back into a synced folder.
+
 ## Status (as of 2026-09-02)
 
-Scoping is done, initial scaffold is in place, zero screens have been run in a simulator yet.
-Xcode is **not installed** on this machine (only Command Line Tools) — that's the next
-blocker before anything here can build. See "First-time machine setup" below.
+Verified end to end: `xcodegen generate` produces a working project, `xcodebuild build`
+succeeds, `xcodebuild test` passes all 5 `ContrastCalculatorTests` (Swift Testing
+framework, not XCTest), and the app launches and renders in the iOS 17 simulator
+(screenshot confirmed the Extractor tab, coral button, tab bar). This was a real
+build/run, not just "code looks right" — three actual bugs were found and fixed doing it:
+
+1. **`ExtractorViewModel.swift`** — `Task { await loadAndExtract() }` inside a `didSet`
+   captured non-isolated `self`, which Swift 6's strict concurrency checker correctly
+   flagged as a data-race risk. Fixed by marking the whole class `@MainActor` (the
+   standard pattern for SwiftUI view models under Swift 6), not just the method.
+2. **`project.yml`** — the `ColorSenseTests` target had no `GENERATE_INFOPLIST_FILE`
+   setting, so `xcodebuild test` failed at the code-signing step. Added
+   `GENERATE_INFOPLIST_FILE: YES` to that target's settings.
+3. **`AppConfig.swift` / `ColorSenseApp.swift`** — the original `assertionFailure` on a
+   missing Clerk key crashed the whole app (and thus the test target, which launches it)
+   before any test could run. Clerk's own SDK also traps if `Clerk.shared` is touched
+   without `configure()` ever being called, and `configure()` itself validates the key's
+   *format* locally (not just non-empty) before any network call. Fixed by: making the
+   missing-key case a `print` warning instead of a crash, and having it return a
+   syntactically-valid-but-fake key (`pk_test_` + base64 of
+   `"colorsense-dev-placeholder.clerk.accounts.dev$"`, matching Clerk's real key shape)
+   so `configure()` succeeds locally. Sign-in will still fail once it tries to actually
+   reach that fake host — which is correct, since there's no real key yet.
+
+Not yet done: the real `CLERK_PUBLISHABLE_KEY` has never been set (still the local
+placeholder in `Config/Secrets.xcconfig`), so sign-in itself is unverified. Bebas
+Neue/DM Sans font files are still not in the repo (see "Fonts" below), so the simulator
+screenshot shows system-font fallback, not the real brand type.
 
 ## Scoping decisions (locked in 2026-09-02)
 
@@ -73,20 +108,21 @@ generated, not hand-edited. Add new source files by creating them under `ColorSe
 picks up the whole folder) and re-running `xcodegen generate`; don't try to add files via Xcode's
 "Add Files" first, since that edits the generated project, not the source of truth.
 
-## First-time machine setup (do this before opening the project)
+## First-time machine setup
 
-1. Install Xcode from the App Store (full Xcode, not just Command Line Tools — verified
-   `xcodebuild` on this machine currently points at CLT only).
-2. Install [Homebrew](https://brew.sh) if not already present (checked 2026-09-02: not installed).
-3. `brew install xcodegen`
-4. `cp Config/Secrets.xcconfig.example Config/Secrets.xcconfig` and fill in the real
-   `CLERK_PUBLISHABLE_KEY` from the ColorSense Clerk dashboard. This file is gitignored —
-   never commit a real key.
-5. `xcodegen generate`
-6. `open ColorSense.xcodeproj`
+Done as of 2026-09-02 on this Mac: Xcode 26.6 (full install) is present, Homebrew 6.0.21
+is installed (`eval "$(/opt/homebrew/bin/brew shellenv)"` is in `~/.zprofile` — open a
+fresh terminal or re-source it if `brew`/`xcodegen` aren't on PATH), xcodegen 2.46.0 is
+installed, `Config/Secrets.xcconfig` exists (copied from the `.example`, still has the
+**placeholder** key — swap in the real `CLERK_PUBLISHABLE_KEY` from the ColorSense Clerk
+dashboard before auth will actually work), and `xcodegen generate` has produced a working
+`ColorSense.xcodeproj` in this location.
 
-None of this has been run yet, so the app has never actually been built or run in a
-simulator. Treat "code compiles" as unverified until someone does step 1-6.
+Still outstanding: confirm Swift Package resolution (Clerk SDK) completes cleanly here,
+then do a real `xcodebuild` and run in a simulator. If setting this up again on a
+different machine, repeat: install Xcode from the App Store, install Homebrew, `brew
+install xcodegen`, copy the secrets file, `xcodegen generate`, `open ColorSense.xcodeproj`
+— and do it on local disk, not inside a synced folder (see "Location" above).
 
 ## Fonts (manual step, not yet done)
 
