@@ -68,6 +68,12 @@ targets:
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: NO
+      # Personal Teams cannot provision Sign in with Apple. Keep day-to-day device builds
+      # working with the current Personal Team; Release retains the entitlement for a paid
+      # Apple Developer team and App Store distribution.
+      configs:
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Config/ColorSense.entitlements
 
   ColorSenseTests:
     type: bundle.unit-test
