@@ -21,7 +21,9 @@ struct AccountView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    UserButton(signedOutContent: {
+                    if let user = clerk.user {
+                        profileHeader(user)
+                    } else {
                         Button("Sign in") {
                             authIsPresented = true
                         }
@@ -31,8 +33,7 @@ struct AccountView: View {
                         .background(BrandColor.coral)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                    })
-                    .prefetchClerkImages()
+                    }
 
                     // Everything below needs a user: there is nothing to show and no token to
                     // fetch it with while signed out.
@@ -70,6 +71,82 @@ struct AccountView: View {
                 }
             }
         }
+    }
+
+    /// Avatar, name and email. Replaces Clerk's `UserButton`, whose avatar is toolbar-sized —
+    /// too small to anchor a screen. Tapping opens the same profile editor `UserButton` would.
+    private func profileHeader(_ user: User) -> some View {
+        Button {
+            route = .profile
+        } label: {
+            VStack(spacing: 10) {
+                avatar(for: user)
+                VStack(spacing: 2) {
+                    Text(displayName(for: user))
+                        .font(BrandFont.ui(20, weight: .bold))
+                    if let email = user.primaryEmailAddress?.emailAddress {
+                        Text(email)
+                            .font(BrandFont.ui(14))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .contentShape(.rect)
+            .foregroundStyle(.primary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Profile for \(displayName(for: user))")
+    }
+
+    @ViewBuilder
+    private func avatar(for user: User) -> some View {
+        let size: CGFloat = 88
+        // `hasImage` is false for accounts with no picture set, where imageUrl still returns a
+        // generated placeholder — checking it lets us show our own initials instead.
+        if user.hasImage, let url = URL(string: user.imageUrl) {
+            AsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                initialsAvatar(for: user, size: size)
+            }
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .overlay { Circle().strokeBorder(.primary.opacity(0.1), lineWidth: 1) }
+        } else {
+            initialsAvatar(for: user, size: size)
+        }
+    }
+
+    private func initialsAvatar(for user: User, size: CGFloat) -> some View {
+        Circle()
+            .fill(BrandColor.coral.opacity(0.18))
+            .frame(width: size, height: size)
+            .overlay {
+                Text(initials(for: user))
+                    .font(BrandFont.ui(30, weight: .bold))
+                    .foregroundStyle(BrandColor.coral)
+            }
+    }
+
+    /// Clerk has no `fullName`, so compose it — falling back through username to the email's
+    /// local part, since an account created through Google may carry no name at all.
+    private func displayName(for user: User) -> String {
+        let parts = [user.firstName, user.lastName].compactMap { $0 }.filter { !$0.isEmpty }
+        if !parts.isEmpty { return parts.joined(separator: " ") }
+        if let username = user.username, !username.isEmpty { return username }
+        if let email = user.primaryEmailAddress?.emailAddress {
+            return email.split(separator: "@").first.map(String.init) ?? email
+        }
+        return "Your account"
+    }
+
+    private func initials(for user: User) -> String {
+        let letters = [user.firstName, user.lastName]
+            .compactMap { $0?.trimmingCharacters(in: .whitespaces).first }
+        if !letters.isEmpty { return String(letters).uppercased() }
+        return String(displayName(for: user).prefix(1)).uppercased()
     }
 
     private func section<Content: View>(
