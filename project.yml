@@ -1,0 +1,77 @@
+name: ColorSense
+options:
+  bundleIdPrefix: online.colorsense
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+
+packages:
+  ClerkSDK:
+    url: https://github.com/clerk/clerk-ios
+    from: 1.2.0
+
+targets:
+  ColorSense:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ColorSense
+    configFiles:
+      Debug: Config/Secrets.xcconfig
+      Release: Config/Secrets.xcconfig
+    dependencies:
+      - package: ClerkSDK
+        product: ClerkKit
+      - package: ClerkSDK
+        product: ClerkKitUI
+    info:
+      path: Generated/ColorSense-Info.plist
+      properties:
+        CFBundleDisplayName: ColorSense
+        UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: "ColorSense needs camera access so you can extract colors from a photo you take."
+        NSPhotoLibraryUsageDescription: "ColorSense needs photo library access so you can extract colors from your images."
+        CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
+        UIAppFonts:
+          - BebasNeue-Regular.ttf
+          - DMSans-Regular.ttf
+          - DMSans-Medium.ttf
+          - DMSans-Bold.ttf
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: online.colorsense.ios
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: NO
+
+  ColorSenseTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ColorSenseTests
+    dependencies:
+      - target: ColorSense
+
+schemes:
+  ColorSense:
+    build:
+      targets:
+        ColorSense: all
+        ColorSenseTests: [test]
+    test:
+      targets:
+        - ColorSenseTests
+    run:
+      config: Debug

@@ -1,0 +1,14 @@
+# Xcode / XcodeGen
+*.xcodeproj
+*.xcworkspace
+Generated/
+DerivedData/
+xcuserdata/
+.build/
+.swiftpm/
+
+# Secrets
+Config/Secrets.xcconfig
+
+# macOS
+.DS_Store
