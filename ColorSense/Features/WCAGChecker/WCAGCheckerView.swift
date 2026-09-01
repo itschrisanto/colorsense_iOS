@@ -56,17 +56,30 @@ struct WCAGCheckerView: View {
 
     // MARK: - Preview
 
+    /// Specimen copy and sizes ported from the web app's WCAG panel. The point of a preview is to
+    /// judge readability, so it shows real sentences at the sizes the thresholds are actually
+    /// about — 16pt body and a 30pt headline — rather than two short labels.
     private var preview: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Large text")
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Normal text — 16px")
+                .font(BrandFont.ui(14, weight: .medium))
+                .opacity(0.8)
+            Text("The quick brown fox jumps over the lazy dog")
+                .font(BrandFont.ui(21, weight: .bold))
+                .padding(.top, 4)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Large headline — 30px bold")
                 .font(BrandFont.ui(28, weight: .bold))
-            Text("Normal body text, set at the size most interface copy actually uses.")
-                .font(BrandFont.ui(15))
+                .padding(.top, 18)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Body copy at 16px regular weight to preview how readable your pairing is for paragraphs and labels.")
+                .font(BrandFont.ui(16))
+                .padding(.top, 4)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(viewModel.foreground)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(22)
+        .padding(24)
         .background(viewModel.background)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay {
@@ -93,10 +106,18 @@ struct WCAGCheckerView: View {
                     .clipShape(Capsule())
             }
 
-            HStack(spacing: 10) {
-                levelChip("Normal text", viewModel.normalTextLevel)
-                levelChip("Large text", viewModel.largeTextLevel)
+            Text("Best grade: \(viewModel.verdict.bestGrade)")
+                .font(BrandFont.ui(13))
+                .foregroundStyle(.secondary)
+
+            // All four checks, spelled out with their thresholds, as the web panel shows them.
+            // Two summary chips hid which specific requirement a pairing missed.
+            VStack(spacing: 8) {
+                ForEach(viewModel.verdict.checks) { check in
+                    verdictRow(check)
+                }
             }
+            .padding(.horizontal, 14)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
@@ -105,19 +126,26 @@ struct WCAGCheckerView: View {
         .padding(.horizontal, 20)
     }
 
-    private func levelChip(_ title: String, _ level: ContrastCalculator.Level) -> some View {
-        VStack(spacing: 4) {
-            Text(title)
-                .font(BrandFont.ui(12))
-                .foregroundStyle(.secondary)
-            Text(label(for: level))
-                .font(BrandFont.ui(15, weight: .bold))
-                .foregroundStyle(color(for: level))
+    private func verdictRow(_ check: ContrastCalculator.Verdict.Check) -> some View {
+        let tint: Color = check.passes ? .green : .red
+        return HStack(spacing: 8) {
+            Image(systemName: check.passes ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .font(.system(size: 15))
+            Text(check.label)
+                .font(BrandFont.ui(13, weight: .medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Spacer(minLength: 6)
+            Text(check.passes ? "PASS" : "FAIL")
+                .font(BrandFont.ui(11, weight: .bold))
         }
-        .frame(maxWidth: .infinity)
+        .foregroundStyle(tint)
+        .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(color(for: level).opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Pickers
@@ -155,21 +183,7 @@ struct WCAGCheckerView: View {
 
     // MARK: - Labels
 
-    private func label(for level: ContrastCalculator.Level) -> String {
-        switch level {
-        case .fail: return "Fail"
-        case .aa: return "AA"
-        case .aaa: return "AAA"
-        }
-    }
 
-    private func color(for level: ContrastCalculator.Level) -> Color {
-        switch level {
-        case .fail: return .red
-        case .aa: return BrandColor.teal
-        case .aaa: return .green
-        }
-    }
 
     private func tint(for tone: ContrastCalculator.Rating.Tone) -> Color {
         switch tone {

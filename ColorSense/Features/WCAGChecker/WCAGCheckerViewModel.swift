@@ -53,6 +53,9 @@ final class WCAGCheckerViewModel {
     /// described two different ways in two places.
     var rating: ContrastCalculator.Rating { ContrastCalculator.rating(for: ratio) }
 
+    /// All four WCAG checks plus the best grade, matching the web app's WCAG panel.
+    var verdict: ContrastCalculator.Verdict { ContrastCalculator.verdict(for: ratio) }
+
     func swap() {
         let previousForeground = foreground
         foreground = background

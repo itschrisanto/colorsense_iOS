@@ -64,6 +64,45 @@ enum ContrastCalculator {
         let tone: Tone
     }
 
+    /// The four pass/fail checks the web app's WCAG panel shows, plus the single best grade
+    /// achieved. Ported from `evaluate()` in the web's `lib/wcagContrast.ts` — same thresholds,
+    /// same labels, same grade precedence — so one pairing is never graded differently across
+    /// the two apps.
+    struct Verdict {
+        struct Check: Identifiable {
+            var id: String { label }
+            let label: String
+            let passes: Bool
+        }
+
+        let checks: [Check]
+        /// "AAA", "AA", "AA Large" or "Fail".
+        let bestGrade: String
+    }
+
+    static func verdict(for ratio: Double) -> Verdict {
+        let aaNormal = ratio >= 4.5
+        let aaLarge = ratio >= 3.0
+        let aaaNormal = ratio >= 7.0
+        let aaaLarge = ratio >= 4.5
+
+        let bestGrade: String
+        if aaaNormal { bestGrade = "AAA" }
+        else if aaNormal { bestGrade = "AA" }
+        else if aaLarge { bestGrade = "AA Large" }
+        else { bestGrade = "Fail" }
+
+        return Verdict(
+            checks: [
+                .init(label: "AA · Normal text (4.5:1)", passes: aaNormal),
+                .init(label: "AA · Large text (3:1)", passes: aaLarge),
+                .init(label: "AAA · Normal text (7:1)", passes: aaaNormal),
+                .init(label: "AAA · Large text (4.5:1)", passes: aaaLarge),
+            ],
+            bestGrade: bestGrade
+        )
+    }
+
     static func rating(for ratio: Double) -> Rating {
         if ratio >= 7.0 { return Rating(label: "GREAT 5/5", tone: .good) }
         if ratio >= 4.5 { return Rating(label: "GOOD 4/5", tone: .good) }
