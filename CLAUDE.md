@@ -71,8 +71,13 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
 - **Build approach: fresh native SwiftUI**, not a WebView wrapper. Color extraction and
   WCAG math are reimplemented natively in Swift (see below), not proxied to the web app.
 - **Backend: offline-first / on-device.** The extractor and WCAG checker do no networking
-  at all. The only networking in the app is Clerk auth. This matches the "free, unlimited,
-  no signup" positioning from the vault.
+  at all. This matches the "free, unlimited, no signup" positioning from the vault. The only
+  networking is Clerk auth and `SavedPaletteService` (saving a palette to the user's account),
+  both of which are opt-in and never block a tool.
+- **"Save" and "Share" mean different destinations** (clarified 2026-09-02). *Save to my
+  account* posts to `/api/saved-palettes` — the same store the web app writes to, requires
+  sign-in. *Share as image* / *Save image to Photos* hand the palette to the **device**. Do not
+  relabel these into one another; Chris corrected this specifically.
 - **Auth: Clerk, wired from day one**, tied to the same Free / Pro Monthly ($5/mo) /
   Pro Annual ($39/yr) / Pro Pass ($9 one-time) plans as the web app, even though v1's
   own tools don't gate on it. This is forward-positioning for when Pro features
@@ -209,6 +214,7 @@ disagreeing about the same hex.
 | `ContrastCalculator.rating(for:)` | `rateContrast()` in labColor.ts | The 5-point labels and their 7 / 4.5 / 3 / 2 thresholds |
 | `Features/Extractor/PaletteGenerator.swift` | `relatedPalette()` in labColor.ts | Scheme tables, jitter magnitudes, clamps, `widen = iteration >= 10` |
 | `Features/Palette/ColorDetailView.swift` | `components/lab/ColorDetailCard.tsx` | Section order and labels |
+| `Services/SavedPaletteService.swift` | `routes/saved-palettes.ts`, `lib/savedPalettes.ts` | `POST /api/saved-palettes`, `{name, colors}`, uppercase `#RRGGBB`, Bearer token, ≤20 colors |
 
 `ColorMathTests.swift` pins the whole chain to values read off the web's own detail card for
 #666770 — if a port drifts, those fail. Extend that fixture rather than trusting a visual check.

@@ -97,31 +97,50 @@ struct RootView: View {
         }
     }
 
+    /// Save and Share are two different destinations, and the labels have to say which:
+    /// **Save** puts the palette in the user's ColorSense *account* (same store as the web app),
+    /// **Share as image** hands it to the *device* — share sheet or camera roll.
     private var exportMenu: some View {
         Menu {
             Button {
                 Task {
-                    switch await PaletteExportService.saveToPhotos(store.palette) {
-                    case .success: showToast("Palette saved to Photos")
+                    switch await SavedPaletteService.save(store.palette) {
+                    case .success: showToast("Saved to your account")
+                    case .failure(.notSignedIn): accountIsPresented = true
                     case .failure(let error): showToast(error.message)
                     }
                 }
             } label: {
-                Label("Save to Photos", systemImage: "square.and.arrow.down")
+                Label("Save to my account", systemImage: "bookmark")
             }
-            Button {
-                UIPasteboard.general.string = PaletteExportService.hexList(store.palette)
-            } label: {
-                Label("Copy hex codes", systemImage: "number")
-            }
-            Button {
-                UIPasteboard.general.string = PaletteExportService.cssVariables(store.palette)
-            } label: {
-                Label("Copy CSS variables", systemImage: "curlybraces")
-            }
-            if let image = PaletteExportService.image(for: store.palette) {
-                ShareLink(item: image, preview: SharePreview("ColorSense palette", image: image)) {
-                    Label("Share as image", systemImage: "photo")
+
+            Section {
+                if let image = PaletteExportService.image(for: store.palette) {
+                    ShareLink(item: image, preview: SharePreview("ColorSense palette", image: image)) {
+                        Label("Share as image", systemImage: "square.and.arrow.up")
+                    }
+                }
+                Button {
+                    Task {
+                        switch await PaletteExportService.saveToPhotos(store.palette) {
+                        case .success: showToast("Saved to Photos")
+                        case .failure(let error): showToast(error.message)
+                        }
+                    }
+                } label: {
+                    Label("Save image to Photos", systemImage: "photo.badge.arrow.down")
+                }
+                Button {
+                    UIPasteboard.general.string = PaletteExportService.hexList(store.palette)
+                    showToast("Hex codes copied")
+                } label: {
+                    Label("Copy hex codes", systemImage: "number")
+                }
+                Button {
+                    UIPasteboard.general.string = PaletteExportService.cssVariables(store.palette)
+                    showToast("CSS variables copied")
+                } label: {
+                    Label("Copy CSS variables", systemImage: "curlybraces")
                 }
             }
         } label: {
@@ -250,8 +269,29 @@ private struct DockButton: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DockButtonStyle())
         .accessibilityLabel(label)
+    }
+}
+
+/// Lights a glass capsule behind whichever dock item is being pressed. iOS has no hover on
+/// touch, so the press state is the only moment there is to acknowledge — without it, an
+/// icon-only dock gives no feedback that a tap landed.
+///
+/// Also stands in for `.plain`: the default style tints its label system-blue, which would
+/// leave the dock glyphs the wrong colour.
+struct DockButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(.primary)
+            .background {
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .overlay { Capsule().strokeBorder(.primary.opacity(0.14), lineWidth: 0.5) }
+                    .opacity(configuration.isPressed ? 1 : 0)
+            }
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 

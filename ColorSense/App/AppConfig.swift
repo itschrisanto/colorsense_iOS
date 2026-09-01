@@ -27,4 +27,20 @@ enum AppConfig {
         }
         return key
     }
+
+    /// Base for the ColorSense API, which backs account-saved palettes. Overridable from
+    /// Secrets.xcconfig (`API_BASE_URL`) so a local api-server can be pointed at during
+    /// development; defaults to production. The web client uses a same-origin relative path,
+    /// so this host has no equivalent constant to port — it is the public site.
+    static var apiBaseURL: URL {
+        if
+            let override = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String,
+            !override.isEmpty,
+            override != "$(API_BASE_URL)",
+            let url = URL(string: override)
+        {
+            return url
+        }
+        return URL(string: "https://colorsense.online/api")!
+    }
 }
