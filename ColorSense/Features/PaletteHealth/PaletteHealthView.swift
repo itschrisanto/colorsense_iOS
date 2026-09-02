@@ -10,6 +10,9 @@ import SwiftUI
 /// desktop deliverable and the web app already does it well.
 struct PaletteHealthView: View {
     let palette: ExtractedPalette
+    /// Pro gates the remap, not the scoring. The score and the report stay free.
+    var isPro = false
+    var onRemap: ((Int, PaletteColor) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -186,7 +189,8 @@ struct PaletteHealthView: View {
         section("Text contrast") {
             VStack(spacing: 8) {
                 ForEach(report.contrastRows) { row in
-                    HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 12) {
                         // The measured pairing itself, shown as it was measured — a swatch of the
                         // surface with the foreground actually used on it.
                         Text("Aa")
@@ -211,7 +215,64 @@ struct PaletteHealthView: View {
                             .foregroundStyle(tone(row.tone))
                             .clipShape(Capsule())
                     }
+
+                        // Offered only where the pairing actually fails. A remap button beside a
+                        // passing row would invite changing something already correct.
+                        if row.tone == .fail { remapButton(for: row) }
+                    }
                 }
+            }
+        }
+    }
+
+    /// Auto-remap: moves the *surface* to the nearest lightness where the text on it clears AA.
+    ///
+    /// The surface moves rather than the text because the report already chose the text — white
+    /// or the palette's darkest colour — as the one a designer would actually use. Locked for
+    /// free users the same way the Pro export formats are: shown, labelled, inert, and with no
+    /// route to a purchase anywhere near it, per guideline 3.1.1.
+    private func remapButton(for row: PaletteHealthReport.ContrastRow) -> some View {
+        Group {
+            if let fix = ContrastCalculator.suggestFix(
+                adjust: row.background, anchor: row.foreground, target: 4.5
+            ) {
+                Button {
+                    guard isPro else { return }
+                    onRemap?(row.backgroundIndex, fix.swatch)
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(isPro
+                             ? "Auto-remap to \(fix.swatch.hex) · \(String(format: "%.2f:1", fix.ratio))"
+                             : "Auto-remap")
+                            .font(BrandFont.ui(12, weight: .medium))
+                        if !isPro {
+                            Text("PRO")
+                                .font(BrandFont.ui(9, weight: .bold))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(BrandColor.purple.opacity(0.16))
+                                .foregroundStyle(BrandColor.purple)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(BrandColor.coral.opacity(isPro ? 0.14 : 0.07))
+                    .foregroundStyle(isPro ? BrandColor.coral : .secondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 9))
+                }
+                .buttonStyle(.plain)
+                .disabled(!isPro)
+                .accessibilityLabel(isPro
+                    ? "Auto-remap \(row.backgroundName) so text on it passes AA"
+                    : "Auto-remap, a Pro feature")
+            } else {
+                Text("No lightness of this hue passes AA with that text.")
+                    .font(BrandFont.ui(11))
+                    .foregroundStyle(.secondary)
             }
         }
     }

@@ -103,6 +103,59 @@ enum ContrastCalculator {
         )
     }
 
+    /// The nudge behind the Contrast tool's "Fix it" and the health report's auto-remap.
+    ///
+    /// Ported from `suggestFix()` in the web's `lib/wcagContrast.ts`. Walks `adjust`'s lightness
+    /// in 0.01 steps — hue and saturation held — until it clears `target` against `anchor`,
+    /// trying first the direction that moves *away* from the anchor's luminance. Returns nil when
+    /// even pure black or white cannot reach the target, which is a real outcome rather than a
+    /// failure: some anchors simply have no passing partner at that hue.
+    ///
+    /// Each candidate is quantised to 8 bits before its ratio is measured, because the web builds
+    /// a hex string at every step and measures that. Skipping the quantisation would drift from
+    /// the web by a step or two near the boundary.
+    static func suggestFix(
+        adjust: PaletteColor,
+        anchor: PaletteColor,
+        target: Double
+    ) -> (swatch: PaletteColor, ratio: Double, wentLighter: Bool)? {
+        let anchorLuminance = relativeLuminance(red: anchor.red, green: anchor.green, blue: anchor.blue)
+        let start = ColorMath.hsl(fromRed: adjust.red, green: adjust.green, blue: adjust.blue)
+
+        func walk(lighter: Bool) -> (swatch: PaletteColor, ratio: Double, wentLighter: Bool)? {
+            let step = 0.01
+            var lightness = start.lightness
+            // 101 steps covers the whole 0...1 range from any starting point.
+            for _ in 0 ..< 101 {
+                lightness += lighter ? step : -step
+                let clamped = min(max(lightness, 0), 1)
+                let rgb = ColorMath.rgb(
+                    from: .init(hue: start.hue, saturation: start.saturation, lightness: clamped)
+                )
+                let candidate = PaletteColor(
+                    red: quantised(rgb.red),
+                    green: quantised(rgb.green),
+                    blue: quantised(rgb.blue),
+                    dominance: adjust.dominance
+                )
+                let ratio = self.ratio(
+                    r1: candidate.red, g1: candidate.green, b1: candidate.blue,
+                    r2: anchor.red, g2: anchor.green, b2: anchor.blue
+                )
+                if ratio >= target { return (candidate, ratio, lighter) }
+                if clamped == 0 || clamped == 1 { return nil }
+            }
+            return nil
+        }
+
+        let preferLighter = anchorLuminance < 0.5
+        return walk(lighter: preferLighter) ?? walk(lighter: !preferLighter)
+    }
+
+    private static func quantised(_ channel: Double) -> Double {
+        (min(max(channel, 0), 1) * 255).rounded() / 255
+    }
+
     static func rating(for ratio: Double) -> Rating {
         if ratio >= 7.0 { return Rating(label: "GREAT 5/5", tone: .good) }
         if ratio >= 4.5 { return Rating(label: "GOOD 4/5", tone: .good) }

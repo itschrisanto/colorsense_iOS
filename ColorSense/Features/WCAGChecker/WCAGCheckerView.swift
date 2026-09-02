@@ -6,10 +6,15 @@ import SwiftUI
 /// being judged, so the type has to be big enough to actually judge. Everything else — the ratio,
 /// the grades, the pickers — sits under it.
 struct WCAGCheckerView: View {
+    /// Pro gates the fix, not the checking. The checker itself stays free and unlimited — see
+    /// CLAUDE.md, which is explicit that this tool is never paywalled.
+    let isPro: Bool
+
     @State private var viewModel: WCAGCheckerViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(palette: ExtractedPalette = .sample) {
+    init(isPro: Bool = false, palette: ExtractedPalette = .sample) {
+        self.isPro = isPro
         _viewModel = State(initialValue: WCAGCheckerViewModel(palette: palette))
     }
 
@@ -87,6 +92,55 @@ struct WCAGCheckerView: View {
         .padding(.top, 4)
     }
 
+    /// "Fix it" — nudges the text colour to the nearest lightness that clears AA.
+    ///
+    /// Locked for free users the same way the Pro export formats are: shown, labelled, and doing
+    /// nothing when tapped, with no route to a purchase. Guideline 3.1.1 is why there is no
+    /// "upgrade" anywhere near it.
+    private var fixIt: some View {
+        Group {
+            if let fix = viewModel.suggestedFix() {
+                Button {
+                    guard isPro else { return }
+                    withAnimation(.snappy) { viewModel.apply(fix) }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(isPro
+                             ? "Fix it — go \(fix.wentLighter ? "lighter" : "darker") to \(String(format: "%.2f:1", fix.ratio))"
+                             : "Fix it")
+                            .font(BrandFont.ui(14, weight: .medium))
+                        if !isPro {
+                            Text("PRO")
+                                .font(BrandFont.ui(10, weight: .bold))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(BrandColor.purple.opacity(0.16))
+                                .foregroundStyle(BrandColor.purple)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(BrandColor.coral.opacity(isPro ? 0.16 : 0.08))
+                    .foregroundStyle(isPro ? BrandColor.coral : .secondary)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(!isPro)
+                .accessibilityLabel(isPro ? "Fix the text color to pass AA" : "Fix it, a Pro feature")
+            } else {
+                // A real outcome: no lightness of this hue clears AA on this background.
+                Text("No lightness of this hue passes AA on this background.")
+                    .font(BrandFont.ui(12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+        }
+    }
+
     // MARK: - Verdict
 
     private var verdict: some View {
@@ -106,6 +160,10 @@ struct WCAGCheckerView: View {
             Text("Best grade: \(viewModel.verdict.bestGrade)")
                 .font(BrandFont.ui(13))
                 .foregroundStyle(.secondary)
+
+            // Only offered when the pairing actually fails AA — a fix button on a passing pairing
+            // would invite people to change something that is already correct.
+            if viewModel.ratio < 4.5 { fixIt }
 
             // All four checks, spelled out with their thresholds, as the web panel shows them.
             // Two summary chips hid which specific requirement a pairing missed.

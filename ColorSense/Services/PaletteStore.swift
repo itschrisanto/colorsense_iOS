@@ -91,6 +91,26 @@ final class PaletteStore {
         return true
     }
 
+    /// Swaps one swatch for another in place — the auto-remap's landing point.
+    ///
+    /// The slot keeps its identity, so the band recolours rather than being torn down and rebuilt,
+    /// exactly as Generate does. Anchors follow, or a later Generate would regenerate from the
+    /// colour that was just corrected away. `generation` resets, because unlike a reorder this
+    /// genuinely is a different palette to iterate from.
+    func replace(at index: Int, with swatch: PaletteColor) {
+        guard palette.colors.indices.contains(index) else { return }
+
+        var recoloured = swatch
+        recoloured.id = palette.colors[index].id
+        recoloured.isLocked = palette.colors[index].isLocked
+        palette.colors[index] = recoloured
+
+        if palette.anchors.indices.contains(index) { palette.anchors[index] = recoloured }
+        palette.generation = 0
+        isShowingDefault = false
+        persist()
+    }
+
     /// Reorders a swatch within the palette.
     ///
     /// Anchors move with it. They are what Generate derives from, so leaving them in the old order

@@ -80,7 +80,7 @@ struct RootView: View {
             ToolsSheet { open($0) }
         }
         .sheet(isPresented: $contrastIsPresented) {
-            WCAGCheckerView(palette: store.palette)
+            WCAGCheckerView(isPro: isPro, palette: store.palette)
         }
         .sheet(isPresented: $accountIsPresented) {
             // Signed out, the account screen had nothing on it but a button that opened this —
@@ -101,7 +101,15 @@ struct RootView: View {
             LibraryView()
         }
         .sheet(isPresented: $healthIsPresented) {
-            PaletteHealthView(palette: store.palette)
+            PaletteHealthView(
+                palette: store.palette,
+                isPro: isPro,
+                onRemap: { index, swatch in
+                    withAnimation(PaletteMotion.recolor(reduceMotion: reduceMotion)) {
+                        store.replace(at: index, with: swatch)
+                    }
+                }
+            )
         }
         .sheet(isPresented: $shareIsPresented) {
             ShareSheet(

@@ -56,6 +56,26 @@ final class WCAGCheckerViewModel {
     /// All four WCAG checks plus the best grade, matching the web app's WCAG panel.
     var verdict: ContrastCalculator.Verdict { ContrastCalculator.verdict(for: ratio) }
 
+    /// The nudge behind "Fix it": moves the *text* colour, never the background.
+    ///
+    /// Backgrounds are usually the fixed thing in a real design — a brand surface, a page — and
+    /// the text on them is what a designer has licence to adjust. Returns nil when no lightness
+    /// of this hue can clear the target against that background, which is a real answer worth
+    /// showing rather than a silent no-op.
+    func suggestedFix(target: Double = 4.5) -> (swatch: PaletteColor, ratio: Double, wentLighter: Bool)? {
+        let fg = foreground.resolveRGBA()
+        let bg = background.resolveRGBA()
+        return ContrastCalculator.suggestFix(
+            adjust: PaletteColor(red: fg.red, green: fg.green, blue: fg.blue, dominance: 0),
+            anchor: PaletteColor(red: bg.red, green: bg.green, blue: bg.blue, dominance: 0),
+            target: target
+        )
+    }
+
+    func apply(_ fix: (swatch: PaletteColor, ratio: Double, wentLighter: Bool)) {
+        foreground = fix.swatch.color
+    }
+
     func swap() {
         let previousForeground = foreground
         foreground = background

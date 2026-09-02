@@ -423,6 +423,7 @@ disagreeing about the same hex.
 | `Features/Palette/ColorDetailView.swift` | `components/lab/ColorDetailCard.tsx` | Section order and labels |
 | `Services/PaletteHealth.swift` | `lib/paletteHealth.ts` | Five dimensions, their thresholds and weights, the A–F bands, and the detail/tip copy verbatim |
 | `Services/PaletteHealthReport.swift` | `lib/paletteHealthReport.ts` | Role assignment, contrast-row selection and ordering, and the summary wording |
+| `ContrastCalculator.suggestFix` | `suggestFix()` in `lib/wcagContrast.ts` | 0.01 lightness steps, hue and saturation held, direction away from the anchor, 8-bit quantised before each measurement |
 | `Services/ColorBlindness.swift` | `lib/colorBlind.ts` | Machado 2009 matrices at severity 1.0, applied in linear sRGB; ΔE < 14 confusable threshold |
 | `Services/SavedPaletteService.swift` | `routes/saved-palettes.ts`, `lib/savedPalettes.ts` | `POST /api/saved-palettes`, `{name, colors}`, uppercase `#RRGGBB`, Bearer token, ≤20 colors |
 
@@ -433,10 +434,14 @@ Deliberate divergences:
 - The web's "Generate Harmonies · AI · Pro" button is **not** on iOS. There is no StoreKit here,
   and App Store review rejects digital-goods upsells that route around IAP. Revisit when Pro
   actually ships on iOS.
-- The health report's fix copy points at the swatch editor, not at "the one-click auto-remap in
-  the Lab" as the web does. Auto-remap is a Pro feature of the web app with no iOS equivalent yet,
-  so the web wording would be an instruction the reader cannot follow. Revisit when auto-remap
-  ships here — the same applies to the Contrast tool's "Fix it", which is also Pro and also absent.
+- Auto-remap and the Contrast tool's "Fix it" are **both live now**, both Pro-gated, and both are
+  the same ported algorithm — `ContrastCalculator.suggestFix`, from `suggestFix()` in
+  `lib/wcagContrast.ts`. They differ only in which colour they move: "Fix it" adjusts the *text*,
+  since a background is usually the fixed thing in a real design, while the report's remap adjusts
+  the *surface*, because the report already chose the text as the one a designer would use.
+- The health report's fix copy still points at the swatch editor rather than at the remap button,
+  since the copy is shown to free readers too and would otherwise describe a control they cannot
+  press.
 - Tapping a harmony swatch copies its hex. On the web it *adds* the color to the palette;
   iOS has no add-color affordance yet.
 

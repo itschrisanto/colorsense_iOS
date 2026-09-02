@@ -327,3 +327,62 @@ struct PaletteReorderTests {
         #expect(store.palette.generation == generation)
     }
 }
+
+@Suite("Replacing a swatch")
+@MainActor
+struct PaletteReplaceTests {
+    private func store(_ hexes: [String]) -> (PaletteStore, URL) {
+        let url = URL.temporaryDirectory.appending(path: "replace-\(UUID().uuidString).json")
+        let store = PaletteStore(fileURL: url)
+        store.replace(
+            with: ExtractedPalette(
+                colors: hexes.compactMap { PaletteColor(hexString: $0, dominance: 0.25) },
+                createdAt: Date()
+            )
+        )
+        return (store, url)
+    }
+
+    /// The slot keeps its identity so the band recolours rather than being rebuilt — the same
+    /// reason Generate carries ids across.
+    @Test func theSlotKeepsItsIdentity() {
+        let (store, url) = store(["#FF6B6B", "#4ECDC4", "#2A2C32"])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let originalID = store.palette.colors[1].id
+        store.replace(at: 1, with: PaletteColor(hexString: "#123456", dominance: 0.25)!)
+
+        #expect(store.palette.colors[1].id == originalID)
+        #expect(store.palette.colors[1].hex == "#123456")
+    }
+
+    /// A locked swatch that gets remapped stays locked — the lock is about the slot, not the value.
+    @Test func lockSurvivesAReplacement() {
+        let (store, url) = store(["#FF6B6B", "#4ECDC4", "#2A2C32"])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        store.toggleLock(for: store.palette.colors[0].id)
+        #expect(store.palette.colors[0].isLocked)
+
+        store.replace(at: 0, with: PaletteColor(hexString: "#123456", dominance: 0.25)!)
+        #expect(store.palette.colors[0].isLocked)
+    }
+
+    /// Anchors follow, or a later Generate would derive from the colour just corrected away.
+    @Test func anchorsFollowTheReplacement() {
+        let (store, url) = store(["#FF6B6B", "#4ECDC4", "#2A2C32"])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        store.replace(at: 2, with: PaletteColor(hexString: "#123456", dominance: 0.25)!)
+        #expect(store.palette.anchors[2].hex == "#123456")
+    }
+
+    @Test func anOutOfRangeIndexChangesNothing() {
+        let (store, url) = store(["#FF6B6B", "#4ECDC4"])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let before = store.palette.colors.map(\.hex)
+        store.replace(at: 9, with: PaletteColor(hexString: "#123456", dominance: 0.5)!)
+        #expect(store.palette.colors.map(\.hex) == before)
+    }
+}
