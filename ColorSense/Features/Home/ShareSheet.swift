@@ -11,6 +11,7 @@ import SwiftUI
 struct ShareSheet: View {
     let palette: ExtractedPalette
     let shareable: SharablePaletteImage?
+    let isPro: Bool
     let onSaveToAccount: () -> Void
     let onCopied: (String) -> Void
 
@@ -66,7 +67,10 @@ struct ShareSheet: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(16)
+                .padding(.horizontal, 16)
+
+                proSection
+                    .padding(16)
             }
             .navigationTitle("Share")
             .navigationBarTitleDisplayMode(.inline)
@@ -84,15 +88,76 @@ struct ShareSheet: View {
                     .padding(.bottom, 4)
             }
         }
-        .presentationDetents([.medium])
+        // Opens at medium so the free actions are reachable one-handed, but expands: the Pro
+        // formats sit below the fold at that height.
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
 
-    private func card(_ systemImage: String, _ title: String, _ summary: String) -> some View {
+    /// The developer and designer formats. Shown to everyone rather than hidden from free users:
+    /// there is no in-app purchase yet, so a free user cannot be sent anywhere to buy — but
+    /// hiding them entirely would mean nobody ever learns they exist. Anyone already Pro from the
+    /// web gets them immediately.
+    private var proSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text("DEVELOPER & DESIGN FORMATS")
+                    .font(BrandFont.ui(11, weight: .bold))
+                    .foregroundStyle(.secondary)
+                if !isPro {
+                    Text("PRO")
+                        .font(BrandFont.ui(10, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(BrandColor.purple.opacity(0.16))
+                        .foregroundStyle(BrandColor.purple)
+                        .clipShape(Capsule())
+                }
+            }
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(PaletteFileFormat.allCases) { format in
+                    if isPro, let url = PaletteFileExporter.file(format, for: palette) {
+                        ShareLink(item: url) {
+                            card(format.systemImage, format.title, format.summary)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        card(
+                            format.systemImage,
+                            format.title,
+                            format.summary,
+                            isLocked: !isPro
+                        )
+                    }
+                }
+            }
+
+            if !isPro {
+                Text("Included with ColorSense Pro. Manage your plan at colorsense.online.")
+                    .font(BrandFont.ui(12))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func card(
+        _ systemImage: String,
+        _ title: String,
+        _ summary: String,
+        isLocked: Bool = false
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.system(size: 20))
-                .foregroundStyle(BrandColor.coral)
+            HStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20))
+                    .foregroundStyle(isLocked ? Color.secondary : BrandColor.coral)
+                if isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
             Text(title)
                 .font(BrandFont.ui(16, weight: .medium))
             Text(summary)
@@ -106,5 +171,6 @@ struct ShareSheet: View {
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .foregroundStyle(.primary)
+        .opacity(isLocked ? 0.5 : 1)
     }
 }

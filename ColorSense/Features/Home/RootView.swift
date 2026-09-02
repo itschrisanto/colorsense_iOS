@@ -95,6 +95,7 @@ struct RootView: View {
                     for: store.palette,
                     includesLogo: !isPro
                 ),
+                isPro: isPro,
                 onSaveToAccount: {
                     // Signing in is a prerequisite, so check it before asking for a name —
                     // otherwise the user types one only to be bounced to auth and lose it.
