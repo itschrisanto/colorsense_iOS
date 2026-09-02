@@ -8,9 +8,10 @@ import UIKit
 /// which is why the library side uses `PhotosPicker`, but camera capture is still what
 /// `UIImagePickerController` is for and it is not deprecated for that use.
 ///
-/// Availability matters: the simulator has no camera, so `isAvailable` is false there and the
-/// source dialog hides the option rather than offering a control that opens a black screen. It is
-/// also false when the user has denied camera access at the system level.
+/// `isAvailable` gates the picker's camera cell, so a device without a camera never shows one.
+/// Note it reports *hardware*, not permission — current simulators do provide a synthetic camera
+/// and return true, and a user who has denied camera access still returns true and lands on the
+/// system's own denied screen inside the capture controller.
 struct CameraPicker: UIViewControllerRepresentable {
     let onCapture: (UIImage) -> Void
 

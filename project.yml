@@ -67,8 +67,13 @@ targets:
         # Required by the Extractor's camera source. iOS terminates the app outright if a camera
         # is opened without this, so it is not optional once CameraPicker exists.
         NSCameraUsageDescription: "ColorSense uses the camera so you can photograph something and pull a palette from its colors."
-        # Still no photo-library *read* string: PhotosPicker runs out of process, so choosing an
-        # existing photo needs no permission from us.
+        # Read access, for the picker's own grid of recent photos. This was deliberately absent
+        # while PhotosPicker was the only way in — it runs out of process, so the system hands
+        # back one chosen image and the app never sees the library. Showing the camera inside the
+        # grid is what changed that: PHPickerViewController cannot host a camera cell, so the
+        # grid has to be ours, and a grid we draw is a library we read. The denied state still
+        # falls back to PhotosPicker, so refusing this permission costs the grid, not the feature.
+        NSPhotoLibraryUsageDescription: "ColorSense shows your recent photos so you can pick one and pull a palette from its colors. Photos are read on your device and never uploaded."
         CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
         # AppConfig reads all three of these from the Info.plist, but only the publishable key was
         # ever declared here — so setting API_BASE_URL or CLERK_PROXY_URL in Secrets.xcconfig did

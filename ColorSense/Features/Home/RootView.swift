@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 import ClerkKit
 import ClerkKitUI
 
@@ -13,8 +12,6 @@ struct RootView: View {
     @State private var toolsArePresented = false
     @State private var contrastIsPresented = false
     @State private var accountIsPresented = false
-    @State private var photoPickerIsPresented = false
-    @State private var selectedItem: PhotosPickerItem?
     @State private var isExtracting = false
     @State private var detailSwatch: PaletteColor?
     @State private var addColorDestination: AddColorDestination?
@@ -28,10 +25,9 @@ struct RootView: View {
     @State private var savePaletteIsPresented = false
     @State private var shareIsPresented = false
     @State private var libraryIsPresented = false
-    /// Which source the next extraction comes from. The + used to be a PhotosPicker directly, so
-    /// the library was the only way in; now both entry points ask first.
+    /// Presents `PhotoSourcePicker`, which is now the only way into an extraction — from the
+    /// dock's + and from the Tools sheet's Extractor alike.
     @State private var sourceChoiceIsPresented = false
-    @State private var cameraIsPresented = false
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
@@ -63,29 +59,11 @@ struct RootView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .safeAreaInset(edge: .bottom, spacing: 0) { dock }
         }
-        .photosPicker(isPresented: $photoPickerIsPresented, selection: $selectedItem, matching: .images)
-        // An action sheet rather than a sheet of cards: for a two-way source choice this is the
-        // platform convention and keeps the palette visible behind it.
-        .confirmationDialog(
-            "New palette",
-            isPresented: $sourceChoiceIsPresented,
-            titleVisibility: .hidden
-        ) {
-            // Hidden rather than disabled where there is no camera — the simulator, or camera
-            // access denied. An option that opens a black screen is worse than no option.
-            if CameraPicker.isAvailable {
-                Button("Take Photo") { cameraIsPresented = true }
-            }
-            Button("Choose Photo") { photoPickerIsPresented = true }
-            Button("Cancel", role: .cancel) {}
-        }
-        .fullScreenCover(isPresented: $cameraIsPresented) {
-            CameraPicker { extract($0) }
-                .ignoresSafeArea()
-        }
-        .onChange(of: selectedItem) { _, item in
-            guard let item else { return }
-            extract(item)
+        // One screen for both sources — recent photos as a grid with the camera as its first
+        // cell — rather than asking which source before showing either. PhotoSourcePicker owns
+        // the camera, the library and every permission state between them.
+        .sheet(isPresented: $sourceChoiceIsPresented) {
+            PhotoSourcePicker { extract($0) }
         }
         .sheet(isPresented: $toolsArePresented) {
             ToolsSheet { open($0) }
@@ -321,32 +299,14 @@ struct RootView: View {
         }
     }
 
-    /// A camera capture arrives already decoded, so there is no read step to fail and no
-    /// "couldn't read that photo" case — unlike the library path below.
+    /// Extraction from whichever source the picker used. Both arrive already decoded — the
+    /// picker owns loading and reports its own read failures — so there is nothing left to fail
+    /// here and no palette-unchanged case to explain.
     private func extract(_ image: UIImage) {
         Task {
             isExtracting = true
             defer { isExtracting = false }
             store.replace(with: await PhotoExtractor.palette(from: image))
-        }
-    }
-
-    private func extract(_ item: PhotosPickerItem) {
-        Task {
-            isExtracting = true
-            defer {
-                isExtracting = false
-                selectedItem = nil
-            }
-            if let palette = await PhotoExtractor.palette(from: item) {
-                store.replace(with: palette)
-            } else {
-                // Without this the spinner simply stopped and the palette stayed as it was,
-                // which is indistinguishable from an extraction that happened to change nothing.
-                // Reachable in ordinary use: an iCloud photo not yet downloaded to the device, a
-                // RAW/ProRAW file UIImage will not decode, or a corrupt asset.
-                showToast("Couldn't read that photo. Try another one.")
-            }
         }
     }
 
@@ -399,7 +359,7 @@ private struct AddColorDestination: Identifiable {
 /// optically misaligned (measured: 2.7pt apart). Scaling each symbol to fit the same square makes
 /// the centering structural instead of a per-symbol fudge factor.
 ///
-/// A view rather than a method on `RootView` so it can be built inside `PhotosPicker` and `Menu`
+/// A view rather than a method on `RootView` so it can be built inside a `Button` label
 /// label closures, which are not main-actor isolated.
 private struct DockIcon: View {
     let systemName: String
