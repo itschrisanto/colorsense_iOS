@@ -64,8 +64,11 @@ targets:
         # Create Watch Face) still appeared, which made the cause easy to misread as a UTType
         # problem. Do not remove it while the export offers image sharing.
         NSPhotoLibraryAddUsageDescription: "ColorSense needs permission to save exported palettes to your photo library."
-        # No camera or photo-library *read* string: the app has no camera code, and PhotosPicker
-        # runs out of process so it needs no read permission.
+        # Required by the Extractor's camera source. iOS terminates the app outright if a camera
+        # is opened without this, so it is not optional once CameraPicker exists.
+        NSCameraUsageDescription: "ColorSense uses the camera so you can photograph something and pull a palette from its colors."
+        # Still no photo-library *read* string: PhotosPicker runs out of process, so choosing an
+        # existing photo needs no permission from us.
         CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
         # AppConfig reads all three of these from the Info.plist, but only the publishable key was
         # ever declared here — so setting API_BASE_URL or CLERK_PROXY_URL in Secrets.xcconfig did

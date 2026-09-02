@@ -28,6 +28,10 @@ struct RootView: View {
     @State private var savePaletteIsPresented = false
     @State private var shareIsPresented = false
     @State private var libraryIsPresented = false
+    /// Which source the next extraction comes from. The + used to be a PhotosPicker directly, so
+    /// the library was the only way in; now both entry points ask first.
+    @State private var sourceChoiceIsPresented = false
+    @State private var cameraIsPresented = false
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
@@ -60,6 +64,25 @@ struct RootView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) { dock }
         }
         .photosPicker(isPresented: $photoPickerIsPresented, selection: $selectedItem, matching: .images)
+        // An action sheet rather than a sheet of cards: for a two-way source choice this is the
+        // platform convention and keeps the palette visible behind it.
+        .confirmationDialog(
+            "New palette",
+            isPresented: $sourceChoiceIsPresented,
+            titleVisibility: .hidden
+        ) {
+            // Hidden rather than disabled where there is no camera — the simulator, or camera
+            // access denied. An option that opens a black screen is worse than no option.
+            if CameraPicker.isAvailable {
+                Button("Take Photo") { cameraIsPresented = true }
+            }
+            Button("Choose Photo") { photoPickerIsPresented = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .fullScreenCover(isPresented: $cameraIsPresented) {
+            CameraPicker { extract($0) }
+                .ignoresSafeArea()
+        }
         .onChange(of: selectedItem) { _, item in
             guard let item else { return }
             extract(item)
@@ -158,14 +181,15 @@ struct RootView: View {
 
             DockButton("square.grid.2x2", label: "Tools", foreground: dockForeground) { toolsArePresented = true }
 
-            PhotosPicker(selection: $selectedItem, matching: .images) {
+            Button { sourceChoiceIsPresented = true } label: {
                 DockIcon("plus", size: 21)
                     .foregroundStyle(.white)
                     .frame(width: 46, height: 46)
                     .background(BrandColor.coral, in: Circle())
             }
+            .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
-            .accessibilityLabel("Extract colors from a photo")
+            .accessibilityLabel("New palette from a photo")
 
             DockButton("arrow.triangle.2.circlepath", label: "Generate", foreground: dockForeground) {
                 store.generate()
@@ -283,7 +307,7 @@ struct RootView: View {
 
     private func open(_ tool: Tool) {
         switch tool {
-        case .extractor: photoPickerIsPresented = true
+        case .extractor: sourceChoiceIsPresented = true
         case .contrast: contrastIsPresented = true
         case .library: libraryIsPresented = true
         }
@@ -294,6 +318,16 @@ struct RootView: View {
             isPro = plan == "pro" || plan == "business"
         } else {
             isPro = false
+        }
+    }
+
+    /// A camera capture arrives already decoded, so there is no read step to fail and no
+    /// "couldn't read that photo" case — unlike the library path below.
+    private func extract(_ image: UIImage) {
+        Task {
+            isExtracting = true
+            defer { isExtracting = false }
+            store.replace(with: await PhotoExtractor.palette(from: image))
         }
     }
 

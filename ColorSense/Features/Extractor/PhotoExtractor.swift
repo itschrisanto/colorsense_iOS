@@ -13,7 +13,14 @@ enum PhotoExtractor {
             let image = UIImage(data: data)
         else { return nil }
 
-        return await Task.detached(priority: .userInitiated) {
+        return await palette(from: image)
+    }
+
+    /// The same clustering, for an image that arrived already decoded — a camera capture, which
+    /// hands back a `UIImage` rather than something to load. Non-optional: there is no read step
+    /// left to fail, so a caller with an image always gets a palette.
+    static func palette(from image: UIImage) async -> ExtractedPalette {
+        await Task.detached(priority: .userInitiated) {
             ColorExtractionService.extractPalette(from: image)
         }.value
     }
