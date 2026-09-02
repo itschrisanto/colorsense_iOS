@@ -33,13 +33,20 @@ struct PaletteBandsView: View {
                 }
             }
         }
-        // The bands are the one screen whose height is fixed by the palette itself: with eight
-        // colors each band is an eighth of the display, and nothing can scroll. Text that keeps
-        // growing past a point clips against a boundary it cannot push. Capping here lets names
-        // and hex grow together through the normal range and most of the accessibility range,
-        // then stop while the full-bleed layout still holds — measured at
-        // accessibility-extra-large, where uncapped names truncated to "Governor…" and
-        // "Cocoa Be…". Every other screen scrolls, so none of them caps.
+        // The bands neither scroll nor grow — the palette fixes their height — so text that keeps
+        // growing collides with the band below rather than pushing it. Measured at
+        // accessibility-extra-large, uncapped names truncated to "Governor…" and "Cocoa Be…".
+        //
+        // A constant is enough because the app is portrait-only (see UISupportedInterfaceOrientations
+        // in project.yml). The tightest portrait case is eight colors on the smallest device this
+        // ships to, which still leaves about 70pt a band against the 68pt this cap allows. Landscape
+        // was the case that needed the height to be measured, and it is no longer reachable — if a
+        // landscape or iPad layout is ever added, this has to become a function of the space actually
+        // available, because there the bands could not fit at any text size at all.
+        //
+        // The limit is width-driven rather than height-driven: past accessibility1 a long name like
+        // "Governor Bay" truncates against the action buttons while the height is still fine. Every
+        // other screen scrolls, so none of them caps.
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
 

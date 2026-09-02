@@ -38,6 +38,16 @@ targets:
       properties:
         CFBundleDisplayName: ColorSense
         UILaunchScreen: {}
+        # Portrait only. The palette screen is full-bleed bands splitting the available height,
+        # and a band cannot be shorter than the 44pt tap targets it carries. Eight bands therefore
+        # need 352pt, against the 288pt landscape leaves once the dock takes its safe-area inset
+        # on an iPhone 17 Pro Max — so at seven or more colors the stack overflowed, clipping the
+        # first name off the top of the screen and pushing the last band under the dock. That is
+        # arithmetic, not a tuning problem: no type size fixes it while the tap targets stay legal.
+        # Landscape did work at six colors or fewer, which is why it looked fine in testing.
+        # Revisit only alongside a real landscape layout for these bands.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
         # Wired to the build settings below rather than left to XcodeGen's defaults. With
         # GENERATE_INFOPLIST_FILE: NO, Xcode never injects MARKETING_VERSION or
         # CURRENT_PROJECT_VERSION itself, so without these two lines the generated plist
