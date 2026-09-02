@@ -264,6 +264,55 @@ Two things that matter and are easy to get wrong:
   box. That is what `DockIcon.opticalOffset` is for — one measured value per symbol, with the
   measurement recorded in a comment, never a guess.
 
+## Checking Dynamic Type, dark mode and orientation (swept 2026-09-03)
+
+The simulator can be driven from the shell, which is how the accessibility sweep was done:
+
+```bash
+xcrun simctl ui booted appearance dark|light
+xcrun simctl ui booted content_size accessibility-extra-large   # note the UNDERSCORE
+```
+
+Rotation has no `simctl` equivalent — go through the menu instead, which is reliable:
+
+```bash
+osascript -e 'tell application "System Events" to tell process "Simulator" to \
+  click menu item "Portrait" of menu 1 of menu item "Orientation" of menu 1 \
+  of menu bar item "Device" of menu bar 1'
+```
+
+Sheets can be opened without a UI test target: the Simulator publishes the app's accessibility
+tree, so a click at a screen coordinate lands on a real control. Read the device screen's origin
+and size off `group 1 of window 1` (`position`/`size` via System Events), then a device point maps
+to `origin + point`. The dock sits at y=808pt, with Share/Tools/+/Generate/Account at x=64/132/201/269/337.
+
+Two traps worth knowing before trusting a screenshot:
+- **`simctl io screenshot` always writes the framebuffer in the device's *native* portrait size.**
+  A rotated device gives a portrait-shaped PNG with sideways content — rotate it with
+  `sips -r 270` before reading it, or you will misread the layout entirely.
+- **A blank white frame is launch lag, not a crash** (see "Running the app"). Allow ~11s after
+  `simctl launch` before capturing, and longer than that after a fresh install.
+
+**What cannot be done this way: scrolling.** The Simulator exposes no `AXScrollArea`, and there is
+no Quartz in the system Python to synthesise wheel events, so anything below the fold has to be
+checked on a device by hand. That is the one thing worth keeping a device around for.
+
+Measure rather than eyeball, the same rule as "Measuring UI alignment" above. Sampling a column of
+pixels out of a BMP and reading where the colour changes gives exact band heights, and that is what
+finally identified the landscape overflow as the 44pt tap targets rather than the type — after two
+fixes had been aimed at the wrong constraint.
+
+Results of the sweep, all confirmed on a physical iPhone 17 Pro Max:
+
+- Fixed: `BrandFont.mono` did not scale, the palette bands clipped names, the dock painted its
+  glyphs against the system appearance instead of its swatch, and the Tools and Share grids broke
+  words mid-way at accessibility sizes.
+- **Checked and found fine, so do not "fix" them:** the Conversion and Harmonies grids in
+  `ColorDetailView`, and the saved-colors grid in `AddColorView`. They keep fixed column counts on
+  purpose — `AdaptiveColumns` is not needed there.
+- Also confirmed on device: haptics (which the simulator cannot produce at all), Dynamic Type at
+  large sizes, portrait lock, and dark mode over a white last swatch.
+
 ## Running the app
 
 `./Scripts/run-sim.sh` builds, installs, launches, and writes `.build/sim-screenshot.png`. It
