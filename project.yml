@@ -39,9 +39,15 @@ targets:
         CFBundleDisplayName: ColorSense
         UILaunchScreen: {}
         ITSAppUsesNonExemptEncryption: false
-        # No camera or photo-library usage strings: the app has no camera code, and PhotosPicker
-        # runs out of process so it needs no library permission. Add them back only alongside
-        # code that actually requires them — unused permission strings invite review questions.
+        # Required for the share sheet's "Save Image" action. That activity writes to the photo
+        # library on the *host app's* behalf, so iOS silently omits it unless the app declares
+        # this — even though the app never calls PHPhotoLibrary itself. Removing this once made
+        # Share as image offer only "Save to Files"; the image-only actions (Assign to Contact,
+        # Create Watch Face) still appeared, which made the cause easy to misread as a UTType
+        # problem. Do not remove it while the export offers image sharing.
+        NSPhotoLibraryAddUsageDescription: "ColorSense needs permission to save exported palettes to your photo library."
+        # No camera or photo-library *read* string: the app has no camera code, and PhotosPicker
+        # runs out of process so it needs no read permission.
         CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
         # OAuth callback scheme. Clerk's iOS SDK defaults its redirect to
         # "<bundle id>://callback", so the app has to own that scheme or the browser has
