@@ -13,11 +13,12 @@ struct SavedPalettesView: View {
 
     @State private var palettes: [SavedPaletteService.SavedPalette] = []
     @State private var state: LoadState = .loading
+    @State private var toast: String?
 
     private enum LoadState: Equatable {
         case loading
         case loaded
-        case failed(String)
+        case failed(SavedPaletteService.SaveError)
     }
 
     var body: some View {
@@ -45,13 +46,26 @@ struct SavedPalettesView: View {
                 switch state {
                 case .loading:
                     ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-                case .failed(let message):
-                    message.isEmpty ? nil : errorState(message)
+                case .failed(let error):
+                    errorState(error)
                 case .loaded:
                     palettes.isEmpty ? nil : list
                     if palettes.isEmpty { emptyState }
                 }
             }
+        .overlay(alignment: .bottom) {
+            if let toast {
+                Text(toast)
+                    .font(BrandFont.ui(14, weight: .medium))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay { Capsule().strokeBorder(.primary.opacity(0.12), lineWidth: 0.5) }
+                    .padding(.bottom, 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .task { await load() }
     }
 
@@ -110,14 +124,17 @@ struct SavedPalettesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func errorState(_ message: String) -> some View {
+    private func errorState(_ error: SavedPaletteService.SaveError) -> some View {
         VStack(spacing: 12) {
-            Text(message)
+            Text(error.message)
                 .font(BrandFont.ui(15))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Try again") { Task { await load() } }
-                .font(BrandFont.ui(15, weight: .medium))
+            // Only offered where it could actually work — see SaveError.isRetryable.
+            if error.isRetryable {
+                Button("Try again") { Task { await load() } }
+                    .font(BrandFont.ui(15, weight: .medium))
+            }
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -129,7 +146,7 @@ struct SavedPalettesView: View {
             palettes = result
             state = .loaded
         case .failure(let error):
-            state = .failed(error.message)
+            state = .failed(error)
         }
     }
 
@@ -137,16 +154,20 @@ struct SavedPalettesView: View {
         let targets = offsets.map { palettes[$0] }
         // Optimistic: the row disappears immediately, and a failed delete restores it on reload.
         palettes.remove(atOffsets: offsets)
-        for target in targets where await SavedPaletteService.delete(id: target.id).isFailure {
-            await load()
-            return
+        for target in targets {
+            if case .failure(let error) = await SavedPaletteService.delete(id: target.id) {
+                await load()
+                show(error.deleteMessage)
+                return
+            }
         }
     }
-}
 
-private extension Result {
-    var isFailure: Bool {
-        if case .failure = self { return true }
-        return false
+    private func show(_ message: String) {
+        withAnimation(.snappy) { toast = message }
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(.snappy) { if toast == message { toast = nil } }
+        }
     }
 }

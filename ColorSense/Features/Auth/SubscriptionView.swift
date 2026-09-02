@@ -16,7 +16,7 @@ struct SubscriptionView: View {
     @State private var state: LoadState = .loading
 
     private enum LoadState: Equatable {
-        case loading, loaded, failed(String)
+        case loading, loaded, failed(SavedPaletteService.SaveError)
     }
 
     private var planLabel: String {
@@ -36,11 +36,23 @@ struct SubscriptionView: View {
                     switch state {
                     case .loading:
                         ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
-                    case .failed(let message):
-                        Text(message)
-                            .font(BrandFont.ui(15))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    case .failed(let error):
+                        // Every other loading screen offers a retry; this one left closing and
+                        // reopening the sheet as the only way to try again. Gated the same way
+                        // they are — see SaveError.isRetryable.
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(error.message)
+                                .font(BrandFont.ui(15))
+                                .foregroundStyle(.secondary)
+                            if error.isRetryable {
+                                Button("Try again") {
+                                    state = .loading
+                                    Task { await load() }
+                                }
+                                .font(BrandFont.ui(15, weight: .medium))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     case .loaded:
                         planCard
                         // Neither branch names the web checkout. A paid user still needs to
@@ -96,7 +108,7 @@ struct SubscriptionView: View {
             plan = value
             state = .loaded
         case .failure(let error):
-            state = .failed(error.message)
+            state = .failed(error)
         }
     }
 }

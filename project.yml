@@ -67,6 +67,16 @@ targets:
         # No camera or photo-library *read* string: the app has no camera code, and PhotosPicker
         # runs out of process so it needs no read permission.
         CLERK_PUBLISHABLE_KEY: "$(CLERK_PUBLISHABLE_KEY)"
+        # AppConfig reads all three of these from the Info.plist, but only the publishable key was
+        # ever declared here — so setting API_BASE_URL or CLERK_PROXY_URL in Secrets.xcconfig did
+        # nothing at all, despite AppConfig and CLAUDE.md both documenting them as overrides.
+        # Neither default was affected (both are hardcoded fallbacks), so this never broke
+        # production; it broke pointing the app at a local api-server, and pointing it at a dead
+        # host to exercise the offline paths. AppConfig already guards against the unexpanded
+        # "$(API_BASE_URL)" literal, which is what an undefined xcconfig variable expands to —
+        # that guard only makes sense if these keys were meant to be here.
+        API_BASE_URL: "$(API_BASE_URL)"
+        CLERK_PROXY_URL: "$(CLERK_PROXY_URL)"
         # OAuth callback scheme. Clerk's iOS SDK defaults its redirect to
         # "<bundle id>://callback", so the app has to own that scheme or the browser has
         # nothing to hand the result back to. The same URL must also be listed as an

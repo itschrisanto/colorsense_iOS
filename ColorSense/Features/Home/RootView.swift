@@ -306,6 +306,12 @@ struct RootView: View {
             }
             if let palette = await PhotoExtractor.palette(from: item) {
                 store.replace(with: palette)
+            } else {
+                // Without this the spinner simply stopped and the palette stayed as it was,
+                // which is indistinguishable from an extraction that happened to change nothing.
+                // Reachable in ordinary use: an iCloud photo not yet downloaded to the device, a
+                // RAW/ProRAW file UIImage will not decode, or a corrupt asset.
+                showToast("Couldn't read that photo. Try another one.")
             }
         }
     }

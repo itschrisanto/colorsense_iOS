@@ -63,7 +63,7 @@ private struct ExploreContent: View {
     @State private var page = 1
     @State private var hasMore = false
     @State private var isLoading = false
-    @State private var errorMessage: String?
+    @State private var loadError: SavedPaletteService.SaveError?
     @State private var query = ""
 
     var body: some View {
@@ -78,7 +78,7 @@ private struct ExploreContent: View {
                 .buttonStyle(.plain)
             }
 
-            if hasMore && errorMessage == nil {
+            if hasMore && loadError == nil {
                 HStack {
                     Spacer()
                     ProgressView()
@@ -88,14 +88,17 @@ private struct ExploreContent: View {
                 .task { await load(nextPage: true) }
             }
 
-            if let errorMessage {
+            if let loadError {
                 VStack(spacing: 10) {
-                    Text(errorMessage)
+                    Text(loadError.message)
                         .font(BrandFont.ui(14))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    Button("Try again") { Task { await load(nextPage: false) } }
-                        .font(BrandFont.ui(15, weight: .medium))
+                    // Gated the same way the other screens are — see SaveError.isRetryable.
+                    if loadError.isRetryable {
+                        Button("Try again") { Task { await load(nextPage: false) } }
+                            .font(BrandFont.ui(15, weight: .medium))
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
@@ -107,7 +110,7 @@ private struct ExploreContent: View {
         .onSubmit(of: .search) { Task { await load(nextPage: false) } }
         .overlay {
             if palettes.isEmpty && isLoading { ProgressView() }
-            if palettes.isEmpty && !isLoading && errorMessage == nil && !query.isEmpty {
+            if palettes.isEmpty && !isLoading && loadError == nil && !query.isEmpty {
                 Text("No palettes match “\(query)”.")
                     .font(BrandFont.ui(15))
                     .foregroundStyle(.secondary)
@@ -147,7 +150,7 @@ private struct ExploreContent: View {
     private func load(nextPage: Bool) async {
         guard !isLoading else { return }
         isLoading = true
-        errorMessage = nil
+        loadError = nil
         let target = nextPage ? page + 1 : 1
 
         switch await SavedPaletteService.explore(page: target, query: query) {
@@ -157,7 +160,7 @@ private struct ExploreContent: View {
             page = result.page
             hasMore = result.hasMore
         case .failure(let error):
-            errorMessage = error.message
+            loadError = error
             hasMore = false
         }
         isLoading = false

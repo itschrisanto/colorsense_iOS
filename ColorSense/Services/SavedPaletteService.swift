@@ -9,7 +9,7 @@ import ClerkKit
 /// This is the only networking in the app besides Clerk itself; the extractor and contrast
 /// checker stay fully on-device.
 enum SavedPaletteService {
-    enum SaveError: LocalizedError {
+    enum SaveError: LocalizedError, Equatable {
         case notSignedIn
         case unauthorized
         case rejected(status: Int)
@@ -21,6 +21,34 @@ enum SavedPaletteService {
             case .unauthorized: return "Your session expired — sign in again."
             case .rejected(let status): return "Couldn't save the palette (\(status))."
             case .offline: return "Couldn't reach ColorSense. Check your connection."
+            }
+        }
+
+        /// The same failures worded for a delete. `message` is written for saving, and
+        /// "Couldn't save the palette" is actively wrong to show when a row the user just swiped
+        /// away has reappeared in a list. Both deletions are optimistic — the row goes
+        /// immediately and comes back on failure — so the wording has to explain the row coming
+        /// back, which is the part the user actually sees.
+        var deleteMessage: String {
+            switch self {
+            case .notSignedIn: return "Sign in to manage your saved items."
+            case .unauthorized: return "Your session expired — sign in again."
+            case .rejected: return "Couldn't delete that — it's back in the list."
+            case .offline: return "Couldn't reach ColorSense — it's back in the list."
+            }
+        }
+
+        /// Whether trying the same call again could plausibly succeed.
+        ///
+        /// It cannot for the two auth failures: nothing about the request changes between
+        /// attempts, so a "Try again" button there is an affordance that is guaranteed to fail.
+        /// Observed on the Library's Saved tab while signed out — the screen said "Sign in to save
+        /// palettes to your account" and then offered Try again, which simply re-ran the same
+        /// rejected call. Sign-in lives in the dock's Account button, not inside these sheets.
+        var isRetryable: Bool {
+            switch self {
+            case .notSignedIn, .unauthorized: return false
+            case .rejected, .offline: return true
             }
         }
 

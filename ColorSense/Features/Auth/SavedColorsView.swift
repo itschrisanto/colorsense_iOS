@@ -17,7 +17,7 @@ struct SavedColorsView: View {
     private enum LoadState: Equatable {
         case loading
         case loaded
-        case failed(String)
+        case failed(SavedPaletteService.SaveError)
     }
 
     private var paletteIsFull: Bool {
@@ -30,8 +30,8 @@ struct SavedColorsView: View {
                 switch state {
                 case .loading:
                     ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-                case .failed(let message):
-                    errorState(message)
+                case .failed(let error):
+                    errorState(error)
                 case .loaded:
                     if colors.isEmpty { emptyState } else { list }
                 }
@@ -123,14 +123,17 @@ struct SavedColorsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func errorState(_ message: String) -> some View {
+    private func errorState(_ error: SavedPaletteService.SaveError) -> some View {
         VStack(spacing: 12) {
-            Text(message)
+            Text(error.message)
                 .font(BrandFont.ui(15))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Try again") { Task { await load() } }
-                .font(BrandFont.ui(15, weight: .medium))
+            // Only offered where it could actually work — see SaveError.isRetryable.
+            if error.isRetryable {
+                Button("Try again") { Task { await load() } }
+                    .font(BrandFont.ui(15, weight: .medium))
+            }
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -147,7 +150,7 @@ struct SavedColorsView: View {
             colors = result
             state = .loaded
         case .failure(let error):
-            state = .failed(error.message)
+            state = .failed(error)
         }
     }
 
@@ -155,9 +158,12 @@ struct SavedColorsView: View {
         let targets = offsets.map { colors[$0] }
         // Optimistic: the row goes immediately, and a failed delete restores it on reload.
         colors.remove(atOffsets: offsets)
-        for target in targets where await SavedPaletteService.delete(id: target.id).isFailure {
-            await load()
-            return
+        for target in targets {
+            if case .failure(let error) = await SavedPaletteService.delete(id: target.id) {
+                await load()
+                show(error.deleteMessage)
+                return
+            }
         }
     }
 
@@ -167,12 +173,5 @@ struct SavedColorsView: View {
             try? await Task.sleep(for: .seconds(2))
             withAnimation(.snappy) { if toast == message { toast = nil } }
         }
-    }
-}
-
-private extension Result {
-    var isFailure: Bool {
-        if case .failure = self { return true }
-        return false
     }
 }
