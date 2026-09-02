@@ -26,6 +26,7 @@ struct RootView: View {
     @State private var isPro = false
     @State private var pendingRemoval: PaletteStore.Removal?
     @State private var savePaletteIsPresented = false
+    @State private var shareIsPresented = false
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
@@ -82,6 +83,25 @@ struct RootView: View {
         }
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(swatch: swatch)
+        }
+        .sheet(isPresented: $shareIsPresented) {
+            ShareSheet(
+                palette: store.palette,
+                shareable: PaletteExportService.shareable(
+                    for: store.palette,
+                    includesLogo: !isPro
+                ),
+                onSaveToAccount: {
+                    // Signing in is a prerequisite, so check it before asking for a name —
+                    // otherwise the user types one only to be bounced to auth and lose it.
+                    if clerk.user == nil {
+                        accountIsPresented = true
+                    } else {
+                        savePaletteIsPresented = true
+                    }
+                },
+                onCopied: { showToast($0) }
+            )
         }
         .sheet(isPresented: $savePaletteIsPresented) {
             SavePaletteView(palette: store.palette) { name in
@@ -176,61 +196,21 @@ struct RootView: View {
         }
     }
 
-    /// Save and Share are two different destinations, and the labels have to say which:
-    /// **Save** puts the palette in the user's ColorSense *account* (same store as the web app),
-    /// **Share as image** hands it to the *device* — share sheet or camera roll.
+    /// The share button. Opens `ShareSheet` rather than a `Menu` so it matches the Tools sheet
+    /// instead of iOS's default menu chrome.
     private var exportMenu: some View {
-        Menu {
-            Button {
-                // Signing in is a prerequisite, so check it before asking for a name — otherwise
-                // the user types one only to be bounced to auth and lose it.
-                if clerk.user == nil {
-                    accountIsPresented = true
-                } else {
-                    savePaletteIsPresented = true
-                }
-            } label: {
-                Label("Save to my account", systemImage: "bookmark")
-            }
-
-            Section {
-                if let shareable = PaletteExportService.shareable(
-                    for: store.palette,
-                    includesLogo: !isPro
-                ) {
-                    ShareLink(
-                        item: shareable,
-                        preview: SharePreview("ColorSense palette", image: shareable.preview)
-                    ) {
-                        Label("Share as image", systemImage: "square.and.arrow.up")
-                    }
-                }
-                Button {
-                    UIPasteboard.general.string = PaletteExportService.hexList(store.palette)
-                    showToast("Hex codes copied")
-                } label: {
-                    Label("Copy hex codes", systemImage: "number")
-                }
-                Button {
-                    UIPasteboard.general.string = PaletteExportService.cssVariables(store.palette)
-                    showToast("CSS variables copied")
-                } label: {
-                    Label("Copy CSS variables", systemImage: "curlybraces")
-                }
-            }
+        Button {
+            shareIsPresented = true
         } label: {
             // The share glyph's rising arrow makes it taller than the rest, which leaves its
             // ink centre sitting 1pt below theirs at the same point size. Measured, not guessed:
             // crop the dock from a screenshot, threshold the dark pixels inside the capsule, and
             // compare each glyph's bounding-box centre.
             DockIcon("square.and.arrow.up", opticalOffset: -1)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
         }
-        // .menuStyle(.button) makes the menu take a ButtonStyle, which is the only way to give
-        // it the same press feedback as the other dock items — a plain Menu ignores buttonStyle
-        // entirely, which is also why its glyph used to render system-blue.
-        .menuStyle(.button)
         .buttonStyle(DockButtonStyle())
         .accessibilityLabel("Share and export")
     }
