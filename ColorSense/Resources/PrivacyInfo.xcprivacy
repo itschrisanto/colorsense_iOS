@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Privacy manifest. Apple's automated check runs at upload, so this has to be right before
+	  the first App Store Connect build, not before release.
+
+	  It covers the whole package graph, not just ColorSense's own code. Of the three packages
+	  that ship in the binary, only PhoneNumberKit carries its own manifest; ClerkKit/ClerkKitUI
+	  1.5.1 and Nuke both ship none (verified by searching the SPM checkouts). SPM links them
+	  statically into the app binary, so their API use becomes ours to declare — there is nowhere
+	  else for it to be declared. Re-check this whenever a package version moves: if a later
+	  release adds its own manifest, the matching entry below becomes redundant.
+	-->
+
+	<!--
+	  No tracking. Nothing here is combined with data from other companies' apps or sites, and
+	  there is no ad network, attribution SDK or analytics SDK in the project.
+
+	  Clerk does have a telemetry subsystem, but TelemetryCollector.shouldRecord() returns false
+	  with reason "production instance", and ColorSense ships a production (pk_live_) key — so it
+	  records nothing in a shipping build. If the app is ever pointed at a development Clerk
+	  instance, telemetry starts flowing and this file needs revisiting.
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!--
+		  Sign-in identity, via Clerk. Linked to the user by definition — the whole point is that
+		  the same account works on iOS and colorsense.online. Never used for tracking.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!--
+		  Declared because Google sign-in is enabled on the production Clerk instance and returns
+		  a display name with the profile. Email-code sign-up on its own would not collect this.
+		  If Google is ever disabled and the instance stops asking for a name, drop this entry.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!--
+		  Saved palettes: the {name, colors} body SavedPaletteService POSTs to /api/saved-palettes.
+		  User-authored content stored against the account, which is what makes it show up in the
+		  web Library. The Extractor and WCAG Checker themselves send nothing — they are entirely
+		  on-device, and that stays true.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!--
+		  UserDefaults, reason CA92.1 — "access info from the app itself". ColorSense's own code
+		  uses no UserDefaults at all (PaletteStore persists JSON to Application Support instead);
+		  this is entirely Clerk's: a first-launch installation marker, the last-used auth method,
+		  and the telemetry throttle cache. All three read and write only this app's own defaults,
+		  which is exactly what CA92.1 describes.
+
+		  No other required-reason categories apply. Checked and absent from both this app and
+		  Clerk: file timestamps (the palette JSON is read and written with plain
+		  Data(contentsOf:) / write(to:options:.atomic), neither of which is a declarable API),
+		  system boot time, disk space, and active keyboards.
+		-->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+
+		<!--
+		  File timestamps, reason C617.1 — "timestamps of files inside the app container".
+		  Nuke's DataCache stamps contentAccessDate on write and reads contentAccessDateKey back
+		  to evict least-recently-used entries (Caching/DataCache.swift). Nuke arrives as a
+		  transitive dependency of ClerkKitUI, which uses it for avatar images, and ships no
+		  manifest of its own — but it is unquestionably in the shipping binary (15,404 Nuke
+		  symbols, DataCache.o among them), so the declaration belongs here.
+
+		  Its cache lives in the app's own Caches directory, which is what makes C617.1 the
+		  right reason rather than the user-provided-files or display-to-user ones. Nuke uses no
+		  disk-space or UserDefaults APIs — checked, not assumed.
+		-->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

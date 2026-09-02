@@ -4,10 +4,12 @@ import ClerkKit
 /// Current plan, read from `GET /api/me` — the same endpoint the web app's `usePlan` uses, which
 /// computes the effective plan at read time so trial and voucher grants expire on their own.
 ///
-/// Deliberately read-only: there is **no** upgrade or checkout link. App Store guideline 3.1.1
-/// requires digital-goods purchases to go through In-App Purchase, and routing users to the web
-/// checkout instead is a common rejection cause. Selling Pro from inside the app means StoreKit,
-/// which is a separate piece of work — until then this reports status and nothing more.
+/// Deliberately read-only: there is **no** upgrade or checkout link, and no mention of where one
+/// lives. App Store guideline 3.1.1 requires digital-goods purchases to go through In-App
+/// Purchase, and it covers prose as well as buttons — "Pro is available at colorsense.online"
+/// was still a call to action pointing at an external purchase mechanism, so it is gone. Selling
+/// Pro from inside the app means StoreKit, which is a separate piece of work — until then this
+/// reports status and nothing more.
 struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var plan: String?
@@ -41,9 +43,13 @@ struct SubscriptionView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     case .loaded:
                         planCard
+                        // Neither branch names the web checkout. A paid user still needs to
+                        // learn that cancelling does not happen here, so that is stated without
+                        // pointing at where it does; a free user gets the tier described rather
+                        // than a route to buy it. See the 3.1.1 note above.
                         Text(isPaid
-                             ? "Manage or cancel your plan at colorsense.online."
-                             : "Pro is available at colorsense.online.")
+                             ? "Your plan is managed outside the app."
+                             : "Pro unlocks the developer and design export formats.")
                             .font(BrandFont.ui(13))
                             .foregroundStyle(.secondary)
                     }

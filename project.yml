@@ -38,6 +38,14 @@ targets:
       properties:
         CFBundleDisplayName: ColorSense
         UILaunchScreen: {}
+        # Wired to the build settings below rather than left to XcodeGen's defaults. With
+        # GENERATE_INFOPLIST_FILE: NO, Xcode never injects MARKETING_VERSION or
+        # CURRENT_PROJECT_VERSION itself, so without these two lines the generated plist
+        # hardcoded 1.0/1 and both settings were dead config — bumping the version in this file
+        # changed nothing in the built app, and a second upload would have been rejected for
+        # reusing build number 1. App Store Connect requires a unique CFBundleVersion per upload.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         ITSAppUsesNonExemptEncryption: false
         # Required for the share sheet's "Save Image" action. That activity writes to the photo
         # library on the *host app's* behalf, so iOS silently omits it unless the app declares

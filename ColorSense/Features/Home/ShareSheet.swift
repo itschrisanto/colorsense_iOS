@@ -134,7 +134,11 @@ struct ShareSheet: View {
             }
 
             if !isPro {
-                Text("Included with ColorSense Pro. Manage your plan at colorsense.online.")
+                // Names the tier, but deliberately points nowhere. Guideline 3.1.1 forbids
+                // "buttons, external links, or other calls to action that direct customers to
+                // purchasing mechanisms other than in-app purchase" — naming the web checkout
+                // in prose is still a call to action. Says what Pro is, not where to buy it.
+                Text("Included with ColorSense Pro.")
                     .font(BrandFont.ui(12))
                     .foregroundStyle(.secondary)
             }

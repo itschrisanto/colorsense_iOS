@@ -192,8 +192,56 @@ Constraints worth knowing before promising anything:
 - A **free** Apple ID signs for **7 days**, then the app stops launching until it is rebuilt from
   Xcode. A paid Developer Program membership ($99/yr) extends that to a year and unlocks TestFlight.
 - Haptics only exist on hardware — the simulator has none, so device is the only way to check them.
-- Sign-in and account-saved palettes still will not work on device: `CLERK_PUBLISHABLE_KEY` is
-  still the placeholder.
+- Sign-in and account-saved palettes *do* work on device — the real production
+  `CLERK_PUBLISHABLE_KEY` is in `Config/Secrets.xcconfig` and was verified end to end.
+
+## Distributing to testers — what is ready and what is not (2026-09-03)
+
+Nothing can reach a tester remotely yet. TestFlight requires the paid **Apple Developer Program
+($99/yr)**; a free Personal Team has no App Store Connect access at all, so the only install path
+today is a cable and Xcode, expiring after 7 days. Enrol as an *Individual* for a fast turnaround,
+or as an *Organization* (needs a D-U-N-S number, roughly a week) if the store listing has to say
+"ColorSense" rather than a personal legal name — the type cannot be changed later without
+re-enrolling.
+
+Once enrolled: **internal** testers (≤100) skip Beta App Review and get builds in minutes, but each
+one needs a real App Store Connect role. **External** testers (≤10,000, invited by email or public
+link) need no team access but cost a Beta App Review per significant build. Builds expire after 90
+days either way.
+
+The repo side is done as far as it can go without an account:
+
+- **Privacy manifest** — `ColorSense/Resources/PrivacyInfo.xcprivacy`, copied to the bundle root.
+  It covers the whole package graph, not just our code: of the three packages that ship in the
+  binary, only PhoneNumberKit carries its own manifest, while ClerkKit/ClerkKitUI 1.5.1 and Nuke
+  ship none — and SPM links them statically, so their API use is ours to declare. Hence the
+  UserDefaults entry (Clerk's install marker and last-used-auth cache) and the file-timestamp
+  entry (Nuke's `DataCache` LRU eviction; Nuke arrives transitively via ClerkKitUI's avatars).
+  **Re-check this whenever a package version moves.** Apple's scan only runs server-side at
+  upload, so this cannot be validated locally — the first upload is the real test.
+- **No Clerk telemetry ships.** `TelemetryCollector.shouldRecord()` returns false with reason
+  "production instance", and we ship a `pk_live_` key. Pointing the app at a *development* Clerk
+  instance would start it flowing and would make the manifest wrong.
+- **Version numbers are wired, and were silently broken before.** `GENERATE_INFOPLIST_FILE: NO`
+  means Xcode never injects `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`, so XcodeGen's own
+  defaults (1.0 / 1) were winning and both settings in `project.yml` did nothing. The plist now
+  reads `$(MARKETING_VERSION)` / `$(CURRENT_PROJECT_VERSION)` explicitly. Bump
+  `CURRENT_PROJECT_VERSION` on **every** upload — App Store Connect rejects a reused build number.
+- **App icons are upload-safe** — both 1024×1024, PNG colour type 2, no alpha channel. Apple
+  rejects an App Store icon with alpha, so re-check with the IHDR if the icon is ever replaced.
+- **No purchase copy anywhere in the app.** Guideline 3.1.1 covers prose, not just buttons, so
+  `SubscriptionView` and `ShareSheet` name the Pro tier without naming where to buy it. The
+  affiliate link in `AffiliateView` is deliberately untouched: applying to a referral programme is
+  not a digital-goods purchase.
+
+Still blocked on the paid account: registering the `online.colorsense.ios` App ID, provisioning
+Sign in with Apple, the App Store Connect record and its privacy questionnaire, and the archive
+itself (`xcodebuild archive` needs a distribution certificate).
+
+One thing to fix *outside* this repo before external testing: the web privacy policy at
+`/privacy-policy` never mentions mobile or iOS. It is substantively accurate — same Clerk instance,
+same API, same data — but a reviewer checks that the policy covers the app. Deliberately parked
+until the Replit side is being touched anyway.
 
 ## Measuring UI alignment
 
