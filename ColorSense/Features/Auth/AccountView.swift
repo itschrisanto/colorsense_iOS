@@ -9,7 +9,6 @@ struct AccountView: View {
     @Environment(Clerk.self) private var clerk
     @Environment(\.dismiss) private var dismiss
 
-    @State private var authIsPresented = false
     @State private var route: Route?
 
     private enum Route: String, Identifiable {
@@ -23,16 +22,6 @@ struct AccountView: View {
                 VStack(spacing: 20) {
                     if let user = clerk.user {
                         profileHeader(user)
-                    } else {
-                        Button("Sign in") {
-                            authIsPresented = true
-                        }
-                        .font(BrandFont.ui(16, weight: .medium))
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(BrandColor.coral)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
 
                     // Everything below needs a user: there is nothing to show and no token to
@@ -58,15 +47,6 @@ struct AccountView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
-            }
-            .sheet(isPresented: $authIsPresented) {
-                AuthView()
-                    // The Clerk dashboard logo is a light-only bitmap with an opaque white
-                    // canvas. Drawing the mark locally keeps it crisp and transparent in both
-                    // appearances, while leaving Clerk's auth flow and provider buttons intact.
-                    .clerkAppIconView {
-                        ColorSenseAuthLogo()
-                    }
             }
             .sheet(item: $route) { destination in
                 switch destination {
@@ -209,7 +189,7 @@ struct AccountView: View {
 /// This intentionally has no background so it blends into both Light and Dark Mode. At 53 points
 /// it is slightly larger than ClerkKitUI's 44-point default logo slot without competing with the
 /// authentication heading.
-private struct ColorSenseAuthLogo: View {
+struct ColorSenseAuthLogo: View {
     private let tileSize: CGFloat = 24
     private let spacing: CGFloat = 5
 

@@ -1,11 +1,14 @@
 import SwiftUI
 import PhotosUI
+import ClerkKit
+import ClerkKitUI
 
 /// The app's home screen: whatever palette the user last had. There is no separate landing or
 /// upload screen — extracting from a photo is a tool that replaces this palette, not a place you
 /// go first. First launch lands on the brand palette rather than an empty state.
 struct RootView: View {
     @Environment(PaletteStore.self) private var store
+    @Environment(Clerk.self) private var clerk
 
     @State private var toolsArePresented = false
     @State private var contrastIsPresented = false
@@ -22,6 +25,7 @@ struct RootView: View {
     /// every time the network hiccups.
     @State private var isPro = false
     @State private var pendingRemoval: PaletteStore.Removal?
+    @State private var savePaletteIsPresented = false
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
@@ -65,10 +69,24 @@ struct RootView: View {
             WCAGCheckerView(palette: store.palette)
         }
         .sheet(isPresented: $accountIsPresented) {
-            AccountView()
+            // Signed out, the account screen had nothing on it but a button that opened this —
+            // so open it directly and save the extra tap.
+            if clerk.user == nil {
+                AuthView()
+                    // Same local mark AccountView used: Clerk's dashboard logo is a light-only
+                    // bitmap on an opaque white canvas, which looks wrong in dark mode.
+                    .clerkAppIconView { ColorSenseAuthLogo() }
+            } else {
+                AccountView()
+            }
         }
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(swatch: swatch)
+        }
+        .sheet(isPresented: $savePaletteIsPresented) {
+            SavePaletteView(palette: store.palette) { name in
+                showToast("Saved “\(name)” to your account")
+            }
         }
         .sheet(item: $addColorDestination) { destination in
             AddColorView(
@@ -117,7 +135,29 @@ struct RootView: View {
                 generateTaps += 1
             }
 
-            DockButton("person.circle", label: "Account") { accountIsPresented = true }
+            // Shows the user's own picture once signed in — a generic glyph gives no sense of
+            // whose account is attached.
+            Button { accountIsPresented = true } label: {
+                Group {
+                    if let user = clerk.user, user.hasImage, let url = URL(string: user.imageUrl) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            DockIcon("person.circle").foregroundStyle(.primary)
+                        }
+                        .frame(width: 26, height: 26)
+                        .clipShape(Circle())
+                        .overlay { Circle().strokeBorder(.primary.opacity(0.18), lineWidth: 1) }
+                        .frame(height: 46)
+                    } else {
+                        DockIcon("person.circle").foregroundStyle(.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .contentShape(.rect)
+            }
+            .buttonStyle(DockButtonStyle())
+            .accessibilityLabel("Account")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
@@ -142,12 +182,12 @@ struct RootView: View {
     private var exportMenu: some View {
         Menu {
             Button {
-                Task {
-                    switch await SavedPaletteService.save(store.palette) {
-                    case .success: showToast("Saved to your account")
-                    case .failure(.notSignedIn): accountIsPresented = true
-                    case .failure(let error): showToast(error.message)
-                    }
+                // Signing in is a prerequisite, so check it before asking for a name — otherwise
+                // the user types one only to be bounced to auth and lose it.
+                if clerk.user == nil {
+                    accountIsPresented = true
+                } else {
+                    savePaletteIsPresented = true
                 }
             } label: {
                 Label("Save to my account", systemImage: "bookmark")
@@ -187,9 +227,11 @@ struct RootView: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
         }
-        // Menu ignores .buttonStyle(.plain), so without an explicit tint its glyph renders
-        // system-blue while every other dock icon is neutral.
-        .tint(.primary)
+        // .menuStyle(.button) makes the menu take a ButtonStyle, which is the only way to give
+        // it the same press feedback as the other dock items — a plain Menu ignores buttonStyle
+        // entirely, which is also why its glyph used to render system-blue.
+        .menuStyle(.button)
+        .buttonStyle(DockButtonStyle())
         .accessibilityLabel("Share and export")
     }
 

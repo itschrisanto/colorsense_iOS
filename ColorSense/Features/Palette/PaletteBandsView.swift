@@ -71,11 +71,15 @@ struct PaletteBandsView: View {
 
     private func band(_ swatch: PaletteColor) -> some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(swatch.hex)
-                    .font(BrandFont.mono(26))
+            // Name leads, hex supports it — a name is the thing worth reading at a glance, and
+            // this matches the exported share card, which also puts the name over the hex.
+            VStack(alignment: .leading, spacing: 3) {
                 Text(swatch.name)
-                    .font(BrandFont.ui(15))
+                    .font(BrandFont.ui(24, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(swatch.hex)
+                    .font(BrandFont.mono(14, weight: .medium))
                     .opacity(0.75)
             }
             Spacer()
