@@ -14,8 +14,6 @@ struct PaletteBandsView: View {
     @State private var copiedHex: String?
     /// One counter per seam, so spinning one + does not spin the others.
     @State private var seamTaps: [Int: Int] = [:]
-    /// Horizontal drag per band, while a swipe-to-delete is in progress.
-    @State private var dragOffsets: [PaletteColor.ID: CGFloat] = [:]
     /// Bumped on a completed swipe, purely to fire a haptic.
     @State private var swipeDeletes = 0
     /// Band width, for the swipe threshold. Read from a background reader rather than wrapping
@@ -111,43 +109,25 @@ struct PaletteBandsView: View {
         palette.colors.count > PaletteStore.minimumColorCount
     }
 
-    /// How far a band must travel before releasing it deletes. A third of the width: far enough
-    /// that a stray horizontal drag while reaching for the lock button cannot destroy a swatch,
-    /// short enough to complete comfortably with one thumb.
-    private func deletionThreshold(_ width: CGFloat) -> CGFloat { width / 3 }
-
     private func band(_ swatch: PaletteColor, width: CGFloat) -> some View {
-        let offset = dragOffsets[swatch.id] ?? 0
-        return ZStack(alignment: .leading) {
-            // Only built while a swipe is under way, so an untouched palette pays nothing for it.
-            if offset > 0 {
-                deletionBackdrop(for: swatch, offset: offset)
+        SwipeToRemove(
+            width: width,
+            isEnabled: canRemove,
+            onRemove: {
+                swipeDeletes += 1
+                onDelete(swatch.id)
             }
+        ) {
             bandBody(swatch, width: width)
-                .offset(x: offset)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: "Show color details") { onOpenDetail(swatch) }
-        // VoiceOver cannot perform the swipe, so the same action is offered directly. The trash
+        // VoiceOver cannot perform a swipe, so the same action is offered directly. The trash
         // button is also still there for everyone.
         .accessibilityAction(named: "Remove \(swatch.name)") {
-            if canRemove { onDelete(swatch.id) }
-        }
-    }
-
-    /// Revealed behind a band as it slides away. Deepens as the threshold approaches, so the
-    /// point of no return is visible before the finger lifts rather than discovered after.
-    private func deletionBackdrop(for swatch: PaletteColor, offset: CGFloat) -> some View {
-        GeometryReader { proxy in
-            let progress = min(offset / deletionThreshold(proxy.size.width), 1)
-            ZStack(alignment: .leading) {
-                Color(.systemRed).opacity(0.35 + 0.65 * progress)
-                Image(systemName: "trash.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .scaleEffect(0.8 + 0.2 * progress)
-                    .padding(.leading, 26)
+            if canRemove {
+                swipeDeletes += 1
+                onDelete(swatch.id)
             }
         }
     }
@@ -183,36 +163,6 @@ struct PaletteBandsView: View {
         // stays independently tappable.
         .contentShape(.rect)
         .onTapGesture { onOpenDetail(swatch) }
-        // simultaneousGesture, not gesture: a plain .gesture() claimed the touch outright and
-        // the tap that opens the detail card stopped firing entirely. minimumDistance already
-        // keeps the drag from triggering on a tap; this stops the two from competing at all.
-        .simultaneousGesture(swipeToDelete(swatch, width: width))
-    }
-
-    /// Swipe a band to the right to remove it.
-    ///
-    /// `minimumDistance` matters: without it this would swallow the taps that open a colour's
-    /// detail card. Rightward only — a leftward drag simply does nothing rather than moving the
-    /// band somewhere it has no meaning.
-    private func swipeToDelete(_ swatch: PaletteColor, width: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 18)
-            .onChanged { value in
-                guard canRemove else { return }
-                dragOffsets[swatch.id] = max(0, value.translation.width)
-            }
-            .onEnded { value in
-                guard canRemove else { return }
-                if value.translation.width > deletionThreshold(width) {
-                    swipeDeletes += 1
-                    // The band is already off to the right; removing it lets the stack close the
-                    // gap with the same spring the trash button uses. Undo lives in the toast.
-                    dragOffsets[swatch.id] = width
-                    onDelete(swatch.id)
-                    dragOffsets[swatch.id] = nil
-                } else {
-                    withAnimation(ControlMotion.press) { dragOffsets[swatch.id] = 0 }
-                }
-            }
     }
 
     private func bandActions(for swatch: PaletteColor) -> some View {
@@ -277,4 +227,73 @@ struct PaletteBandsView: View {
         onDelete: { _ in },
         onOpenDetail: { _ in }
     )
+}
+
+/// Swipe a band left to remove it.
+///
+/// A view of its own, and that is the point rather than tidiness: the drag offset changes on every
+/// frame of a gesture, and while it lived on `PaletteBandsView` each of those frames invalidated
+/// the whole screen — five bands, every seam button, the type metrics — which stuttered visibly on
+/// device. Held here, a drag repaints one band.
+private struct SwipeToRemove<Content: View>: View {
+    let width: CGFloat
+    let isEnabled: Bool
+    let onRemove: () -> Void
+    @ViewBuilder let content: () -> Content
+
+    @State private var offset: CGFloat = 0
+
+    /// How far a band must travel before releasing it removes. A third of the width: far enough
+    /// that a stray horizontal drag while reaching for the lock button cannot destroy a swatch,
+    /// short enough to complete comfortably with one thumb.
+    private var threshold: CGFloat { width / 3 }
+
+    /// 0...1 toward the point of no return, for the backdrop to deepen against.
+    private var progress: CGFloat {
+        guard threshold > 0 else { return 0 }
+        return min(-offset / threshold, 1)
+    }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // Only built while a swipe is under way, so an untouched palette pays nothing for it.
+            if offset < 0 {
+                ZStack(alignment: .trailing) {
+                    Color(.systemRed).opacity(0.35 + 0.65 * progress)
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .scaleEffect(0.8 + 0.2 * progress)
+                        .padding(.trailing, 26)
+                }
+            }
+            content()
+                .offset(x: offset)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .simultaneousGesture(gesture)
+    }
+
+    /// `minimumDistance` keeps this out of the way of the tap that opens a colour's detail card,
+    /// and `simultaneousGesture` at the call site stops the two competing for the touch outright.
+    private var gesture: some Gesture {
+        DragGesture(minimumDistance: 18)
+            .onChanged { value in
+                guard isEnabled else { return }
+                // Leftward only. A rightward drag does nothing rather than moving the band
+                // somewhere that has no meaning.
+                offset = min(0, value.translation.width)
+            }
+            .onEnded { value in
+                guard isEnabled else { return }
+                if -value.translation.width > threshold {
+                    // Send it the rest of the way first, so the band leaves rather than vanishing;
+                    // the stack then closes the gap with the same spring the trash button uses.
+                    withAnimation(ControlMotion.press) { offset = -width }
+                    onRemove()
+                } else {
+                    withAnimation(ControlMotion.press) { offset = 0 }
+                }
+            }
+    }
 }
