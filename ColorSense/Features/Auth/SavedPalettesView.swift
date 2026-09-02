@@ -22,9 +22,21 @@ struct SavedPalettesView: View {
 
     var body: some View {
         if isEmbedded {
+            // No navigation chrome at all when embedded. Previously this still applied an empty
+            // navigationTitle and toolbar, so switching Library tabs made the parent's bar change
+            // identity mid-transition — the title blanked out and came back.
             content
         } else {
-            NavigationStack { content }
+            NavigationStack {
+                content
+                    .navigationTitle("Saved palettes")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { dismiss() }
+                        }
+                    }
+            }
         }
     }
 
@@ -40,15 +52,6 @@ struct SavedPalettesView: View {
                     if palettes.isEmpty { emptyState }
                 }
             }
-        .navigationTitle(isEmbedded ? "" : "Saved palettes")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if !isEmbedded {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
         .task { await load() }
     }
 

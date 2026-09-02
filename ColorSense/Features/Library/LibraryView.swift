@@ -30,6 +30,11 @@ struct LibraryView: View {
             }
             .navigationTitle("Library")
             .navigationBarTitleDisplayMode(.inline)
+            // Without an explicit surface the bar is translucent glass and the list scrolls
+            // under it, smearing swatch colours through the segmented control. The palette
+            // screen needed the same treatment for the same reason.
+            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Picker("Library section", selection: $tab) {
