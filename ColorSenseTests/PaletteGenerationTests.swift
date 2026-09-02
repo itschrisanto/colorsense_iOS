@@ -252,3 +252,78 @@ struct PaletteColorHexParsingTests {
         #expect(PaletteColor(hexString: "#12345678", dominance: 0) == nil)
     }
 }
+
+@Suite("Reordering")
+@MainActor
+struct PaletteReorderTests {
+    private func store(colors: Int) -> (PaletteStore, URL) {
+        let url = URL.temporaryDirectory.appending(path: "reorder-\(UUID().uuidString).json")
+        let store = PaletteStore(fileURL: url)
+        store.replace(
+            with: ExtractedPalette(
+                colors: (0 ..< colors).map {
+                    PaletteColor(
+                        red: Double($0) / 10,
+                        green: 0.5,
+                        blue: 0.5,
+                        dominance: 1 / Double(colors)
+                    )
+                },
+                createdAt: Date()
+            )
+        )
+        return (store, url)
+    }
+
+    @Test func movingASwatchPutsItAtTheDestination() {
+        let (store, url) = store(colors: 4)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let moved = store.palette.colors[0].id
+        store.move(from: 0, to: 2)
+
+        #expect(store.palette.colors.count == 4)
+        #expect(store.palette.colors[2].id == moved)
+    }
+
+    /// Anchors are what Generate derives from, so a reorder that left them behind would make a
+    /// rearranged palette regenerate into a different arrangement than the one on screen.
+    @Test func anchorsFollowTheSwatchTheyBelongTo() {
+        let (store, url) = store(colors: 4)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let anchorHexes = store.palette.anchors.map(\.hex)
+        store.move(from: 3, to: 0)
+
+        #expect(store.palette.anchors.count == anchorHexes.count)
+        #expect(store.palette.anchors.first?.hex == anchorHexes.last)
+    }
+
+    @Test func outOfRangeAndNoOpMovesChangeNothing() {
+        let (store, url) = store(colors: 3)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let before = store.palette.colors.map(\.hex)
+        store.move(from: 0, to: 0)
+        store.move(from: 5, to: 1)
+        store.move(from: 1, to: 9)
+        store.move(from: -1, to: 0)
+
+        #expect(store.palette.colors.map(\.hex) == before)
+    }
+
+    /// Insert and remove reset `generation`; a reorder deliberately does not. Rearranging the
+    /// same colors is not a new palette to iterate from.
+    @Test func reorderingKeepsTheGenerationCount() {
+        let (store, url) = store(colors: 4)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        store.generate()
+        store.generate()
+        let generation = store.palette.generation
+        #expect(generation > 0)
+
+        store.move(from: 0, to: 3)
+        #expect(store.palette.generation == generation)
+    }
+}

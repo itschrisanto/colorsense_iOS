@@ -9,6 +9,7 @@ struct PaletteBandsView: View {
     let onAddColor: (Int) -> Void
     let onDelete: (PaletteColor.ID) -> Void
     let onOpenDetail: (PaletteColor) -> Void
+    let onMove: (Int, Int) -> Void
 
     /// Hex of the swatch most recently copied, so its button can confirm with a checkmark.
     @State private var copiedHex: String?
@@ -19,17 +20,28 @@ struct PaletteBandsView: View {
     /// Band width, for the swipe threshold. Read from a background reader rather than wrapping
     /// the stack in a GeometryReader, which would change how the bands are laid out.
     @State private var bandWidth: CGFloat = 0
+    @State private var bandsHeight: CGFloat = 0
+    /// Which band is being carried, and the slot it would land in. Set only when the slot
+    /// changes rather than on every frame of the drag — the frame-by-frame movement is local to
+    /// the band, which is what keeps a drag from repainting the whole screen.
+    @State private var draggingIndex: Int?
+    @State private var dropIndex: Int?
+    @State private var reorders = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                ForEach(palette.colors) { swatch in
-                    band(swatch, width: bandWidth)
+                ForEach(Array(palette.colors.enumerated()), id: \.element.id) { index, swatch in
+                    band(swatch, index: index, width: bandWidth)
+                        // A sibling being carried past this one opens a gap. Only the bands
+                        // between the source and the destination move, and only by one slot.
+                        .offset(y: gapOffset(for: index))
+                        .zIndex(draggingIndex == index ? 1 : 0)
                 }
             }
 
-            if palette.colors.count < PaletteStore.maximumColorCount {
+            if palette.colors.count < PaletteStore.maximumColorCount, draggingIndex == nil {
                 GeometryReader { proxy in
                     ForEach(insertionIndices, id: \.self) { index in
                         insertionButton(at: index)
@@ -44,11 +56,17 @@ struct PaletteBandsView: View {
         .background {
             GeometryReader { proxy in
                 Color.clear
-                    .onAppear { bandWidth = proxy.size.width }
+                    .onAppear {
+                        bandWidth = proxy.size.width
+                        bandsHeight = proxy.size.height
+                    }
                     .onChange(of: proxy.size.width) { _, width in bandWidth = width }
+                    .onChange(of: proxy.size.height) { _, height in bandsHeight = height }
             }
         }
         .sensoryFeedback(.impact(flexibility: .rigid), trigger: swipeDeletes)
+        // A lighter tick than a removal: passing a slot is a step, not a commitment.
+        .sensoryFeedback(.selection, trigger: dropIndex)
         // The bands neither scroll nor grow — the palette fixes their height — so text that keeps
         // growing collides with the band below rather than pushing it. Measured at
         // accessibility-extra-large, uncapped names truncated to "Governor…" and "Cocoa Be…".
@@ -109,13 +127,45 @@ struct PaletteBandsView: View {
         palette.colors.count > PaletteStore.minimumColorCount
     }
 
-    private func band(_ swatch: PaletteColor, width: CGFloat) -> some View {
-        SwipeToRemove(
+    /// Height of one band, for turning a vertical drag into a number of slots.
+    private var bandHeight: CGFloat {
+        bandsHeight / CGFloat(max(palette.colors.count, 1))
+    }
+
+    /// How far a band that is *not* being carried should step aside.
+    private func gapOffset(for index: Int) -> CGFloat {
+        guard let from = draggingIndex, let to = dropIndex, from != to, index != from else { return 0 }
+        if from < to {
+            return (index > from && index <= to) ? -bandHeight : 0
+        } else {
+            return (index >= to && index < from) ? bandHeight : 0
+        }
+    }
+
+    private func band(_ swatch: PaletteColor, index: Int, width: CGFloat) -> some View {
+        BandDrag(
+            index: index,
+            slotCount: palette.colors.count,
+            bandHeight: bandHeight,
             width: width,
-            isEnabled: canRemove,
+            canRemove: canRemove,
+            canReorder: palette.colors.count > 1,
             onRemove: {
                 swipeDeletes += 1
                 onDelete(swatch.id)
+            },
+            onSlot: { from, to in
+                draggingIndex = from
+                dropIndex = to
+            },
+            onDrop: { from, to in
+                draggingIndex = nil
+                dropIndex = nil
+                guard from != to else { return }
+                reorders += 1
+                withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
+                    onMove(from, to)
+                }
             }
         ) {
             bandBody(swatch, width: width)
@@ -226,39 +276,55 @@ struct PaletteBandsView: View {
         onToggleLock: { _ in },
         onAddColor: { _ in },
         onDelete: { _ in },
-        onOpenDetail: { _ in }
+        onOpenDetail: { _ in },
+        onMove: { _, _ in }
     )
 }
 
-/// Swipe a band left to remove it.
+/// Both of a band's drags, resolved by one gesture rather than two competing ones.
 ///
-/// A view of its own, and that is the point rather than tidiness: the drag offset changes on every
-/// frame of a gesture, and while it lived on `PaletteBandsView` each of those frames invalidated
-/// the whole screen — five bands, every seam button, the type metrics — which stuttered visibly on
-/// device. Held here, a drag repaints one band.
-private struct SwipeToRemove<Content: View>: View {
+/// A horizontal drag removes; a vertical drag reorders. They cannot be separate recognisers —
+/// each would try to claim the touch and a diagonal start would fire whichever won — so the axis
+/// is decided once, on the first movement past the threshold, and held for the rest of the
+/// gesture. A drag that starts sideways stays a removal even if it wanders downward.
+///
+/// The frame-by-frame movement is held here rather than by the parent, and that placement is the
+/// difference between smooth and stuttering: while it lived on `PaletteBandsView` every frame of
+/// a drag invalidated the whole screen. The parent hears only when the *slot* changes, which is a
+/// handful of times per drag instead of sixty a second.
+private struct BandDrag<Content: View>: View {
+    let index: Int
+    let slotCount: Int
+    let bandHeight: CGFloat
     let width: CGFloat
-    let isEnabled: Bool
+    let canRemove: Bool
+    let canReorder: Bool
     let onRemove: () -> Void
+    let onSlot: (Int, Int) -> Void
+    let onDrop: (Int, Int) -> Void
     @ViewBuilder let content: () -> Content
 
-    @State private var offset: CGFloat = 0
+    private enum Axis { case horizontal, vertical }
 
-    /// How far a band must travel before releasing it removes. A third of the width: far enough
-    /// that a stray horizontal drag while reaching for the lock button cannot destroy a swatch,
-    /// short enough to complete comfortably with one thumb.
-    private var threshold: CGFloat { width / 3 }
+    @State private var axis: Axis?
+    @State private var dx: CGFloat = 0
+    @State private var dy: CGFloat = 0
+    @State private var slot: Int?
 
-    /// 0...1 toward the point of no return, for the backdrop to deepen against.
+    /// A third of the width to remove: far enough that a stray sideways drag while reaching for
+    /// the lock button cannot destroy a swatch, short enough for one thumb.
+    private var removeThreshold: CGFloat { width / 3 }
+
     private var progress: CGFloat {
-        guard threshold > 0 else { return 0 }
-        return min(-offset / threshold, 1)
+        guard removeThreshold > 0 else { return 0 }
+        return min(-dx / removeThreshold, 1)
     }
+
+    private var isCarrying: Bool { axis == .vertical }
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Only built while a swipe is under way, so an untouched palette pays nothing for it.
-            if offset < 0 {
+            if dx < 0 {
                 ZStack(alignment: .trailing) {
                     Color(.systemRed).opacity(0.35 + 0.65 * progress)
                     Image(systemName: "trash.fill")
@@ -269,32 +335,64 @@ private struct SwipeToRemove<Content: View>: View {
                 }
             }
             content()
-                .offset(x: offset)
+                .offset(x: dx, y: dy)
+                // Lifted while carried, so it reads as picked up rather than merely misaligned.
+                .scaleEffect(isCarrying ? 0.97 : 1)
+                .shadow(color: .black.opacity(isCarrying ? 0.28 : 0), radius: 14, y: 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .simultaneousGesture(gesture)
     }
 
-    /// `minimumDistance` keeps this out of the way of the tap that opens a colour's detail card,
-    /// and `simultaneousGesture` at the call site stops the two competing for the touch outright.
     private var gesture: some Gesture {
         DragGesture(minimumDistance: 18)
             .onChanged { value in
-                guard isEnabled else { return }
-                // Leftward only. A rightward drag does nothing rather than moving the band
-                // somewhere that has no meaning.
-                offset = min(0, value.translation.width)
+                if axis == nil {
+                    let horizontal = abs(value.translation.width) > abs(value.translation.height)
+                    if horizontal, canRemove { axis = .horizontal }
+                    else if !horizontal, canReorder { axis = .vertical }
+                    else { return }
+                }
+
+                switch axis {
+                case .horizontal:
+                    // Leftward only. A rightward drag does nothing rather than moving the band
+                    // somewhere that has no meaning.
+                    dx = min(0, value.translation.width)
+                case .vertical:
+                    dy = value.translation.height
+                    guard bandHeight > 0 else { return }
+                    let steps = Int((dy / bandHeight).rounded())
+                    let target = min(max(index + steps, 0), slotCount - 1)
+                    if target != slot {
+                        slot = target
+                        onSlot(index, target)
+                    }
+                case nil:
+                    break
+                }
             }
             .onEnded { value in
-                guard isEnabled else { return }
-                if -value.translation.width > threshold {
-                    // Send it the rest of the way first, so the band leaves rather than vanishing;
-                    // the stack then closes the gap with the same spring the trash button uses.
-                    withAnimation(ControlMotion.press) { offset = -width }
-                    onRemove()
-                } else {
-                    withAnimation(ControlMotion.press) { offset = 0 }
+                switch axis {
+                case .horizontal:
+                    if -value.translation.width > removeThreshold {
+                        withAnimation(ControlMotion.press) { dx = -width }
+                        onRemove()
+                    } else {
+                        withAnimation(ControlMotion.press) { dx = 0 }
+                    }
+                case .vertical:
+                    // The offset is dropped without animation because the parent is about to
+                    // reorder the array: animating it home would slide the band back to where it
+                    // came from and then have it jump to its new slot.
+                    let target = slot ?? index
+                    dy = 0
+                    onDrop(index, target)
+                case nil:
+                    break
                 }
+                axis = nil
+                slot = nil
             }
     }
 }

@@ -54,7 +54,11 @@ struct RootView: View {
                     )
                 },
                 onDelete: { removeColor($0) },
-                onOpenDetail: { detailSwatch = $0 }
+                onOpenDetail: { detailSwatch = $0 },
+                onMove: { from, to in
+                    store.move(from: from, to: to)
+                    AnalyticsService.capture(.colorReordered)
+                }
             )
                 .overlay { if isExtracting { extractingOverlay } }
                 .overlay(alignment: .top) { if let toast { toastView(toast) } }

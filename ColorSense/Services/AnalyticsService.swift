@@ -37,6 +37,7 @@ enum AnalyticsService {
         // Was it worked on
         case colorAdded = "color_added"
         case colorRemoved = "color_removed"
+        case colorReordered = "color_reordered"
         case toolOpened = "tool_opened"
         case contrastChecked = "contrast_checked"
 

@@ -91,6 +91,32 @@ final class PaletteStore {
         return true
     }
 
+    /// Reorders a swatch within the palette.
+    ///
+    /// Anchors move with it. They are what Generate derives from, so leaving them in the old order
+    /// would make a reordered palette regenerate into a different arrangement than the one on
+    /// screen. `generation` is deliberately *not* reset, unlike insert and remove: rearranging the
+    /// same colors is not a new palette to iterate from, so an in-flight run of Generate should
+    /// keep its place in the scheme cycle.
+    func move(from source: Int, to destination: Int) {
+        let colors = palette.colors
+        guard colors.indices.contains(source),
+              destination >= 0, destination < colors.count,
+              source != destination
+        else { return }
+
+        let swatch = palette.colors.remove(at: source)
+        palette.colors.insert(swatch, at: destination)
+
+        if palette.anchors.indices.contains(source) {
+            let anchor = palette.anchors.remove(at: source)
+            palette.anchors.insert(anchor, at: min(destination, palette.anchors.count))
+        }
+
+        isShowingDefault = false
+        persist()
+    }
+
     @discardableResult
     func remove(swatchID: PaletteColor.ID) -> Removal? {
         guard palette.colors.count > Self.minimumColorCount,
