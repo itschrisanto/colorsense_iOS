@@ -45,7 +45,9 @@ struct ToolsSheet: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var columns: [GridItem] { AdaptiveColumns.cards(for: dynamicTypeSize) }
 
     var body: some View {
         NavigationStack {
