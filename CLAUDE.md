@@ -439,6 +439,22 @@ Deliberate divergences:
   `lib/wcagContrast.ts`. They differ only in which colour they move: "Fix it" adjusts the *text*,
   since a background is usually the fixed thing in a real design, while the report's remap adjusts
   the *surface*, because the report already chose the text as the one a designer would use.
+- **Neither fix applies itself.** Tapping proposes: `ContrastFixSheet` shows the failing pairing,
+  the measured before and after, and the new hex, and nothing changes until the reader presses
+  Apply. Both surfaces route through it, and the health report passes *every* failing pairing so
+  the choice of which to correct stays with the reader. Changing a colour somebody chose — often a
+  brand colour — without asking would be the app overruling its user on the one thing the product
+  is about.
+- **Both buttons are always present**, pinned to the bottom of their screen: coral when there is
+  something to fix, grey when there is not. Inline, they only appeared when something was already
+  broken, so a palette that scores well — which the brand default does — never revealed the
+  feature existed. Being locked deliberately does *not* borrow the grey, or a free reader mistakes
+  "Pro" for "all fine".
+- **A free tap opens the same sheet**, which names Pro and shows the fix in full including the new
+  hex. There is no upgrade button and no link, because there is nothing legitimate to link to: the
+  app has no StoreKit, and guideline 3.1.1 forbids sending people to an outside purchase — the
+  same rule that removed "Pro is available at colorsense.online". **Until StoreKit ships there is
+  no in-app route to Pro at all**, and adding one is the piece of work that unblocks it.
 - The health report's fix copy still points at the swatch editor rather than at the remap button,
   since the copy is shown to free readers too and would otherwise describe a control they cannot
   press.

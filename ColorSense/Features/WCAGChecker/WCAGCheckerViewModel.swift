@@ -56,6 +56,18 @@ final class WCAGCheckerViewModel {
     /// All four WCAG checks plus the best grade, matching the web app's WCAG panel.
     var verdict: ContrastCalculator.Verdict { ContrastCalculator.verdict(for: ratio) }
 
+    /// The two colours as swatches, for anything that needs more than a `Color` — previews,
+    /// hex labels, the fix sheet.
+    var foregroundSwatch: PaletteColor {
+        let c = foreground.resolveRGBA()
+        return PaletteColor(red: c.red, green: c.green, blue: c.blue, dominance: 0)
+    }
+
+    var backgroundSwatch: PaletteColor {
+        let c = background.resolveRGBA()
+        return PaletteColor(red: c.red, green: c.green, blue: c.blue, dominance: 0)
+    }
+
     /// The nudge behind "Fix it": moves the *text* colour, never the background.
     ///
     /// Backgrounds are usually the fixed thing in a real design — a brand surface, a page — and

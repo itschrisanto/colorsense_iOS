@@ -18,6 +18,7 @@ struct PaletteHealthView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var seenAs: ColorBlindness.Kind = .deuteranopia
+    @State private var remapIsPresented = false
 
     private var report: PaletteHealthReport {
         PaletteHealthReport.build(for: palette.colors, name: "", seenAs: seenAs)
@@ -40,6 +41,18 @@ struct PaletteHealthView: View {
                     }
                 }
                 .padding(20)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if palette.colors.count >= 2 { remapBar }
+            }
+            .sheet(isPresented: $remapIsPresented) {
+                ContrastFixSheet(
+                    title: "Auto-remap",
+                    isPro: isPro,
+                    proposals: remapProposals,
+                    onApply: { proposal in onRemap?(proposal.id, proposal.proposed) }
+                )
+                .presentationDetents([.medium, .large])
             }
             .navigationTitle("Palette health")
             .navigationBarTitleDisplayMode(.inline)
@@ -216,65 +229,93 @@ struct PaletteHealthView: View {
                             .clipShape(Capsule())
                     }
 
-                        // Offered only where the pairing actually fails. A remap button beside a
-                        // passing row would invite changing something already correct.
-                        if row.tone == .fail { remapButton(for: row) }
                     }
                 }
             }
         }
     }
 
-    /// Auto-remap: moves the *surface* to the nearest lightness where the text on it clears AA.
+    /// Every failing pairing, with the surface colour that would fix it.
     ///
-    /// The surface moves rather than the text because the report already chose the text — white
-    /// or the palette's darkest colour — as the one a designer would actually use. Locked for
-    /// free users the same way the Pro export formats are: shown, labelled, inert, and with no
-    /// route to a purchase anywhere near it, per guideline 3.1.1.
-    private func remapButton(for row: PaletteHealthReport.ContrastRow) -> some View {
-        Group {
-            if let fix = ContrastCalculator.suggestFix(
-                adjust: row.background, anchor: row.foreground, target: 4.5
-            ) {
-                Button {
-                    guard isPro else { return }
-                    onRemap?(row.backgroundIndex, fix.swatch)
-                } label: {
-                    HStack(spacing: 7) {
-                        Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text(isPro
-                             ? "Auto-remap to \(fix.swatch.hex) · \(String(format: "%.2f:1", fix.ratio))"
-                             : "Auto-remap")
-                            .font(BrandFont.ui(12, weight: .medium))
-                        if !isPro {
-                            Text("PRO")
-                                .font(BrandFont.ui(9, weight: .bold))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(BrandColor.purple.opacity(0.16))
-                                .foregroundStyle(BrandColor.purple)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(BrandColor.coral.opacity(isPro ? 0.14 : 0.07))
-                    .foregroundStyle(isPro ? BrandColor.coral : .secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 9))
-                }
-                .buttonStyle(.plain)
-                .disabled(!isPro)
-                .accessibilityLabel(isPro
-                    ? "Auto-remap \(row.backgroundName) so text on it passes AA"
-                    : "Auto-remap, a Pro feature")
-            } else {
-                Text("No lightness of this hue passes AA with that text.")
-                    .font(BrandFont.ui(11))
-                    .foregroundStyle(.secondary)
+    /// The *surface* moves rather than the text because the report has already chosen the text —
+    /// white, or the palette's darkest colour — as the one a designer would actually use there.
+    private var remapProposals: [ContrastFixSheet.Proposal] {
+        report.contrastRows
+            .filter { $0.tone == .fail }
+            .compactMap { row in
+                guard let fix = ContrastCalculator.suggestFix(
+                    adjust: row.background, anchor: row.foreground, target: 4.5
+                ) else { return nil }
+                return ContrastFixSheet.Proposal(
+                    id: row.backgroundIndex,
+                    problem: "Text on \(row.backgroundName) measures \(row.ratioText), below WCAG AA. Going \(fix.wentLighter ? "lighter" : "darker") reaches \(String(format: "%.2f:1", fix.ratio)) while keeping the hue.",
+                    original: row.background,
+                    proposed: fix.swatch,
+                    against: row.foreground,
+                    // The colour being changed is the surface, so it paints the background here.
+                    changingIsForeground: false,
+                    currentRatio: row.ratio,
+                    newRatio: fix.ratio,
+                    wentLighter: fix.wentLighter
+                )
             }
+    }
+
+    /// Auto-remap, pinned to the bottom rather than hidden beside a failing row.
+    ///
+    /// Inline it only existed when something was already broken, so a palette that scores well —
+    /// which is most of them, and certainly the brand default — never revealed the feature at all.
+    /// Here it is always present: coral when there is something to fix, grey when there is not.
+    private var remapBar: some View {
+        let proposals = remapProposals
+
+        return VStack(spacing: 0) {
+            Divider()
+            Group {
+                if proposals.isEmpty {
+                    Label("Every pairing passes AA — nothing to remap", systemImage: "checkmark.circle.fill")
+                        .font(BrandFont.ui(14))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                } else {
+                    Button { remapIsPresented = true } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(proposals.count == 1
+                                 ? "Auto-remap 1 color"
+                                 : "Auto-remap \(proposals.count) colors")
+                                .font(BrandFont.ui(15, weight: .medium))
+                            if !isPro {
+                                Text("PRO")
+                                    .font(BrandFont.ui(10, weight: .bold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(.white.opacity(0.28))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.plain)
+                    // Coral means there is something to fix; grey means there is not. Locked must
+                    // not borrow the grey, or a free reader mistakes "Pro" for "all fine".
+                    .foregroundStyle(.white)
+                    .background {
+                        RoundedRectangle(cornerRadius: 13)
+                            .fill(BrandColor.coral.opacity(isPro ? 1 : 0.55))
+                    }
+                    .accessibilityLabel(isPro
+                        ? "Auto-remap \(proposals.count) colors so text on them passes AA"
+                        : "Auto-remap, a Pro feature")
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
         }
+        .background(.bar)
     }
 
     private var colorBlindSection: some View {

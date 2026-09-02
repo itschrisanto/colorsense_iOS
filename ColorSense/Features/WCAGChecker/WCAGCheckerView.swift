@@ -11,6 +11,7 @@ struct WCAGCheckerView: View {
     let isPro: Bool
 
     @State private var viewModel: WCAGCheckerViewModel
+    @State private var fixIsPresented = false
     @Environment(\.dismiss) private var dismiss
 
     init(isPro: Bool = false, palette: ExtractedPalette = .sample) {
@@ -32,6 +33,32 @@ struct WCAGCheckerView: View {
                     .font(BrandFont.ui(16, weight: .medium))
                     .padding(.horizontal, 20)
                     .padding(.bottom, 8)
+                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) { fixItBar }
+            .sheet(isPresented: $fixIsPresented) {
+                if let target = fixTarget, let fix = viewModel.suggestedFix(target: target) {
+                    ContrastFixSheet(
+                        title: "Fix contrast",
+                        isPro: isPro,
+                        proposals: [
+                            .init(
+                                id: 0,
+                                problem: "Your text measures \(String(format: "%.2f:1", viewModel.ratio)) on this background, short of \(target >= 7 ? "AAA (7:1)" : "AA (4.5:1)"). Going \(fix.wentLighter ? "lighter" : "darker") reaches it while keeping the hue.",
+                                original: viewModel.foregroundSwatch,
+                                proposed: fix.swatch,
+                                against: viewModel.backgroundSwatch,
+                                changingIsForeground: true,
+                                currentRatio: viewModel.ratio,
+                                newRatio: fix.ratio,
+                                wentLighter: fix.wentLighter
+                            )
+                        ],
+                        onApply: { proposal in
+                            withAnimation(.snappy) { viewModel.foreground = proposal.proposed.color }
+                        }
+                    )
+                    .presentationDetents([.medium, .large])
                 }
             }
             .navigationTitle("Contrast")
@@ -92,53 +119,94 @@ struct WCAGCheckerView: View {
         .padding(.top, 4)
     }
 
-    /// "Fix it" — nudges the text colour to the nearest lightness that clears AA.
+    /// Which grade the fix should aim for, or nil when the pairing already clears AAA.
     ///
-    /// Locked for free users the same way the Pro export formats are: shown, labelled, and doing
-    /// nothing when tapped, with no route to a purchase. Guideline 3.1.1 is why there is no
-    /// "upgrade" anywhere near it.
-    private var fixIt: some View {
-        Group {
-            if let fix = viewModel.suggestedFix() {
-                Button {
-                    guard isPro else { return }
-                    withAnimation(.snappy) { viewModel.apply(fix) }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text(isPro
-                             ? "Fix it — go \(fix.wentLighter ? "lighter" : "darker") to \(String(format: "%.2f:1", fix.ratio))"
-                             : "Fix it")
-                            .font(BrandFont.ui(14, weight: .medium))
-                        if !isPro {
-                            Text("PRO")
-                                .font(BrandFont.ui(10, weight: .bold))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(BrandColor.purple.opacity(0.16))
-                                .foregroundStyle(BrandColor.purple)
-                                .clipShape(Capsule())
+    /// Climbing rather than only rescuing: a pairing that passes AA is still offered the nudge to
+    /// AAA, which is what keeps this control present — and therefore discoverable — instead of
+    /// appearing only when something is broken.
+    private var fixTarget: Double? {
+        if viewModel.ratio < 4.5 { return 4.5 }
+        if viewModel.ratio < 7 { return 7 }
+        return nil
+    }
+
+    /// "Fix it" — nudges the *text* colour to the nearest lightness that clears the next grade.
+    ///
+    /// It lives in a bottom bar rather than inline in the verdict for a reason found in testing:
+    /// inline, it only appeared when a pairing failed, so anyone whose colours already passed
+    /// never learned the feature existed at all. Pinned to the bottom it is always visible, and
+    /// says what it would do before it is pressed.
+    ///
+    /// Locked for free users the same way the Pro export formats are — shown, labelled, inert,
+    /// and with no route to a purchase anywhere near it, per guideline 3.1.1.
+    private var fixItBar: some View {
+        let target = fixTarget
+        let fix = target.flatMap { viewModel.suggestedFix(target: $0) }
+
+        return VStack(spacing: 0) {
+            Divider()
+            Group {
+                if let target, let fix {
+                    Button {
+                        // Proposes rather than applies — changing someone's colour without asking
+                        // is the app overruling its user on the one thing the product is about.
+                        // Free users open the same sheet: it shows the fix in full and names Pro
+                        // as what applies it.
+                        fixIsPresented = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Fix it — reach \(target >= 7 ? "AAA" : "AA")")
+                                .font(BrandFont.ui(15, weight: .medium))
+                            if !isPro { proBadge }
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(BrandColor.coral.opacity(isPro ? 0.16 : 0.08))
-                    .foregroundStyle(isPro ? BrandColor.coral : .secondary)
-                    .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .disabled(!isPro)
-                .accessibilityLabel(isPro ? "Fix the text color to pass AA" : "Fix it, a Pro feature")
-            } else {
-                // A real outcome: no lightness of this hue clears AA on this background.
-                Text("No lightness of this hue passes AA on this background.")
-                    .font(BrandFont.ui(12))
+                    .buttonStyle(.plain)
+                    // Coral means there is something to fix; grey means there is not. Being
+                    // locked must not borrow the grey, or a free user reads "nothing to fix"
+                    // when the truth is "something to fix, and this is how".
+                    .foregroundStyle(.white)
+                    .background {
+                        RoundedRectangle(cornerRadius: 13)
+                            .fill(BrandColor.coral.opacity(isPro ? 1 : 0.55))
+                    }
+                    .accessibilityLabel(isPro
+                        ? "Fix the text color to reach \(target >= 7 ? "triple A" : "double A")"
+                        : "Fix it, a Pro feature")
+                } else {
+                    // Either already AAA, or no lightness of this hue can get there. Both are
+                    // real outcomes and both are worth saying rather than showing nothing.
+                    Label(
+                        target == nil
+                            ? "Passes AAA — nothing to fix"
+                            : "No lightness of this hue reaches the next grade",
+                        systemImage: target == nil ? "checkmark.circle.fill" : "info.circle"
+                    )
+                    .font(BrandFont.ui(14))
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
         }
+        .background(.bar)
+    }
+
+    private var proBadge: some View {
+        Text("PRO")
+            .font(BrandFont.ui(10, weight: .bold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            // On a coral fill, not on a card — so the badge is white-on-white-ish rather than
+            // the purple-on-light it uses in the share sheet.
+            .background(.white.opacity(0.28))
+            .foregroundStyle(.white)
+            .clipShape(Capsule())
     }
 
     // MARK: - Verdict
@@ -161,9 +229,6 @@ struct WCAGCheckerView: View {
                 .font(BrandFont.ui(13))
                 .foregroundStyle(.secondary)
 
-            // Only offered when the pairing actually fails AA — a fix button on a passing pairing
-            // would invite people to change something that is already correct.
-            if viewModel.ratio < 4.5 { fixIt }
 
             // All four checks, spelled out with their thresholds, as the web panel shows them.
             // Two summary chips hid which specific requirement a pairing missed.
