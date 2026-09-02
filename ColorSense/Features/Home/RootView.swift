@@ -140,11 +140,23 @@ struct RootView: View {
     ///
     /// Generate deliberately does *not* also take an accent — two competing highlights in a
     /// five-item row leaves neither reading as primary.
+    /// Black or white against the swatch the dock floats on, by the same WCAG rule the band labels
+    /// use — `ContrastCalculator`, via `PaletteColor.legibleForeground`.
+    ///
+    /// Without it the glyphs followed the *system* appearance while their background followed the
+    /// *palette*, which are independent: in dark mode over a pale last swatch the dock painted
+    /// white glyphs on a near-white ground. Measured off the framebuffer at 2.36:1, against
+    /// 10.42:1 for the same dock in light mode — and the band label directly above it was
+    /// correctly flipping to black at the time.
+    private var dockForeground: Color {
+        store.palette.colors.last?.legibleForeground ?? .primary
+    }
+
     private var dock: some View {
         HStack(spacing: 0) {
             exportMenu
 
-            DockButton("square.grid.2x2", label: "Tools") { toolsArePresented = true }
+            DockButton("square.grid.2x2", label: "Tools", foreground: dockForeground) { toolsArePresented = true }
 
             PhotosPicker(selection: $selectedItem, matching: .images) {
                 DockIcon("plus", size: 21)
@@ -155,7 +167,7 @@ struct RootView: View {
             .frame(maxWidth: .infinity)
             .accessibilityLabel("Extract colors from a photo")
 
-            DockButton("arrow.triangle.2.circlepath", label: "Generate") {
+            DockButton("arrow.triangle.2.circlepath", label: "Generate", foreground: dockForeground) {
                 store.generate()
                 generateTaps += 1
             }
@@ -168,26 +180,26 @@ struct RootView: View {
                         AsyncImage(url: url) { image in
                             image.resizable().scaledToFill()
                         } placeholder: {
-                            DockIcon("person.circle").foregroundStyle(.primary)
+                            DockIcon("person.circle").foregroundStyle(dockForeground)
                         }
                         .frame(width: 26, height: 26)
                         .clipShape(Circle())
-                        .overlay { Circle().strokeBorder(.primary.opacity(0.18), lineWidth: 1) }
+                        .overlay { Circle().strokeBorder(dockForeground.opacity(0.18), lineWidth: 1) }
                         .frame(height: 46)
                     } else {
-                        DockIcon("person.circle").foregroundStyle(.primary)
+                        DockIcon("person.circle").foregroundStyle(dockForeground)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
             }
-            .buttonStyle(DockButtonStyle())
+            .buttonStyle(DockButtonStyle(foreground: dockForeground))
             .accessibilityLabel("Account")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(.ultraThinMaterial, in: Capsule())
-        .overlay { Capsule().strokeBorder(.primary.opacity(0.14), lineWidth: 0.5) }
+        .overlay { Capsule().strokeBorder(dockForeground.opacity(0.14), lineWidth: 0.5) }
         .shadow(color: .black.opacity(0.2), radius: 14, y: 5)
         .padding(.horizontal, 20)
         .padding(.top, 10)
@@ -212,11 +224,11 @@ struct RootView: View {
             // crop the dock from a screenshot, threshold the dark pixels inside the capsule, and
             // compare each glyph's bounding-box centre.
             DockIcon("square.and.arrow.up", opticalOffset: -1)
-                .foregroundStyle(.primary)
+                .foregroundStyle(dockForeground)
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
         }
-        .buttonStyle(DockButtonStyle())
+        .buttonStyle(DockButtonStyle(foreground: dockForeground))
         .accessibilityLabel("Share and export")
     }
 
@@ -379,22 +391,23 @@ private struct DockIcon: View {
 private struct DockButton: View {
     let systemName: String
     let label: String
+    let foreground: Color
     let action: () -> Void
 
-    init(_ systemName: String, label: String, action: @escaping () -> Void) {
+    init(_ systemName: String, label: String, foreground: Color, action: @escaping () -> Void) {
         self.systemName = systemName
         self.label = label
+        self.foreground = foreground
         self.action = action
     }
 
     var body: some View {
         Button(action: action) {
             DockIcon(systemName)
-                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
         }
-        .buttonStyle(DockButtonStyle())
+        .buttonStyle(DockButtonStyle(foreground: foreground))
         .accessibilityLabel(label)
     }
 }
@@ -406,13 +419,15 @@ private struct DockButton: View {
 /// Also stands in for `.plain`: the default style tints its label system-blue, which would
 /// leave the dock glyphs the wrong colour.
 struct DockButtonStyle: ButtonStyle {
+    let foreground: Color
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(.primary)
+            .foregroundStyle(foreground)
             .background {
                 Capsule()
                     .fill(.ultraThinMaterial)
-                    .overlay { Capsule().strokeBorder(.primary.opacity(0.14), lineWidth: 0.5) }
+                    .overlay { Capsule().strokeBorder(foreground.opacity(0.14), lineWidth: 0.5) }
                     .opacity(configuration.isPressed ? 1 : 0)
             }
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
