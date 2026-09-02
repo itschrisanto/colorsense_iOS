@@ -61,7 +61,12 @@ final class PaletteStore {
         )
 
         palette.colors = zip(palette.colors, generated).map { current, replacement in
-            current.isLocked ? current : replacement
+            guard !current.isLocked else { return current }
+            // Same slot, new colour — not a new swatch. Carrying the id is what lets the band
+            // animate from one colour to the next rather than being torn down and rebuilt.
+            var recoloured = replacement
+            recoloured.id = current.id
+            return recoloured
         }
         palette.generation += 1
         isShowingDefault = false

@@ -10,6 +10,7 @@ struct AddColorView: View {
     @Environment(PaletteStore.self) private var store
     @Environment(Clerk.self) private var clerk
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var customColor: Color
     @State private var hexDigits: String
@@ -256,7 +257,11 @@ struct AddColorView: View {
             validateHex()
             return
         }
-        guard store.insert(swatch, at: insertionIndex) else { return }
+        var inserted = false
+        withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
+            inserted = store.insert(swatch, at: insertionIndex)
+        }
+        guard inserted else { return }
         dismiss()
     }
 

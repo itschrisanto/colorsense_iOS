@@ -31,6 +31,9 @@ struct RootView: View {
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
+    /// Motion is opt-out at the system level and `withAnimation` ignores it, so every palette
+    /// change reads this and passes nil when it is on. See PaletteMotion.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -170,7 +173,9 @@ struct RootView: View {
             .accessibilityLabel("New palette from a photo")
 
             DockButton("arrow.triangle.2.circlepath", label: "Generate", foreground: dockForeground) {
-                store.generate()
+                withAnimation(PaletteMotion.recolor(reduceMotion: reduceMotion)) {
+                    store.generate()
+                }
                 generateTaps += 1
             }
 
@@ -306,12 +311,19 @@ struct RootView: View {
         Task {
             isExtracting = true
             defer { isExtracting = false }
-            store.replace(with: await PhotoExtractor.palette(from: image))
+            let extracted = await PhotoExtractor.palette(from: image)
+            withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
+                store.replace(with: extracted)
+            }
         }
     }
 
     private func removeColor(_ swatchID: PaletteColor.ID) {
-        guard let removal = store.remove(swatchID: swatchID) else { return }
+        var removal: PaletteStore.Removal?
+        withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
+            removal = store.remove(swatchID: swatchID)
+        }
+        guard let removal else { return }
         showToast("Color removed", removal: removal)
     }
 
@@ -340,7 +352,9 @@ struct RootView: View {
 
     private func undoRemoval() {
         guard let pendingRemoval else { return }
-        store.restore(pendingRemoval)
+        withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
+            store.restore(pendingRemoval)
+        }
         withAnimation(.snappy) { toast = nil }
         self.pendingRemoval = nil
     }

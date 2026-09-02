@@ -9,6 +9,7 @@ import SwiftUI
 struct SavedColorsView: View {
     @Environment(PaletteStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var colors: [SavedPaletteService.SavedColor] = []
     @State private var state: LoadState = .loading
@@ -140,7 +141,11 @@ struct SavedColorsView: View {
     }
 
     private func add(_ saved: SavedPaletteService.SavedColor) {
-        guard store.insert(saved.swatch, at: store.palette.colors.count) else { return }
+        var inserted = false
+        withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
+            inserted = store.insert(saved.swatch, at: store.palette.colors.count)
+        }
+        guard inserted else { return }
         show("\(saved.name) added to your palette")
     }
 

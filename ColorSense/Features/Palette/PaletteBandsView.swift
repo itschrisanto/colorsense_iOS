@@ -89,13 +89,19 @@ struct PaletteBandsView: View {
             // Name leads, hex supports it — a name is the thing worth reading at a glance, and
             // this matches the exported share card, which also puts the name over the hex.
             VStack(alignment: .leading, spacing: 3) {
+                // The band keeps its identity through Generate so its colour can interpolate,
+                // which means the label and hex are re-rendered in place with new values. A
+                // cross-fade keeps them in step with the colour behind them; without it the text
+                // swaps instantly against a band that is still moving.
                 Text(swatch.name)
                     .font(BrandFont.ui(24, weight: .bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                    .contentTransition(.opacity)
                 Text(swatch.hex)
                     .brandMono(14, weight: .medium)
                     .opacity(0.75)
+                    .contentTransition(.opacity)
             }
             Spacer()
             bandActions(for: swatch)

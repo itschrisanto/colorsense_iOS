@@ -1,7 +1,14 @@
 import SwiftUI
 
 struct PaletteColor: Identifiable, Equatable, Codable {
-    let id = UUID()
+    /// Per-run identity for SwiftUI, and assignable on purpose.
+    ///
+    /// Generate replaces every unlocked swatch with a freshly built one. With a fresh id each
+    /// time, SwiftUI saw that as a band being destroyed and a different band appearing, so the
+    /// colours could only pop. `PaletteStore.generate()` carries the old id onto the replacement
+    /// so the band stays the same band and its colour animates instead. Locked swatches keep
+    /// their identity for free, because generate keeps the instance itself.
+    var id = UUID()
     let red: Double
     let green: Double
     let blue: Double
