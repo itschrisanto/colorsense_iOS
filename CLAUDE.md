@@ -77,6 +77,17 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
   cut from v1, not cut forever.
   - Do not add new tool screens without an explicit ask — that's a scope decision, not
     a code decision.
+  - **Amended 2026-09-03: Palette Health was added, reversing the half of this that cut it.**
+    Asked for directly, so it is an amendment rather than drift — the vault's `Claude Skill.md`
+    should say so too. The rest of the cut list still stands: Brand Kit Creator, Website Color
+    Analyzer and Color Scheme Generator are still out, and still need an explicit ask.
+  - Health is a **port**, not an invention. `Services/PaletteHealth.swift` is `scorePalette()` from
+    the web's `lib/paletteHealth.ts`, and `Services/PaletteHealthReport.swift` is
+    `buildHealthReportData()` from `lib/paletteHealthReport.ts`. The report pulled in a third
+    port, `Services/ColorBlindness.swift` from `lib/colorBlind.ts` — the Machado (2009)
+    simulation and the ΔE confusable-pair check.
+  - **No PDF export**, unlike the web. That is a desktop deliverable and the web app already does
+    it well; a phone is not where anyone assembles a client PDF.
 - **Build approach: fresh native SwiftUI**, not a WebView wrapper. Color extraction and
   WCAG math are reimplemented natively in Swift (see below), not proxied to the web app.
 - **Backend: offline-first / on-device.** The extractor and WCAG checker do no networking
@@ -410,15 +421,22 @@ disagreeing about the same hex.
 | `ContrastCalculator.rating(for:)` | `rateContrast()` in labColor.ts | The 5-point labels and their 7 / 4.5 / 3 / 2 thresholds |
 | `Features/Extractor/PaletteGenerator.swift` | `relatedPalette()` in labColor.ts | Scheme tables, jitter magnitudes, clamps, `widen = iteration >= 10` |
 | `Features/Palette/ColorDetailView.swift` | `components/lab/ColorDetailCard.tsx` | Section order and labels |
+| `Services/PaletteHealth.swift` | `lib/paletteHealth.ts` | Five dimensions, their thresholds and weights, the A–F bands, and the detail/tip copy verbatim |
+| `Services/PaletteHealthReport.swift` | `lib/paletteHealthReport.ts` | Role assignment, contrast-row selection and ordering, and the summary wording |
+| `Services/ColorBlindness.swift` | `lib/colorBlind.ts` | Machado 2009 matrices at severity 1.0, applied in linear sRGB; ΔE < 14 confusable threshold |
 | `Services/SavedPaletteService.swift` | `routes/saved-palettes.ts`, `lib/savedPalettes.ts` | `POST /api/saved-palettes`, `{name, colors}`, uppercase `#RRGGBB`, Bearer token, ≤20 colors |
 
 `ColorMathTests.swift` pins the whole chain to values read off the web's own detail card for
 #666770 — if a port drifts, those fail. Extend that fixture rather than trusting a visual check.
 
-Two deliberate divergences:
+Deliberate divergences:
 - The web's "Generate Harmonies · AI · Pro" button is **not** on iOS. There is no StoreKit here,
   and App Store review rejects digital-goods upsells that route around IAP. Revisit when Pro
   actually ships on iOS.
+- The health report's fix copy points at the swatch editor, not at "the one-click auto-remap in
+  the Lab" as the web does. Auto-remap is a Pro feature of the web app with no iOS equivalent yet,
+  so the web wording would be an instruction the reader cannot follow. Revisit when auto-remap
+  ships here — the same applies to the Contrast tool's "Fix it", which is also Pro and also absent.
 - Tapping a harmony swatch copies its hex. On the web it *adds* the color to the palette;
   iOS has no add-color affordance yet.
 

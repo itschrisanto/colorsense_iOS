@@ -25,6 +25,7 @@ struct RootView: View {
     @State private var savePaletteIsPresented = false
     @State private var shareIsPresented = false
     @State private var libraryIsPresented = false
+    @State private var healthIsPresented = false
     /// Presents `PhotoSourcePicker`, which is now the only way into an extraction — from the
     /// dock's + and from the Tools sheet's Extractor alike.
     @State private var sourceChoiceIsPresented = false
@@ -98,6 +99,9 @@ struct RootView: View {
         }
         .sheet(isPresented: $libraryIsPresented) {
             LibraryView()
+        }
+        .sheet(isPresented: $healthIsPresented) {
+            PaletteHealthView(palette: store.palette)
         }
         .sheet(isPresented: $shareIsPresented) {
             ShareSheet(
@@ -306,6 +310,7 @@ struct RootView: View {
         switch tool {
         case .extractor: sourceChoiceIsPresented = true
         case .contrast: contrastIsPresented = true
+        case .health: healthIsPresented = true
         case .library: libraryIsPresented = true
         }
     }

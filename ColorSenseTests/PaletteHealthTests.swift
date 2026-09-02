@@ -71,3 +71,62 @@ struct PaletteHealthTests {
         #expect(PaletteHealth.grade(for: 39) == .f)
     }
 }
+
+/// Pins the report assembly ported from `buildHealthReportData()`.
+@Suite("Palette health report")
+struct PaletteHealthReportTests {
+    private func palette(_ hexes: [String]) -> [PaletteColor] {
+        hexes.compactMap { PaletteColor(hexString: $0, dominance: 1 / Double(hexes.count)) }
+    }
+
+    private let brand = ["#FF6B6B", "#4ECDC4", "#FFD93D", "#7C6DEB", "#2A2C32"]
+
+    /// The darkest colour is the text colour, not a surface, so it is excluded — and the rest are
+    /// ordered worst-first so the report leads with what needs attention.
+    @Test func contrastRowsSkipTheDarkestAndLeadWithTheWorst() {
+        let rows = PaletteHealthReport.contrastRows(for: palette(brand))
+
+        #expect(rows.count == 4)
+        #expect(!rows.contains { $0.backgroundName == palette(brand)[4].name })
+        #expect(rows == rows.sorted { $0.ratio < $1.ratio })
+    }
+
+    /// Roles are guidance, never part of the score, but they must be deterministic — a report that
+    /// renamed roles between runs would be useless to hand to a client.
+    @Test func rolesAreAssignedDeterministically() {
+        let roles = PaletteHealthReport.roleByIndex(for: palette(brand))
+
+        #expect(roles.count == 5)
+        #expect(Set(roles.values).contains("Accent"))
+        #expect(Set(roles.values).contains("Surface"))
+        #expect(Set(roles.values).contains("Text"))
+        #expect(roles == PaletteHealthReport.roleByIndex(for: palette(brand)))
+    }
+
+    @Test func aCleanPaletteSaysSoRatherThanInventingProblems() {
+        let report = PaletteHealthReport.build(for: palette(brand), name: "Brand")
+
+        #expect(report.paletteName == "Brand")
+        #expect(report.summary.hasSuffix("Everything below is measured, not guessed."))
+        #expect(report.colorBlindFinding.contains("stay distinguishable"))
+        #expect(report.fixes.isEmpty == (report.issueCount == 0))
+    }
+
+    @Test func anUnnamedPaletteGetsTheWebsFallbackName() {
+        let report = PaletteHealthReport.build(for: palette(brand), name: "   ")
+        #expect(report.paletteName == "Your brand palette")
+    }
+
+    /// A palette whose two colours collapse under deuteranopia should be reported as an issue and
+    /// get a fix, rather than passing quietly.
+    @Test func confusableColorsBecomeAnIssueAndAFix() {
+        let report = PaletteHealthReport.build(
+            for: palette(["#C0392B", "#7D6608", "#2A2C32"]),
+            name: "Signals"
+        )
+
+        #expect(report.issueCount > 0)
+        #expect(report.colorBlindFinding.contains("collapse to nearly the same tone"))
+        #expect(report.fixes.contains { $0.title.contains("separation") })
+    }
+}
