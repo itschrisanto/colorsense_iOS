@@ -9,6 +9,7 @@ import SwiftUI
 enum Tool: String, CaseIterable, Identifiable {
     case extractor
     case contrast
+    case library
 
     var id: String { rawValue }
 
@@ -16,6 +17,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .extractor: return "Extractor"
         case .contrast: return "Contrast"
+        case .library: return "Library"
         }
     }
 
@@ -23,6 +25,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .extractor: return "eyedropper"
         case .contrast: return "circle.lefthalf.filled"
+        case .library: return "books.vertical"
         }
     }
 
@@ -30,6 +33,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .extractor: return "Pull a palette from a photo"
         case .contrast: return "Check WCAG AA / AAA"
+        case .library: return "Your saved palettes and the curated library"
         }
     }
 }

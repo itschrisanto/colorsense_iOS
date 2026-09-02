@@ -4,6 +4,10 @@ import SwiftUI
 /// Tapping one loads it as the app's current palette, which is the point of syncing them at all:
 /// a palette saved from the web should be one tap from being worked on here.
 struct SavedPalettesView: View {
+    /// When embedded in `LibraryView` the parent already provides the navigation bar and Done
+    /// button, so this drops its own rather than nesting two.
+    var isEmbedded = false
+
     @Environment(PaletteStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
@@ -17,8 +21,15 @@ struct SavedPalettesView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
+        if isEmbedded {
+            content
+        } else {
+            NavigationStack { content }
+        }
+    }
+
+    private var content: some View {
+        Group {
                 switch state {
                 case .loading:
                     ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -29,15 +40,16 @@ struct SavedPalettesView: View {
                     if palettes.isEmpty { emptyState }
                 }
             }
-            .navigationTitle("Saved palettes")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+        .navigationTitle(isEmbedded ? "" : "Saved palettes")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !isEmbedded {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }
-            .task { await load() }
         }
+        .task { await load() }
     }
 
     private var list: some View {

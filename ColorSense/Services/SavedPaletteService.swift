@@ -103,6 +103,82 @@ enum SavedPaletteService {
         await authorizedRequest(path: "saved-palettes/\(id)", method: "DELETE") { _ in () }
     }
 
+    /// One curated palette from the public library, matching a row of `GET /api/palettes`.
+    struct ExplorePalette: Identifiable, Decodable, Equatable {
+        let id: Int
+        let slug: String
+        let name: String
+        let colors: [String]
+        let category: String
+
+        var paletteColors: [PaletteColor] {
+            let share = colors.isEmpty ? 0 : 1.0 / Double(colors.count)
+            return colors.compactMap { PaletteColor(hexString: $0, dominance: share) }
+        }
+
+        var asExtractedPalette: ExtractedPalette {
+            ExtractedPalette(colors: paletteColors, createdAt: Date())
+        }
+    }
+
+    private struct ExploreResponse: Decodable {
+        let items: [ExplorePalette]
+        let totalPages: Int
+        let page: Int
+    }
+
+    struct ExplorePage: Equatable {
+        let palettes: [ExplorePalette]
+        let page: Int
+        let totalPages: Int
+        var hasMore: Bool { page < totalPages }
+    }
+
+    /// The public curated library — the same approved palettes the web's Explore shows.
+    /// Deliberately unauthenticated: this endpoint needs no token, so Explore works signed out.
+    static func explore(page: Int = 1, query: String = "") async -> Result<ExplorePage, SaveError> {
+        var components = URLComponents(
+            url: AppConfig.apiBaseURL.appendingPathComponent("palettes"),
+            resolvingAgainstBaseURL: false
+        )
+        var items = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "limit", value: "30"),
+        ]
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { items.append(URLQueryItem(name: "q", value: trimmed)) }
+        components?.queryItems = items
+
+        guard let url = components?.url else { return .failure(.rejected(status: 0)) }
+
+        // The server answers conditional GETs with 304 and an empty body. URLSession normally
+        // replays the cached response transparently, but when the cache entry is gone the bare
+        // 304 reaches us with nothing to decode — which looked like a hang. These results are
+        // paged and change as palettes are approved, so always fetch them fresh.
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { return .failure(.rejected(status: 0)) }
+            guard (200..<300).contains(http.statusCode) else {
+                return .failure(.rejected(status: http.statusCode))
+            }
+            guard let decoded = try? JSONDecoder().decode(ExploreResponse.self, from: data) else {
+                return .failure(.rejected(status: http.statusCode))
+            }
+            return .success(
+                ExplorePage(
+                    palettes: decoded.items,
+                    page: decoded.page,
+                    totalPages: decoded.totalPages
+                )
+            )
+        } catch {
+            return .failure(.offline)
+        }
+    }
+
     private struct MeResponse: Decodable {
         struct User: Decodable { let plan: String? }
         let user: User

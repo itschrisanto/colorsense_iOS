@@ -27,6 +27,7 @@ struct RootView: View {
     @State private var pendingRemoval: PaletteStore.Removal?
     @State private var savePaletteIsPresented = false
     @State private var shareIsPresented = false
+    @State private var libraryIsPresented = false
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
@@ -83,6 +84,9 @@ struct RootView: View {
         }
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(swatch: swatch)
+        }
+        .sheet(isPresented: $libraryIsPresented) {
+            LibraryView()
         }
         .sheet(isPresented: $shareIsPresented) {
             ShareSheet(
@@ -268,6 +272,7 @@ struct RootView: View {
         switch tool {
         case .extractor: photoPickerIsPresented = true
         case .contrast: contrastIsPresented = true
+        case .library: libraryIsPresented = true
         }
     }
 
