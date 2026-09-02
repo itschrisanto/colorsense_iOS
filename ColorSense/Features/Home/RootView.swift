@@ -154,11 +154,14 @@ struct RootView: View {
             }
 
             Section {
-                if let image = PaletteExportService.image(
+                if let shareable = PaletteExportService.shareable(
                     for: store.palette,
                     includesLogo: !isPro
                 ) {
-                    ShareLink(item: image, preview: SharePreview("ColorSense palette", image: image)) {
+                    ShareLink(
+                        item: shareable,
+                        preview: SharePreview("ColorSense palette", image: shareable.preview)
+                    ) {
                         Label("Share as image", systemImage: "square.and.arrow.up")
                     }
                 }

@@ -1,4 +1,6 @@
 import SwiftUI
+import CoreTransferable
+import UniformTypeIdentifiers
 
 /// Builds the shareable representations of a palette offered by the Export menu.
 /// Everything here is generated on-device — exporting never touches the network.
@@ -33,6 +35,34 @@ enum PaletteExportService {
     @MainActor
     static func image(for palette: ExtractedPalette, includesLogo: Bool = true) -> Image? {
         uiImage(for: palette, includesLogo: includesLogo).map(Image.init(uiImage:))
+    }
+
+    /// The palette card packaged for `ShareLink`.
+    ///
+    /// Sharing a SwiftUI `Image` directly does not reliably advertise a photo type to the share
+    /// sheet, so "Save to Files" appears but "Save Image" does not. Declaring an explicit PNG
+    /// `DataRepresentation` with a filename is what puts the Photos destination back.
+    @MainActor
+    static func shareable(
+        for palette: ExtractedPalette,
+        includesLogo: Bool = true
+    ) -> SharablePaletteImage? {
+        guard
+            let uiImage = uiImage(for: palette, includesLogo: includesLogo),
+            let data = uiImage.pngData()
+        else { return nil }
+        return SharablePaletteImage(data: data, preview: Image(uiImage: uiImage))
+    }
+}
+
+struct SharablePaletteImage: Transferable {
+    let data: Data
+    /// Only for the share sheet's own thumbnail — the PNG data above is what actually transfers.
+    let preview: Image
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .png) { $0.data }
+            .suggestedFileName { _ in "ColorSense palette.png" }
     }
 
     // There is deliberately no save-to-Photos of our own: the system share sheet already offers
