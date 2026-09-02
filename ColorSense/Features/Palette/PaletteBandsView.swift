@@ -209,6 +209,7 @@ struct PaletteBandsView: View {
 
     private func copy(_ swatch: PaletteColor) {
         UIPasteboard.general.string = swatch.hex
+        AnalyticsService.capture(.colorCopied, ["from": "band"])
         withAnimation(.easeOut(duration: 0.15)) { copiedHex = swatch.hex }
         Task {
             try? await Task.sleep(for: .seconds(1.4))

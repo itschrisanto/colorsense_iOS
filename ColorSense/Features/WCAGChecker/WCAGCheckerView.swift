@@ -30,6 +30,9 @@ struct WCAGCheckerView: View {
                 }
             }
             .navigationTitle("Contrast")
+            // Once per opening rather than on each ratio change: the question is whether the
+            // checker gets used at all, not how much the sliders move.
+            .onAppear { AnalyticsService.capture(.contrastChecked) }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

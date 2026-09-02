@@ -180,7 +180,12 @@ struct PhotoSourcePicker: View {
             ? await PHPhotoLibrary.requestAuthorization(for: .readWrite)
             : current
         status = granted
-        if granted == .authorized || granted == .limited { loadAssets() }
+        if granted == .authorized || granted == .limited {
+            loadAssets()
+        } else if granted == .denied || granted == .restricted {
+            // Explains the drop between opening the picker and producing a palette.
+            AnalyticsService.capture(.permissionDenied, ["permission": "photos"])
+        }
     }
 
     private func loadAssets() {
@@ -221,6 +226,7 @@ struct PhotoSourcePicker: View {
                     // Reachable for real: an iCloud asset that cannot be fetched, or one whose
                     // format will not decode. Saying nothing here would repeat the bug this
                     // screen's predecessor had.
+                    AnalyticsService.capture(.extractionFailed, ["source": "library"])
                     loadFailed = true
                     return
                 }
@@ -237,6 +243,7 @@ struct PhotoSourcePicker: View {
             let data = try? await item.loadTransferable(type: Data.self),
             let image = UIImage(data: data)
         else {
+            AnalyticsService.capture(.extractionFailed, ["source": "library_fallback"])
             loadFailed = true
             return
         }

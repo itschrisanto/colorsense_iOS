@@ -100,6 +100,7 @@ struct SavePaletteView: View {
         Task {
             switch await SavedPaletteService.save(palette, name: trimmedName) {
             case .success:
+                AnalyticsService.capture(.paletteSaved, ["colors": palette.colors.count])
                 onSaved(trimmedName)
                 dismiss()
             case .failure(let error):

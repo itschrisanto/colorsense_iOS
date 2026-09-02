@@ -75,6 +75,11 @@ struct ShareSheet: View {
                     .padding(16)
             }
             .navigationTitle("Share")
+            .onAppear {
+                if !isPro {
+                    AnalyticsService.capture(.proFormatsSeen, ["formats": PaletteFileFormat.allCases.count])
+                }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
