@@ -26,6 +26,12 @@ struct PhotoSourcePicker: View {
     /// when this screen has no library access of its own.
     @State private var fallbackItem: PhotosPickerItem?
     @State private var loadFailed = false
+    /// Created once and owned by this screen, not by the tile view — see CameraPreviewSession.
+    @State private var preview = CameraPreviewSession()
+    /// Read once into state rather than called in `body`. Evaluating it inline made the branch
+    /// around the preview re-decide on every render, which is part of what let SwiftUI rebuild
+    /// the representable repeatedly.
+    @State private var cameraAuthorized = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
 
     /// Three across, hairline gutters — the grid is the content, so it runs edge to edge rather
     /// than sitting inside the app's usual card padding.
@@ -74,11 +80,13 @@ struct PhotoSourcePicker: View {
             }
         }
         .task { await requestAccess() }
+        .onAppear { preview.start() }
+        .onDisappear { preview.stop() }
         .onChange(of: fallbackItem) { _, item in
             guard let item else { return }
             Task { await loadFallback(item) }
         }
-        .fullScreenCover(isPresented: $cameraIsPresented) {
+        .fullScreenCover(isPresented: $cameraIsPresented, onDismiss: { preview.start() }) {
             CameraPicker { image in
                 onImage(image)
                 dismiss()
@@ -110,12 +118,16 @@ struct PhotoSourcePicker: View {
     }
 
     private func cameraCell(side: CGFloat) -> some View {
-        Button { cameraIsPresented = true } label: {
+        // Stops the preview and waits for the camera to actually be released before opening the
+        // capture screen. Presenting first would leave two things reaching for one camera.
+        Button { preview.stop { cameraIsPresented = true } } label: {
             ZStack {
                 Color.black
-                // Live only when the camera is already permitted — see CameraPreviewTile.
-                if AVCaptureDevice.authorizationStatus(for: .video) == .authorized {
-                    CameraPreviewTile()
+                // Live only when the camera is already permitted — starting a session is what
+                // triggers that prompt, and the picker should not ask before the user shows any
+                // interest in the camera.
+                if cameraAuthorized {
+                    CameraPreviewTile(session: preview.session)
                 }
                 Image(systemName: "camera.fill")
                     .font(.system(size: 24, weight: .medium))

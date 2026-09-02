@@ -313,6 +313,48 @@ Results of the sweep, all confirmed on a physical iPhone 17 Pro Max:
 - Also confirmed on device: haptics (which the simulator cannot produce at all), Dynamic Type at
   large sizes, portrait lock, and dark mode over a white last swatch.
 
+## The live camera tile, and why it crashed (fixed 2026-09-03)
+
+`PhotoSourcePicker` shows a live viewfinder in its first grid cell. Getting that to work took
+three attempts and two wrong diagnoses, so the conclusion is worth keeping.
+
+**The cause was `previewLayer.session = session` being assigned synchronously inside
+`makeUIView`/`updateUIView`.** Mutating capture-session state there re-enters SwiftUI while its
+AttributeGraph transaction is still open, and the graph eventually detects a cycle and *aborts the
+process*:
+
+```
+[com.apple.attributegraph:error] precondition failure: cyclic graph
+```
+
+`CameraPreviewSession.PreviewView` therefore defers the assignment by one run-loop turn, with a
+generation counter to drop work for cells discarded before they reach a window. Do not "simplify"
+that back into a direct assignment.
+
+The symptom is worth recognising because it does not look like a camera bug: **every** tile in the
+grid crashed, photos included, since any tap re-renders the grid and it is the *camera* cell that
+makes a re-render fatal.
+
+Two things that did **not** fix it, so they are not worth retrying:
+- Owning the `AVCaptureSession` outside the view rather than in it. This is still correct and still
+  in the code — it removed real session churn (`AVCaptureSession dealloc`, `Timed out waiting for
+  session to stop`, `AVFoundationErrorDomain Code=-11819`) — but the cycle survived it.
+- Pinning the representable's identity with `.id`. No effect at all.
+
+Also note `CameraPreviewSession.stop(then:)` fires its completion on whichever comes first, the
+stop or a 0.4s deadline. The camera cell releases the camera before presenting the capture screen,
+and `stopRunning()` can block ~9 seconds when the session is wedged — measured — which would
+otherwise be a nine-second wait before the camera appears.
+
+**The simulator cannot verify any of this visually.** Its synthetic camera logs `Timed out waiting
+for session to start` and never runs the session, so the tile stays black there no matter what.
+The crash is reproducible in the simulator, but only with camera permission already granted
+(`xcrun simctl privacy booted grant camera online.colorsense.ios`) — without it the tile falls back
+to a glyph and nothing churns. A working preview can only be confirmed on device.
+
+One more red herring: `ClosedViewfinderController: Viewfinder still closed …` appears in simulator
+logs whether or not the app has a capture session at all. It is ambient noise, not a signal.
+
 ## Running the app
 
 `./Scripts/run-sim.sh` builds, installs, launches, and writes `.build/sim-screenshot.png`. It
