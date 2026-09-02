@@ -33,6 +33,14 @@ struct PaletteBandsView: View {
                 }
             }
         }
+        // The bands are the one screen whose height is fixed by the palette itself: with eight
+        // colors each band is an eighth of the display, and nothing can scroll. Text that keeps
+        // growing past a point clips against a boundary it cannot push. Capping here lets names
+        // and hex grow together through the normal range and most of the accessibility range,
+        // then stop while the full-bleed layout still holds — measured at
+        // accessibility-extra-large, where uncapped names truncated to "Governor…" and
+        // "Cocoa Be…". Every other screen scrolls, so none of them caps.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
 
     private var insertionIndices: [Int] {
@@ -79,7 +87,7 @@ struct PaletteBandsView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(swatch.hex)
-                    .font(BrandFont.mono(14, weight: .medium))
+                    .brandMono(14, weight: .medium)
                     .opacity(0.75)
             }
             Spacer()

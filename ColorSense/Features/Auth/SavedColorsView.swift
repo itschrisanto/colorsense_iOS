@@ -97,7 +97,7 @@ struct SavedColorsView: View {
                 Text(saved.name)
                     .font(BrandFont.ui(16, weight: .medium))
                 Text(saved.swatch.hex)
-                    .font(BrandFont.mono(13))
+                    .brandMono(13)
                     .foregroundStyle(.secondary)
             }
             Spacer()

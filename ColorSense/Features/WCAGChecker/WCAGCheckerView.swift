@@ -180,7 +180,7 @@ struct WCAGCheckerView: View {
             swatch.color
                 .frame(height: 54)
             Text(swatch.hex)
-                .font(BrandFont.mono(11, weight: .medium))
+                .brandMono(11, weight: .medium)
                 .padding(.vertical, 6)
             HStack(spacing: 0) {
                 roleButton(

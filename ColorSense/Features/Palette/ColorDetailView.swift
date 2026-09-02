@@ -76,7 +76,7 @@ struct ColorDetailView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text(swatch.hex)
-                            .font(BrandFont.mono(14, weight: .medium))
+                            .brandMono(14, weight: .medium)
                         Image(systemName: copiedValue == swatch.hex ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 12))
                     }
@@ -120,7 +120,7 @@ struct ColorDetailView: View {
                                 .font(BrandFont.ui(10, weight: .bold))
                                 .foregroundStyle(.secondary)
                             Text(conversion.value)
-                                .font(BrandFont.mono(11, weight: .medium))
+                                .brandMono(11, weight: .medium)
                                 .foregroundStyle(
                                     copiedValue == conversion.value ? .green : .primary
                                 )
@@ -195,7 +195,7 @@ struct ColorDetailView: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text(String(format: "%.2f:1", row.ratio))
-                        .font(BrandFont.mono(12))
+                        .brandMono(12)
                         .foregroundStyle(.secondary)
                     Text(row.rating.label)
                         .font(BrandFont.ui(10, weight: .bold))
@@ -296,7 +296,7 @@ private struct SaveColorView: View {
                         }
                     VStack(alignment: .leading, spacing: 3) {
                         Text(swatch.hex)
-                            .font(BrandFont.mono(15, weight: .medium))
+                            .brandMono(15, weight: .medium)
                         Text("Give this color a name you will recognize later.")
                             .font(BrandFont.ui(13))
                             .foregroundStyle(.secondary)

@@ -87,7 +87,7 @@ struct AddColorView: View {
                         .font(BrandFont.ui(16, weight: .medium))
                     Spacer()
                     Text(swatch.hex)
-                        .font(BrandFont.mono(13))
+                        .brandMono(13)
                         .foregroundStyle(.secondary)
                 }
 
@@ -131,10 +131,10 @@ struct AddColorView: View {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {
                     Text("#")
-                        .font(BrandFont.mono(15, weight: .medium))
+                        .brandMono(15, weight: .medium)
                         .foregroundStyle(.secondary)
                     TextField("RRGGBB", text: $hexDigits)
-                        .font(BrandFont.mono(15, weight: .medium))
+                        .brandMono(15, weight: .medium)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                         .keyboardType(.asciiCapable)
@@ -223,7 +223,7 @@ struct AddColorView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(saved.swatch.hex)
-                    .font(BrandFont.mono(11))
+                    .brandMono(11)
                     .foregroundStyle(.secondary)
             }
             .padding(10)
