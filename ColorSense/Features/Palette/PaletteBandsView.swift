@@ -12,12 +12,22 @@ struct PaletteBandsView: View {
 
     /// Hex of the swatch most recently copied, so its button can confirm with a checkmark.
     @State private var copiedHex: String?
+    /// One counter per seam, so spinning one + does not spin the others.
+    @State private var seamTaps: [Int: Int] = [:]
+    /// Horizontal drag per band, while a swipe-to-delete is in progress.
+    @State private var dragOffsets: [PaletteColor.ID: CGFloat] = [:]
+    /// Bumped on a completed swipe, purely to fire a haptic.
+    @State private var swipeDeletes = 0
+    /// Band width, for the swipe threshold. Read from a background reader rather than wrapping
+    /// the stack in a GeometryReader, which would change how the bands are laid out.
+    @State private var bandWidth: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
                 ForEach(palette.colors) { swatch in
-                    band(swatch)
+                    band(swatch, width: bandWidth)
                 }
             }
 
@@ -33,6 +43,14 @@ struct PaletteBandsView: View {
                 }
             }
         }
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { bandWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, width in bandWidth = width }
+            }
+        }
+        .sensoryFeedback(.impact(flexibility: .rigid), trigger: swipeDeletes)
         // The bands neither scroll nor grow — the palette fixes their height — so text that keeps
         // growing collides with the band below rather than pushing it. Measured at
         // accessibility-extra-large, uncapped names truncated to "Governor…" and "Cocoa Be…".
@@ -61,17 +79,20 @@ struct PaletteBandsView: View {
 
     private func insertionButton(at index: Int) -> some View {
         Button {
+            seamTaps[index, default: 0] += 1
             onAddColor(index)
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 13, weight: .semibold))
+                .rotationEffect(.degrees(Double(seamTaps[index] ?? 0) * 90))
+                .animation(ControlMotion.spin(reduceMotion: reduceMotion), value: seamTaps[index])
                 .frame(width: 30, height: 30)
                 .background(.ultraThinMaterial, in: Circle())
                 .overlay { Circle().strokeBorder(.primary.opacity(0.16), lineWidth: 0.5) }
                 .shadow(color: .black.opacity(0.16), radius: 4, y: 1)
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PlusButtonStyle())
         .frame(width: 44, height: 44)
         .accessibilityLabel(insertionAccessibilityLabel(at: index))
     }
@@ -84,7 +105,54 @@ struct PaletteBandsView: View {
         return "Add color between \(palette.colors[index - 1].name) and \(palette.colors[index].name)"
     }
 
-    private func band(_ swatch: PaletteColor) -> some View {
+    /// A band can only be swiped away while the palette is above its minimum, matching the trash
+    /// button, which hides for the same reason.
+    private var canRemove: Bool {
+        palette.colors.count > PaletteStore.minimumColorCount
+    }
+
+    /// How far a band must travel before releasing it deletes. A third of the width: far enough
+    /// that a stray horizontal drag while reaching for the lock button cannot destroy a swatch,
+    /// short enough to complete comfortably with one thumb.
+    private func deletionThreshold(_ width: CGFloat) -> CGFloat { width / 3 }
+
+    private func band(_ swatch: PaletteColor, width: CGFloat) -> some View {
+        let offset = dragOffsets[swatch.id] ?? 0
+        return ZStack(alignment: .leading) {
+            // Only built while a swipe is under way, so an untouched palette pays nothing for it.
+            if offset > 0 {
+                deletionBackdrop(for: swatch, offset: offset)
+            }
+            bandBody(swatch, width: width)
+                .offset(x: offset)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(named: "Show color details") { onOpenDetail(swatch) }
+        // VoiceOver cannot perform the swipe, so the same action is offered directly. The trash
+        // button is also still there for everyone.
+        .accessibilityAction(named: "Remove \(swatch.name)") {
+            if canRemove { onDelete(swatch.id) }
+        }
+    }
+
+    /// Revealed behind a band as it slides away. Deepens as the threshold approaches, so the
+    /// point of no return is visible before the finger lifts rather than discovered after.
+    private func deletionBackdrop(for swatch: PaletteColor, offset: CGFloat) -> some View {
+        GeometryReader { proxy in
+            let progress = min(offset / deletionThreshold(proxy.size.width), 1)
+            ZStack(alignment: .leading) {
+                Color(.systemRed).opacity(0.35 + 0.65 * progress)
+                Image(systemName: "trash.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .scaleEffect(0.8 + 0.2 * progress)
+                    .padding(.leading, 26)
+            }
+        }
+    }
+
+    private func bandBody(_ swatch: PaletteColor, width: CGFloat) -> some View {
         HStack(spacing: 12) {
             // Name leads, hex supports it — a name is the thing worth reading at a glance, and
             // this matches the exported share card, which also puts the name over the hex.
@@ -115,8 +183,36 @@ struct PaletteBandsView: View {
         // stays independently tappable.
         .contentShape(.rect)
         .onTapGesture { onOpenDetail(swatch) }
-        .accessibilityElement(children: .contain)
-        .accessibilityAction(named: "Show color details") { onOpenDetail(swatch) }
+        // simultaneousGesture, not gesture: a plain .gesture() claimed the touch outright and
+        // the tap that opens the detail card stopped firing entirely. minimumDistance already
+        // keeps the drag from triggering on a tap; this stops the two from competing at all.
+        .simultaneousGesture(swipeToDelete(swatch, width: width))
+    }
+
+    /// Swipe a band to the right to remove it.
+    ///
+    /// `minimumDistance` matters: without it this would swallow the taps that open a colour's
+    /// detail card. Rightward only — a leftward drag simply does nothing rather than moving the
+    /// band somewhere it has no meaning.
+    private func swipeToDelete(_ swatch: PaletteColor, width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 18)
+            .onChanged { value in
+                guard canRemove else { return }
+                dragOffsets[swatch.id] = max(0, value.translation.width)
+            }
+            .onEnded { value in
+                guard canRemove else { return }
+                if value.translation.width > deletionThreshold(width) {
+                    swipeDeletes += 1
+                    // The band is already off to the right; removing it lets the stack close the
+                    // gap with the same spring the trash button uses. Undo lives in the toast.
+                    dragOffsets[swatch.id] = width
+                    onDelete(swatch.id)
+                    dragOffsets[swatch.id] = nil
+                } else {
+                    withAnimation(ControlMotion.press) { dragOffsets[swatch.id] = 0 }
+                }
+            }
     }
 
     private func bandActions(for swatch: PaletteColor) -> some View {

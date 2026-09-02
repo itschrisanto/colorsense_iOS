@@ -31,6 +31,9 @@ struct RootView: View {
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
+    /// Drives the + button's quarter turn. A counter rather than a bool so every tap spins
+    /// again in the same direction instead of rocking back and forth.
+    @State private var plusTaps = 0
     /// Motion is opt-out at the system level and `withAnimation` ignores it, so every palette
     /// change reads this and passes nil when it is on. See PaletteMotion.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -162,13 +165,18 @@ struct RootView: View {
 
             DockButton("square.grid.2x2", label: "Tools", foreground: dockForeground) { toolsArePresented = true }
 
-            Button { sourceChoiceIsPresented = true } label: {
+            Button {
+                plusTaps += 1
+                sourceChoiceIsPresented = true
+            } label: {
                 DockIcon("plus", size: 21)
                     .foregroundStyle(.white)
+                    .rotationEffect(.degrees(Double(plusTaps) * 90))
+                    .animation(ControlMotion.spin(reduceMotion: reduceMotion), value: plusTaps)
                     .frame(width: 46, height: 46)
                     .background(BrandColor.coral, in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PlusButtonStyle())
             .frame(maxWidth: .infinity)
             .accessibilityLabel("New palette from a photo")
 
