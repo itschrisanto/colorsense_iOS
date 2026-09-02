@@ -28,6 +28,11 @@
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 
+	<!--
+	  Analytics collection is NOT declared here. PostHog ships its own manifest declaring product
+	  interaction and other usage data, and Apple aggregates every manifest in the bundle. Repeating
+	  it would risk the two drifting apart. This file covers what ColorSense itself collects.
+	-->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
 		<!--

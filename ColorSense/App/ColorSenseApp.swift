@@ -8,6 +8,8 @@ struct ColorSenseApp: App {
     @State private var paletteStore = PaletteStore()
 
     init() {
+        AnalyticsService.start()
+
         // Clerk.shared traps if configure() was never called, so this always runs even with
         // the placeholder key from AppConfig — sign-in itself just won't work until a real
         // key is set, which AppConfig already warns about.

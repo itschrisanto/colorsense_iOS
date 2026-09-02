@@ -8,6 +8,9 @@ import ClerkKitUI
 struct AccountView: View {
     @Environment(Clerk.self) private var clerk
     @Environment(\.dismiss) private var dismiss
+    /// Mirrors AnalyticsService.isOptedOut. Held here so the toggle animates immediately rather
+    /// than waiting on a UserDefaults round trip.
+    @State private var analyticsEnabled = !AnalyticsService.isOptedOut
 
     @State private var route: Route?
 
@@ -37,6 +40,28 @@ struct AccountView: View {
                             row("Affiliate", "hands.clap", .affiliate)
                             row("Delete account", "trash", .deleteAccount, isDestructive: true)
                         }
+                    }
+
+                    // Outside the signed-in block on purpose: analytics are anonymous and apply
+                    // to everyone, so the switch has to be reachable without an account. Putting
+                    // it behind sign-in would make it unreachable for most of the people it
+                    // actually governs.
+                    section(title: "Privacy") {
+                        Toggle(isOn: $analyticsEnabled) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Share anonymous usage data")
+                                    .font(BrandFont.ui(15))
+                                Text("Which tools get used, never your photos, colors or names.")
+                                    .font(BrandFont.ui(12))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .tint(BrandColor.coral)
+                        .onChange(of: analyticsEnabled) { _, isOn in
+                            AnalyticsService.isOptedOut = !isOn
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
                     }
                 }
                 .padding(20)

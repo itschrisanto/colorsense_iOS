@@ -51,6 +51,27 @@ enum AppConfig {
         return "https://colorsense.online/api/__clerk"
     }
 
+    /// PostHog project key. Nil when unset, which switches analytics off entirely rather than
+    /// half-configuring it — a checkout without the key in Secrets.xcconfig just runs without it.
+    static var posthogAPIKey: String? {
+        guard
+            let key = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_API_KEY") as? String,
+            !key.isEmpty,
+            key != "$(POSTHOG_API_KEY)"
+        else { return nil }
+        return key
+    }
+
+    /// Region matters: a US key sent to the EU host silently records nothing.
+    static var posthogHost: String {
+        guard
+            let host = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_HOST") as? String,
+            !host.isEmpty,
+            host != "$(POSTHOG_HOST)"
+        else { return "https://us.i.posthog.com" }
+        return host
+    }
+
     /// Base for the ColorSense API, which backs account-saved palettes. Overridable from
     /// Secrets.xcconfig (`API_BASE_URL`) so a local api-server can be pointed at during
     /// development; defaults to production. The web client uses a same-origin relative path,

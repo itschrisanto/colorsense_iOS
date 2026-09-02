@@ -17,6 +17,12 @@ packages:
   ClerkSDK:
     url: https://github.com/clerk/clerk-ios
     from: 1.2.0
+  # Declared here rather than through `npx @posthog/wizard`. The wizard writes the dependency into
+  # the generated .xcodeproj, which is gitignored and rebuilt by `xcodegen generate` — the change
+  # would vanish silently on the next generate.
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios
+    from: 3.0.0
 
 targets:
   ColorSense:
@@ -33,6 +39,8 @@ targets:
         product: ClerkKit
       - package: ClerkSDK
         product: ClerkKitUI
+      - package: PostHog
+        product: PostHog
     info:
       path: Generated/ColorSense-Info.plist
       properties:
@@ -83,6 +91,11 @@ targets:
         # host to exercise the offline paths. AppConfig already guards against the unexpanded
         # "$(API_BASE_URL)" literal, which is what an undefined xcconfig variable expands to —
         # that guard only makes sense if these keys were meant to be here.
+        # Product analytics. The project key is a client-side identifier by design — PostHog
+        # expects it to ship inside apps — but it lives in Secrets.xcconfig anyway, so switching
+        # projects needs no code change and the repo carries no account detail.
+        POSTHOG_API_KEY: "$(POSTHOG_API_KEY)"
+        POSTHOG_HOST: "$(POSTHOG_HOST)"
         API_BASE_URL: "$(API_BASE_URL)"
         CLERK_PROXY_URL: "$(CLERK_PROXY_URL)"
         # OAuth callback scheme. Clerk's iOS SDK defaults its redirect to

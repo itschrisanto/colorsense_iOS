@@ -184,6 +184,7 @@ struct RootView: View {
                 withAnimation(PaletteMotion.recolor(reduceMotion: reduceMotion)) {
                     store.generate()
                 }
+                AnalyticsService.capture(.paletteGenerated, ["colors": store.palette.colors.count])
                 generateTaps += 1
             }
 
@@ -297,6 +298,7 @@ struct RootView: View {
     // MARK: - Actions
 
     private func open(_ tool: Tool) {
+        AnalyticsService.capture(.toolOpened, ["tool": tool.rawValue])
         switch tool {
         case .extractor: sourceChoiceIsPresented = true
         case .contrast: contrastIsPresented = true
@@ -332,6 +334,7 @@ struct RootView: View {
             removal = store.remove(swatchID: swatchID)
         }
         guard let removal else { return }
+        AnalyticsService.capture(.colorRemoved)
         showToast("Color removed", removal: removal)
     }
 

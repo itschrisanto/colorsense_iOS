@@ -88,6 +88,7 @@ struct PhotoSourcePicker: View {
         }
         .fullScreenCover(isPresented: $cameraIsPresented, onDismiss: { preview.start() }) {
             CameraPicker { image in
+                AnalyticsService.capture(.paletteExtracted, ["source": "camera"])
                 onImage(image)
                 dismiss()
             }

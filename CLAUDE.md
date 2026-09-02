@@ -83,6 +83,24 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
   at all. This matches the "free, unlimited, no signup" positioning from the vault. The only
   networking is Clerk auth and `SavedPaletteService` (saving a palette to the user's account),
   both of which are opt-in and never block a tool.
+  - **Amended 2026-09-03: analytics were added, reversing the "no networking at all" half of
+    this.** PostHog product analytics now run for every user, signed in or not. Chris asked for
+    it deliberately, knowing it contradicts the positioning above; the vault's `Claude Skill.md`
+    should say so too. The constraints that keep the reversal narrow live in
+    `Services/AnalyticsService.swift` and are the point of that file: anonymous with `identify()`
+    never called, no session replay, no autocapture, a closed list of events, and never any user
+    content — no hex values, palette names or photos. The opt-out in Account calls PostHog's own
+    `optOut()`, verified to stop the SDK rather than merely skipping call sites: zero connections
+    to `us.i.posthog.com` while opted out, against a live one while opted in. The tools themselves
+    still do their actual work — extraction and WCAG math — entirely on device.
+  - PostHog ships **its own privacy manifest**, unlike Clerk and Nuke, so its required-reason APIs
+    and its product-interaction/usage declarations are not repeated in ours. Apple aggregates
+    every manifest in the bundle. Note it declares collection as *unlinked*, which stays true only
+    while `identify()` is never called — identifying users would silently make PostHog's own
+    declaration false.
+  - The package is declared in `project.yml`, not through `npx @posthog/wizard`. The wizard writes
+    into the generated `.xcodeproj`, which is gitignored and rebuilt by `xcodegen generate`, so
+    its changes disappear on the next generate.
 - **"Save" and "Share" mean different destinations** (clarified 2026-09-02). *Save to my
   account* posts to `/api/saved-palettes` — the same store the web app writes to, requires
   sign-in. *Share as image* / *Save image to Photos* hand the palette to the **device**. Do not
