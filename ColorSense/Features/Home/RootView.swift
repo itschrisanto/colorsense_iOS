@@ -16,6 +16,11 @@ struct RootView: View {
     @State private var detailSwatch: PaletteColor?
     @State private var addColorDestination: AddColorDestination?
     @State private var toast: String?
+    /// Pro users get a logo-free share card. Defaults to false so the lockup is included
+    /// whenever the plan is unknown — offline, signed out, or a failed lookup. Giving a Pro user
+    /// a branded export occasionally is a smaller cost than handing free users the paid feature
+    /// every time the network hiccups.
+    @State private var isPro = false
     @State private var pendingRemoval: PaletteStore.Removal?
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
@@ -74,6 +79,12 @@ struct RootView: View {
         // A soft tap on Generate: the whole screen recolours at once, and a light physical
         // confirmation makes that land as something you did rather than something that happened.
         .sensoryFeedback(.impact(flexibility: .soft), trigger: generateTaps)
+        // Refreshed on launch and whenever the account sheet closes, since signing in or out
+        // there is the only thing in the app that can change the plan.
+        .task { await refreshPlan() }
+        .onChange(of: accountIsPresented) { _, isPresented in
+            if !isPresented { Task { await refreshPlan() } }
+        }
     }
 
     // MARK: - Chrome
@@ -143,7 +154,10 @@ struct RootView: View {
             }
 
             Section {
-                if let image = PaletteExportService.image(for: store.palette) {
+                if let image = PaletteExportService.image(
+                    for: store.palette,
+                    includesLogo: !isPro
+                ) {
                     ShareLink(item: image, preview: SharePreview("ColorSense palette", image: image)) {
                         Label("Share as image", systemImage: "square.and.arrow.up")
                     }
@@ -229,6 +243,14 @@ struct RootView: View {
         switch tool {
         case .extractor: photoPickerIsPresented = true
         case .contrast: contrastIsPresented = true
+        }
+    }
+
+    private func refreshPlan() async {
+        if case .success(let plan) = await SavedPaletteService.currentPlan() {
+            isPro = plan == "pro" || plan == "business"
+        } else {
+            isPro = false
         }
     }
 
