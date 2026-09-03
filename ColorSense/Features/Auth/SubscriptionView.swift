@@ -64,6 +64,8 @@ struct SubscriptionView: View {
                              : "Pro unlocks the developer and design export formats.")
                             .font(BrandFont.ui(13))
                             .foregroundStyle(.secondary)
+
+                        plans
                     }
                 }
                 .padding(20)
@@ -75,6 +77,77 @@ struct SubscriptionView: View {
             }
             .task { await load() }
         }
+    }
+
+    /// Every plan ColorSense sells, listed so the shapes exist before In-App Purchase does.
+    ///
+    /// **Descriptive, not a shop.** Nothing here is tappable and nothing says where to buy: with no
+    /// StoreKit yet, a button would either do nothing or point outside the app, and guideline 3.1.1
+    /// forbids the second in prose as much as in buttons. When `ProStore` goes live these rows are
+    /// where the buy actions attach, which is the point of listing them now.
+    ///
+    /// Prices come from `ProProduct`, which reads them off the vault, so this screen cannot drift
+    /// from the onboarding plan beat or from the web.
+    private var plans: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("What ColorSense offers")
+                .font(BrandFont.ui(13, weight: .bold))
+                .foregroundStyle(.secondary)
+                .padding(.top, 8)
+
+            planRow(
+                title: "Free",
+                price: "$0",
+                detail: "The Extractor and the WCAG checker, unlimited and never paywalled.",
+                isCurrent: !isPaid
+            )
+
+            ForEach(ProProduct.allCases, id: \.self) { product in
+                planRow(
+                    title: product.title,
+                    price: product.price,
+                    detail: product.detail,
+                    // The server reports one effective plan, not which product bought it, so a
+                    // paid reader cannot be told *which* of these three they are on. Saying
+                    // nothing is better than guessing wrong at somebody's own subscription.
+                    isCurrent: false
+                )
+            }
+
+            Text("In-app purchase is not available yet, so these are listed rather than offered.")
+                .font(BrandFont.ui(12))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+    }
+
+    private func planRow(title: String, price: String, detail: String, isCurrent: Bool) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(title).font(BrandFont.ui(15, weight: .bold))
+                    if isCurrent {
+                        Text("CURRENT")
+                            .font(BrandFont.ui(10, weight: .bold))
+                            .foregroundStyle(PaletteColor(color: BrandColor.teal).legibleForeground)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(BrandColor.teal, in: Capsule())
+                    }
+                }
+                Text(detail)
+                    .font(BrandFont.ui(13))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Text(price).font(BrandFont.ui(16, weight: .bold))
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
     }
 
     private var planCard: some View {

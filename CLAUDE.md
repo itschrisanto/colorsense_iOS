@@ -668,7 +668,47 @@ wired to StoreKit**, and a purchase screen that does not purchase is its own gui
 rejection. Adding a third plan and a discount badge raises the stakes on that, it does not lower
 them.
 
-### The StoreKit seam, ready to wire (added 2026-09-04)
+### About, and what was deliberately left out of it (added 2026-09-04)
+
+`Features/About/AboutView.swift`, reached from Account. Modelled on a reference design Chris
+supplied (it is Coolors' About screen), but **every value comes from the vault**, not from the
+reference: `hello@colorsense.online` from section 12, `@colorsensehq` from section 13, and the two
+legal pages the web app actually serves.
+
+Three rows in the reference were left out on purpose, and should stay out until each reason goes
+away:
+
+- **No Cookie Policy.** The web serves `/privacy-policy` and `/terms` and nothing else. A link to a
+  page that does not exist is worse than an absent link.
+- **No Support row.** The web's `/support` route renders the **Pro pricing page**. Linking it from
+  inside the app is precisely the external-purchase route guideline 3.1.1 forbids, and is what got
+  "Pro is available at colorsense.online" deleted already. Email reaches a person regardless.
+- **No "Leave a review".** There is no App Store listing yet, so it would go nowhere. It belongs
+  here the day the App Store record exists, with the real App ID.
+
+The social URLs are **constructed** from the `@colorsensehq` handle rather than recorded anywhere,
+so they are worth checking once against the live accounts. The hero line is written for the app and
+is not a vault-owned tagline; if the brand ever settles one, the vault wins.
+
+## Every plan is listed, before any of them can be bought (added 2026-09-04)
+
+`SubscriptionView` now lists Free, Pro Monthly, Pro Annual and the Pro Pass, with prices read from
+`ProProduct` so this screen cannot drift from the onboarding plan beat or from the web. It is
+**descriptive, not a shop**: nothing is tappable and nothing says where to buy, because with no
+StoreKit a button would either do nothing or point outside the app. Those rows are where the buy
+actions attach when `ProStore` goes live.
+
+**The Pro Pass is a consumable, not a subscription, and must not be created as one.** The vault
+sells it as a one-month, one-time $9 purchase. In StoreKit that is a *consumable*: it can be bought
+again once it lapses, which a non-consumable cannot, and it does not belong in the subscription
+group with Monthly and Annual. Getting this wrong is not a display bug, it is a wrong product in
+App Store Connect that has to be replaced rather than edited. `ProProduct.kind` records it.
+
+One limitation worth knowing: `GET /api/me` reports one *effective* plan, not which product paid
+for it, so a paying reader cannot be shown which of the three they are on. The list marks only Free
+as current, because guessing at somebody's own subscription is worse than saying nothing.
+
+## The StoreKit seam, ready to wire (added 2026-09-04)
 
 `Services/ProStore.swift` is where In-App Purchase will go. Nothing talks to StoreKit yet, and the
 point is that every screen offering Pro already calls **through** it, so wiring is writing one

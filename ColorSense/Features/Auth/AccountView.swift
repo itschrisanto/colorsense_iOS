@@ -15,7 +15,7 @@ struct AccountView: View {
     @State private var route: Route?
 
     private enum Route: String, Identifiable {
-        case savedPalettes, savedColors, profile, subscription, affiliate, deleteAccount
+        case savedPalettes, savedColors, profile, subscription, affiliate, about, deleteAccount
         var id: String { rawValue }
     }
 
@@ -40,6 +40,14 @@ struct AccountView: View {
                             row("Affiliate", "hands.clap", .affiliate)
                             row("Delete account", "trash", .deleteAccount, isDestructive: true)
                         }
+                    }
+
+                    // Outside the signed-in block, like Privacy below: contact details, the legal
+                    // pages and the version are not account information, and someone who has not
+                    // signed in has as much need of them as someone who has. On the App Review
+                    // side, a reachable privacy policy is not optional.
+                    section(title: "ColorSense") {
+                        row("About", "info.circle", .about)
                     }
 
                     // Outside the signed-in block on purpose: analytics are pseudonymous and apply
@@ -80,6 +88,7 @@ struct AccountView: View {
                 case .profile: UserProfileView()
                 case .subscription: SubscriptionView()
                 case .affiliate: AffiliateView()
+                case .about: AboutView()
                 case .deleteAccount: DeleteAccountView()
                 }
             }

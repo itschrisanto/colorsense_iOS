@@ -9,9 +9,11 @@ import Foundation
 ///
 /// # What to do when the paid Apple Developer account lands
 ///
-/// 1. In App Store Connect, create two **auto-renewable subscriptions** in one subscription group,
-///    with the identifiers in `ProProduct`. They must be one group, or a reader cannot move between
-///    monthly and yearly without double-paying.
+/// 1. In App Store Connect, create the two **auto-renewable subscriptions** in one subscription
+///    group, with the identifiers in `ProProduct`. They must be one group, or a reader cannot move
+///    between monthly and yearly without double-paying. Create the **Pro Pass separately as a
+///    consumable**, outside that group: it is a one-month one-time purchase that can be bought
+///    again once it lapses, which is what a consumable is and what a non-consumable is not.
 /// 2. Attach the free trial as an **introductory offer** on the monthly product. It is *not* a
 ///    third product, which is why `ProProduct` has two cases and `Plan` in the onboarding flow has
 ///    three. Whatever length is configured there has to match the copy on the plan beat, and it
@@ -45,9 +47,54 @@ protocol ProStore: Sendable {
 /// The App Store product identifiers, in one place so they cannot drift from App Store Connect.
 ///
 /// The trial is not here on purpose: it is an introductory offer on `monthly`, not a product.
+///
+/// **The Pass is not a subscription and must not be created as one.** The vault sells it as a
+/// one-month, one-time $9 purchase, which in StoreKit is a *consumable*: it can be bought again
+/// when it lapses, which a non-consumable cannot, and it does not belong in the subscription group
+/// with the other two. Getting this wrong is not a display bug, it is a wrong product in App Store
+/// Connect that has to be replaced rather than edited.
 enum ProProduct: String, CaseIterable, Sendable {
     case monthly = "online.colorsense.ios.pro.monthly"
     case annual = "online.colorsense.ios.pro.annual"
+    case pass = "online.colorsense.ios.pro.pass"
+
+    /// What kind of App Store product this is, which decides how it is created and how it is
+    /// verified after purchase.
+    enum Kind { case autoRenewable, consumable }
+
+    var kind: Kind {
+        switch self {
+        case .monthly, .annual: return .autoRenewable
+        case .pass: return .consumable
+        }
+    }
+
+    /// Prices come from the vault (`Claude Skill.md` section 3) and are the same on every platform.
+    /// The Pass is **$9**: the vault calls that out specifically because it has been misquoted as
+    /// $3 and $5 before.
+    var price: String {
+        switch self {
+        case .monthly: return "$5"
+        case .annual: return "$39"
+        case .pass: return "$9"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .monthly: return "Pro Monthly"
+        case .annual: return "Pro Annual"
+        case .pass: return "Pro Pass"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .monthly: return "$5 a month, billed monthly. Cancel any time."
+        case .annual: return "$39 a year. Two months cheaper than paying monthly."
+        case .pass: return "$9 once, for one month. It does not renew."
+        }
+    }
 }
 
 enum PurchaseOutcome: Equatable, Sendable {
