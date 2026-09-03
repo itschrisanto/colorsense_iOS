@@ -180,6 +180,22 @@ struct PaletteBandsView: View {
                 onDelete(swatch.id)
             }
         }
+        // Reordering has the same problem as removing, and for longer: VoiceOver cannot perform
+        // the press-and-drag the bands are built around, so without these the palette's order is
+        // simply not editable with the screen reader on. Onboarding asks every reader to reorder
+        // a band, which is what turned this from a gap into a dead end.
+        .accessibilityAction(named: "Move up") { moveAccessibly(from: index, to: index - 1) }
+        .accessibilityAction(named: "Move down") { moveAccessibly(from: index, to: index + 1) }
+    }
+
+    /// The keyboard/VoiceOver equivalent of a drag. Silently does nothing at either end of the
+    /// palette rather than announcing a failure, matching how the drag itself clamps.
+    private func moveAccessibly(from: Int, to: Int) {
+        guard palette.colors.count > 1, to >= 0, to < palette.colors.count else { return }
+        reorders += 1
+        withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
+            onMove(from, to)
+        }
     }
 
     private func bandBody(_ swatch: PaletteColor, width: CGFloat) -> some View {

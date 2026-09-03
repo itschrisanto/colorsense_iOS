@@ -9,6 +9,11 @@ struct RootView: View {
     @Environment(PaletteStore.self) private var store
     @Environment(Clerk.self) private var clerk
 
+    /// Separate from `PaletteStore.isShowingDefault`: somebody may deliberately keep exploring
+    /// the supplied brand palette, and that should not make onboarding return next launch.
+    @AppStorage("onboarding.completed.v1") private var onboardingCompleted = false
+    @State private var forcedOnboardingDismissed = false
+
     @State private var toolsArePresented = false
     @State private var contrastIsPresented = false
     @State private var accountIsPresented = false
@@ -40,35 +45,46 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        NavigationStack {
-            PaletteBandsView(
-                palette: store.palette,
-                onToggleLock: { store.toggleLock(for: $0) },
-                onAddColor: { index in
-                    guard store.palette.colors.count < PaletteStore.maximumColorCount else {
-                        showToast("A palette can contain up to 8 colors")
-                        return
+        ZStack {
+            NavigationStack {
+                PaletteBandsView(
+                    palette: store.palette,
+                    onToggleLock: { store.toggleLock(for: $0) },
+                    onAddColor: { index in
+                        guard store.palette.colors.count < PaletteStore.maximumColorCount else {
+                            showToast("A palette can contain up to 8 colors")
+                            return
+                        }
+                        addColorDestination = AddColorDestination(
+                            index: index,
+                            suggestedSwatch: suggestedColor(at: index)
+                        )
+                    },
+                    onDelete: { removeColor($0) },
+                    onOpenDetail: { detailSwatch = $0 },
+                    onMove: { from, to in
+                        store.move(from: from, to: to)
+                        AnalyticsService.capture(.colorReordered)
                     }
-                    addColorDestination = AddColorDestination(
-                        index: index,
-                        suggestedSwatch: suggestedColor(at: index)
-                    )
-                },
-                onDelete: { removeColor($0) },
-                onOpenDetail: { detailSwatch = $0 },
-                onMove: { from, to in
-                    store.move(from: from, to: to)
-                    AnalyticsService.capture(.colorReordered)
-                }
-            )
-                .overlay { if isExtracting { extractingOverlay } }
-                .overlay(alignment: .top) { if let toast { toastView(toast) } }
-                // No nav bar: with every action in the dock it would hold nothing but a title,
-                // and a whole bar of chrome for one label is space the palette can use. The
-                // bands still respect the top safe area, so the status bar keeps a clean strip
-                // to sit on rather than landing on an arbitrary swatch.
-                .toolbar(.hidden, for: .navigationBar)
-                .safeAreaInset(edge: .bottom, spacing: 0) { dock }
+                )
+                    .overlay { if isExtracting { extractingOverlay } }
+                    .overlay(alignment: .top) { if let toast { toastView(toast) } }
+                    // No nav bar: with every action in the dock it would hold nothing but a title,
+                    // and a whole bar of chrome for one label is space the palette can use. The
+                    // bands still respect the top safe area, so the status bar keeps a clean strip
+                    // to sit on rather than landing on an arbitrary swatch.
+                    .toolbar(.hidden, for: .navigationBar)
+                    .safeAreaInset(edge: .bottom, spacing: 0) { dock }
+            }
+            // Onboarding covers the palette completely, so the bands must not remain a second,
+            // invisible navigation tree for VoiceOver underneath it.
+            .accessibilityHidden(shouldShowOnboarding)
+
+            if shouldShowOnboarding {
+                OnboardingFlowView(onComplete: finishOnboarding)
+                    .transition(.opacity)
+                    .zIndex(2)
+            }
         }
         // One screen for both sources — recent photos as a grid with the camera as its first
         // cell — rather than asking which source before showing either. PhotoSourcePicker owns
@@ -312,6 +328,21 @@ struct RootView: View {
     }
 
     // MARK: - Actions
+
+    /// `-show-onboarding` makes iteration possible without repeatedly deleting app data. It is a
+    /// launch-only development affordance: completing the forced flow hides it for this process,
+    /// while a real first launch writes the same durable completion flag production will use.
+    private var shouldShowOnboarding: Bool {
+        let isForced = ProcessInfo.processInfo.arguments.contains("-show-onboarding")
+        return (!onboardingCompleted || isForced) && !forcedOnboardingDismissed
+    }
+
+    private func finishOnboarding() {
+        onboardingCompleted = true
+        withAnimation(OnboardingMotion.beat(reduceMotion: reduceMotion)) {
+            forcedOnboardingDismissed = true
+        }
+    }
 
     private func open(_ tool: Tool) {
         AnalyticsService.capture(.toolOpened, ["tool": tool.rawValue])

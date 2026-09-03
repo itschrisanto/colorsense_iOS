@@ -42,16 +42,16 @@ struct AccountView: View {
                         }
                     }
 
-                    // Outside the signed-in block on purpose: analytics are anonymous and apply
+                    // Outside the signed-in block on purpose: analytics are pseudonymous and apply
                     // to everyone, so the switch has to be reachable without an account. Putting
                     // it behind sign-in would make it unreachable for most of the people it
                     // actually governs.
                     section(title: "Privacy") {
                         Toggle(isOn: $analyticsEnabled) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Share anonymous usage data")
+                                Text("Share usage and crash diagnostics")
                                     .font(BrandFont.ui(15))
-                                Text("Which tools get used, never your photos, colors or names.")
+                                Text("Tied to a random install ID — never your account, photos, colors or names.")
                                     .font(BrandFont.ui(12))
                                     .foregroundStyle(.secondary)
                             }

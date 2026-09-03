@@ -1,0 +1,8 @@
+{
+  "images" : [
+    { "filename" : "LaumaHead.png",    "idiom" : "universal", "scale" : "1x" },
+    { "filename" : "LaumaHead@2x.png", "idiom" : "universal", "scale" : "2x" },
+    { "filename" : "LaumaHead@3x.png", "idiom" : "universal", "scale" : "3x" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}

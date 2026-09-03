@@ -48,6 +48,27 @@ final class PaletteStore {
         persist()
     }
 
+    /// Swaps in a whole new set of colors while keeping each slot's identity.
+    ///
+    /// Distinct from `replace(with:)`, which is for a genuinely new palette (an extraction) and
+    /// resets the generation run. This is for showing the *same* palette wearing different
+    /// colors — onboarding's live mood preview — where carrying each band's id is what lets the
+    /// color animate in place instead of the band being torn down and a different one built.
+    func recolor(to colors: [PaletteColor]) {
+        guard !colors.isEmpty else { return }
+        let existing = palette.colors
+        palette.colors = colors.enumerated().map { index, replacement in
+            guard index < existing.count else { return replacement }
+            var carried = replacement
+            carried.id = existing[index].id
+            return carried
+        }
+        palette.anchors = palette.colors
+        palette.generation = 0
+        isShowingDefault = false
+        persist()
+    }
+
     /// Regenerates every unlocked swatch, anchored to the locked ones if the user has locked any
     /// and to the original extract otherwise. Mirrors `shuffle()` in the web app's LabContext.
     /// There is no cap: past `PaletteGenerator.wideningIteration` the schemes simply get bolder.

@@ -45,7 +45,21 @@ targets:
       path: Generated/ColorSense-Info.plist
       properties:
         CFBundleDisplayName: ColorSense
-        UILaunchScreen: {}
+        # CORAL, and colour only. The app's own `splash` beat paints the same coral with
+        # Lauma's head on it, so there is no white flash and no seam between the system launch
+        # image and the first app frame.
+        #
+        # `UIImageName` is deliberately absent. It worked with a portrait full-body sprite but
+        # rendered nothing at all for the landscape head, with no build warning and no runtime
+        # error, across a fresh install, a simulator reboot, exact 1x/2x/3x multiples and a renamed
+        # asset. It is not worth more time: the splash beat guarantees the brand moment anyway, and
+        # a launch screen that is only a colour cannot get the handover wrong.
+        #
+        # The key itself is REQUIRED even when it carries only a colour. Deleting it entirely (as
+        # happened once here) leaves the app with no launch screen at all, and iOS then runs it in
+        # compatibility mode: letterboxed inside black bars instead of full bleed, on every screen.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         # Portrait only. The palette screen is full-bleed bands splitting the available height,
         # and a band cannot be shorter than the 44pt tap targets it carries. Eight bands therefore
         # need 352pt, against the 288pt landscape leaves once the dock takes its safe-area inset

@@ -23,6 +23,24 @@ a known bad interaction between Xcode and any live file-sync tool, same as Dropb
 Drive/OneDrive). A pointer note was left at the old Nextcloud path. Version control for
 this project is git, not file sync — don't move it back into a synced folder.
 
+## Onboarding is done (2026-09-04)
+
+The first-run flow is finished, filmed and committed: splash, hello, naming, mood, keep, plan. It
+was verified on a physical iPhone 17 Pro Max end to end, and swept in the simulator in dark mode, at
+accessibility text sizes and with Reduce Motion on. 85 tests pass.
+
+What is deliberately *not* done, and is the first thing to pick up if this is reopened:
+
+1. **The plan beat does not purchase anything.** `Services/ProStore.swift` is the seam and carries
+   the checklist. Guideline 3.1.1 makes a purchase screen that cannot purchase a rejection risk, so
+   this must be wired or hidden before any build is submitted.
+2. **The trial is still not in the vault.** `Claude Skill.md` section 3 lists Pro Monthly $5, Pro
+   Annual $39 and the $9 Pro Pass, with no trial of any length.
+3. **Sign in with Apple is still unprovisioned**, and guideline 4.8 requires it wherever a
+   third-party sign-in is offered. The account beat offers Google today.
+4. **The asset catalog is about 20MB**, nearly all of it the three Lauma clips. Fine now, worth
+   watching before a fourth.
+
 ## Status (as of 2026-09-02)
 
 Verified end to end: `xcodegen generate` produces a working project, `xcodebuild build`
@@ -88,6 +106,12 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
     simulation and the ΔE confusable-pair check.
   - **No PDF export**, unlike the web. That is a desktop deliverable and the web app already does
     it well; a phone is not where anyone assembles a client PDF.
+- **Amended 2026-09-03: first launch is a full-screen onboarding flow, and iOS asks for an
+  account.** This does not reopen "no landing screen": the flow is made of bands and hands the
+  palette straight back, and there is still no separate upload or landing screen. It does change
+  two things. First launch no longer always lands on `brandDefault`; the reader picks a mood and
+  keeps it. And the "free, unlimited, no signup" promise is **removed from the iOS app**, which
+  contradicts the vault's positioning and needs reconciling there. See "Onboarding, and Lauma".
 - **Build approach: fresh native SwiftUI**, not a WebView wrapper. Color extraction and
   WCAG math are reimplemented natively in Swift (see below), not proxied to the web app.
 - **Backend: offline-first / on-device.** The extractor and WCAG checker do no networking
@@ -98,9 +122,11 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
     this.** PostHog product analytics now run for every user, signed in or not. Chris asked for
     it deliberately, knowing it contradicts the positioning above; the vault's `Claude Skill.md`
     should say so too. The constraints that keep the reversal narrow live in
-    `Services/AnalyticsService.swift` and are the point of that file: anonymous with `identify()`
-    never called, no session replay, no autocapture, a closed list of events, and never any user
-    content — no hex values, palette names or photos. The opt-out in Account calls PostHog's own
+    `Services/AnalyticsService.swift` and are the point of that file: pseudonymous with `identify()`
+    never called, no session replay or interaction autocapture, and an outbound allowlist containing
+    only the closed product-event enum plus PostHog's `$exception` crash event. Fatal crash reports
+    contain stack traces and technical diagnostics, but no breadcrumbs, logs, hex values, palette
+    names or photos. The opt-out in Account calls PostHog's own
     `optOut()`, verified to stop the SDK rather than merely skipping call sites: zero connections
     to `us.i.posthog.com` while opted out, against a live one while opted in. The tools themselves
     still do their actual work — extraction and WCAG math — entirely on device.
@@ -170,7 +196,7 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
 ```
 ColorSense/
   App/              ColorSenseApp.swift (entry point, Clerk.configure, owns PaletteStore), AppConfig.swift
-  DesignSystem/      BrandColor.swift, BrandFont.swift — brand kit as Swift, not hardcoded per-view
+  DesignSystem/      BrandColor.swift, BrandFont.swift, SpeechBubble.swift — brand kit as Swift, not hardcoded per-view
   Models/            PaletteColor, ExtractedPalette (+ .brandDefault, .sample)
   Services/
     ColorNameService.swift   Nearest Name That Color match
@@ -186,6 +212,10 @@ ColorSense/
       ColorExtractionService.swift  On-device k-means
       PaletteGenerator.swift Drift for Generate, plus the fresh-palette suggestion
       PaletteExportService.swift    Hex list / CSS vars / shareable PNG
+    Onboarding/
+      OnboardingFlowView.swift  The four-beat first run, built out of palette bands
+      LaumaStage.swift          The mascot's poses, and the only place her art is referenced
+      OnboardingMood.swift      The four starting palettes offered in beat two
     WCAGChecker/      ContrastCalculator (WCAG 2.x luminance) + a sheet seeded from the palette
     Auth/             AccountView wraps Clerk's AuthView/UserButton, presented as a sheet
   Resources/
@@ -267,6 +297,32 @@ Still blocked on the paid account: registering the `online.colorsense.ios` App I
 Sign in with Apple, the App Store Connect record and its privacy questionnaire, and the archive
 itself (`xcodebuild archive` needs a distribution certificate).
 
+### PostHog open items before the first beta release (added 2026-09-04)
+
+The app integration and the pinned **iOS Retention & Reliability** dashboard are configured. The
+PostHog project also has exception autocapture enabled. These release-only tasks remain:
+
+1. **Complete and publish the App Store Connect App Privacy answers.** They must match the app and
+   every bundled SDK, including PostHog and PHPLCrashReporter: Product Interaction and Other Usage
+   Data for analytics, plus Crash Data and Other Diagnostic Data for crash diagnosis. PostHog uses
+   only its random installation ID here; these four categories are not used for tracking and are
+   not linked to the Clerk account. Keep the existing linked Clerk/user-content declarations too.
+2. **Add and verify PostHog's Release dSYM upload build phase.** Use the SPM script at
+   `"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/posthog-ios/build-tools/upload-symbols.sh"`,
+   keep Release set to `DWARF with dSYM File`, authenticate `posthog-cli`, and do not enable
+   `POSTHOG_INCLUDE_SOURCE`. Without the matching dSYM, native crash addresses will not become
+   useful symbolicated ColorSense stack frames.
+3. **Smoke-test the actual archived build before inviting beta testers.** Confirm the Release
+   archive contains the production PostHog project token and host, launch it with analytics enabled,
+   and verify `app_opened` reaches the dashboard. Then trigger one controlled crash in an internal
+   test build, relaunch so the stored report uploads, verify `$exception` appears in Error Tracking
+   and both reliability tiles, and remove any temporary crash trigger before external distribution.
+4. **Check the uploaded privacy report and monitoring once App Store processing finishes.** Treat
+   Apple's server-side privacy-manifest report as the authoritative aggregation, resolve any warning,
+   and confirm the dashboard's four tiles still query the production project. Retention will remain
+   sparse until at least a second weekly cohort interval has elapsed; that is expected, not a setup
+   failure.
+
 One thing to fix *outside* this repo before external testing: the web privacy policy at
 `/privacy-policy` never mentions mobile or iOS. It is substantively accurate — same Clerk instance,
 same API, same data — but a reviewer checks that the policy covers the app. Deliberately parked
@@ -339,6 +395,10 @@ Results of the sweep, all confirmed on a physical iPhone 17 Pro Max:
 - **Checked and found fine, so do not "fix" them:** the Conversion and Harmonies grids in
   `ColorDetailView`, and the saved-colors grid in `AddColorView`. They keep fixed column counts on
   purpose — `AdaptiveColumns` is not needed there.
+- Added 2026-09-03: **`Move up` / `Move down` accessibility actions on each band.** Drag-to-reorder
+  had no VoiceOver equivalent at all, so the palette's order was simply not editable with the
+  screen reader on — the same gap the delete action had already been given a fix for. Onboarding
+  asking every reader to reorder a band is what turned it from a gap into a dead end.
 - Also confirmed on device: haptics (which the simulator cannot produce at all), Dynamic Type at
   large sizes, portrait lock, and dark mode over a white last swatch.
 
@@ -383,6 +443,456 @@ to a glyph and nothing churns. A working preview can only be confirmed on device
 
 One more red herring: `ClosedViewfinderController: Viewfinder still closed …` appears in simulator
 logs whether or not the app has a capture session at all. It is ambient noise, not a signal.
+
+## Onboarding, and Lauma (rebuilt 2026-09-03)
+
+First launch is a **full-screen flow built out of the app's own palette bands**. No cards, no
+scrim, no gradient.
+
+The first attempt was a gradient backdrop with rounded translucent cards, and Chris's verdict was
+that it felt generic with none of ColorSense's personality. He was right, and the diagnosis is
+worth keeping: it covered the palette in order to show a tutorial *about* the palette. Full-bleed
+color bands with hard edges and Bebas set directly on the color are the one thing that makes this
+product look like itself, and the old design hid exactly that behind the house style of every SaaS
+onboarding. If a future change starts reaching for a floating panel over the bands, that is the
+same mistake.
+
+The screen is a tall hero band carrying the type, three colour strips, and an action band at the
+bottom. Every label takes its colour from the band it sits on through `legibleForeground`, the same
+`ContrastCalculator` route every swatch label uses, so nothing here needed a hand-picked colour.
+
+Three beats:
+
+0. `splash` holds the launch screen's own composition, same pose on the same coral, for 1.15s and
+   then advances itself. It exists because **nobody ever sees the system launch screen**: iOS
+   caches the launch snapshot per install, so an upgrade keeps showing the previous one, and on a
+   fast device it is gone in a frame or two anyway. Chris reported the first screen simply never
+   appeared. This makes the brand moment land without costing a tap.
+1. `hello` a flat **TEAL** field, Lauma centred, one speech bubble reading "HI! I'm Lauma." and
+   nothing else. No wordmark, no headline, no supporting paragraph (Chris asked for the lockup and
+   the extra copy to come out; the launch screen already showed her face and the next beat carries
+   the product idea). Three things here are deliberate and easy to break:
+   - **The bubble is DM Sans, not the Bebas display face.** Bebas Neue is caps-only, so it renders
+     "I'm Lauma" as "I'M LAUMA" and destroys the casing the line is written in.
+   - **The strips collapse to zero height on this beat only.** They are the same teal as the hero
+     so they show nothing, but at 84pt each they still took 252pt out of the band, which pushed
+     her a full 126pt above the centre of the screen she is meant to stand in the middle of.
+   - **The bubble is glass** (`.ultraThinMaterial`) with `.primary` text, so it follows the system
+     appearance. It was a solid black fill first, which Chris queried for dark mode. Worth knowing:
+     that version was not actually broken, because the flow paints explicit brand colours and so
+     renders identically in both appearances. Glass is a style choice, not a bug fix.
+2. `naming` a flat **CORAL** field with Lauma on top and the type underneath, the same vertical
+   order as the introduction before it so the two screens read as one sequence. She was
+   bottom-right with left-aligned type first, which put her in competition with the headline for
+   the same corner and made the two screens feel unrelated. Its strips collapse to zero for the
+   same centring reason as `hello`. It and it labels itself the way the app labels a swatch: "Bittersweet"
+   over "#FF6B6B". That name is the real Name That Color match, verified against `ColorNames.json`
+   rather than written from memory.
+3. `mood` the same five slots animate from coral to a real palette, so the field appears to
+   **split**. Picking a mood recolors them live underneath. The split is the product demo; no copy
+   explains it. The four moods are rendered as miniature palettes, not icon-and-subtitle rows.
+   **Lauma's pose changes with the mood picked** (`OnboardingMood.pose`), so she reads as reacting
+   to the choice. That mapping is restricted to the full-body poses on purpose: the expression
+   busts are framed at the chest, so mixing them in at one height makes her jump scale between
+   selections. A full-body emotion set would let this be much more expressive; see below.
+4. `keep` the palette is theirs, and the account ask lands here, after they have made something.
+
+Lauma's placement is per beat and was iterated on with Chris. `hello` and `keep` stand her on the
+seam at the bottom of the hero band as a `bottomTrailing` overlay; her height on `hello` is capped
+at 200 because a taller pose reaches up and clips the headline's last character. `mood` is
+different: she is an **inline sibling** in an HStack beside the question, using the GUIDE pose
+**flipped** so her arm points back at the four choices. Pinned to a corner there she floated in the
+empty top of the band with nothing tying her to the words, and unflipped she pointed off the edge
+of the screen. Her column narrows the type, which is why that headline is the short one.
+
+Load-bearing details:
+
+- **`PaletteStore.recolor(to:)`, not `replace(with:)`.** `replace` mints fresh swatch ids, so the
+  bands are torn down and rebuilt and the colors *pop*. `recolor` carries each slot's id, which is
+  what lets the mood preview morph. It also resets the generation run and re-anchors.
+- **Backing out before "Keep this one" restores the palette that was on screen**, so the dev-only
+  `-show-onboarding` flag can never eat real work.
+- The drag-to-reorder lesson was **cut** on purpose (2026-09-03). "Now press and hold a band" was
+  the most tutorial-shaped moment in the flow and the main thing that read as generic. The
+  `LaumaPaletteTip` component that supported it was deleted rather than left dead.
+- **The primary button inverts its band** (settled 2026-09-04, after two rejected attempts). It is
+  filled with the band's own measured ink and labelled in the band's colour: a black bar with TEAL
+  type on the teal field, CORAL type on the coral one. Three treatments were tried in order, and
+  the two dead ends are worth not repeating. Plain `actionForeground` made the flow read as black
+  bars on flat colour. Filling with a second brand colour instead (CORAL on TEAL, TEAL on CORAL,
+  YELLOW on BLURPLE) fixed that but made the button an unrelated third colour whose label still
+  measured black, so the button and the type on the screen shared nothing, and Chris read the
+  result as "a bit off". Inverting is what ties them together, and it cannot fail a contrast check:
+  `legibleForeground` already picked the ink furthest from this band, so swapping the two keeps
+  exactly that ratio, on a flat brand field and on whatever palette a mood turns out to be. Only
+  the primary inverts; a filled second button would compete with the one meant to be pressed.
+  The `plan` cards lost the YELLOW they borrowed from the old accent in the same pass, and separate
+  chosen from unchosen by fill and border weight in one ink instead.
+- **The splash holds five seconds** (asked for 2026-09-04). It was 1.5s, and the blink was over
+  before the reader had focused on her face. `LaumaBlink` also gained a `gap` parameter and the
+  splash passes a tight `0.5...1.1`, which puts a blink roughly every 1.6s, so three land inside
+  the hold rather than one. This is a long hold for a screen with no controls, so if it starts to
+  feel like a wait, shorten it rather than adding a skip control, which would invite a tap past the
+  one moment the screen exists to show.
+- **The blink is a function of the clock, and holds no state. Do not put it back on a timer.**
+  Lengthening the splash did *not* make it visible on device, and the reason is the second
+  occurrence of a bug this file already records once. `LaumaBlink` advanced its frames with a chain
+  of `Task.sleep` calls inside a `.task` on the view, exactly the shape that silently skipped the
+  splash timer before: a `.task` is tied to view lifetime, an early rebuild cancels it, `try? await`
+  swallows the cancellation, and the sequence restarts from its initial delay. A phone initialises
+  fast enough for that to happen repeatedly in the first seconds, which is precisely the window the
+  blink plays in, so it was reset before it ever finished. The simulator is slow and idle there, so
+  it played perfectly and the bug looked like a taste problem about duration.
+  It is now a `TimelineView` over a pure function of `Date`: time is cut into fixed slots, each
+  holding one blink at a jittered offset, so the spacing still varies but nothing is remembered
+  between frames. A rebuild cannot restart, stall or desynchronise something with no state. The
+  jitter is a deterministic hash of the slot index rather than `random`, because a random draw
+  would answer differently on every rebuild and she would stutter mid-blink.
+  Also note `shutHold`: an extra 0.1s on the fully-closed frame. Without it the blink is 420ms of
+  unbroken motion that reads as a flicker, which was a real part of why it was missed.
+  Verified by sampling her eye region out of simulator screenshots, not by eye: the pupil-pixel
+  count drops and recovers on a ~1.6s cycle.
+- **Beat content slides; the bands do not** (settled 2026-09-04, third attempt). The beats had no transition
+  at all: a `switch` swaps the subtree in a single frame, so the words and Lauma cut instantly
+  while the band colours and strip heights were still springing to their new values. That mismatch
+  is what read as glitchy, and it is a transition bug, not a curve to retune. `.id(beat)` on the
+  hero and action band makes the swap a real insertion and removal, which is the only way a
+  transition can run at all, and it sits *inside* `.background(bandColors[...])` so the colour keeps
+  morphing straight through. The redundant `.animation(_:value: beat)` came off the root at the same
+  time, since `advance(to:)` already wraps every beat change in `withAnimation` and the second
+  transaction would have overridden the transition's own timing.
+  The transition itself took three goes and the two dead ends are worth not repeating. A straight
+  cross-fade smears, because almost every beat has Lauma in it and two half-transparent Laumas in
+  slightly different places overlap. A fade-through (outgoing leaves, then incoming arrives) fixed
+  the smear but Chris still disliked it: content vanishing in place and reappearing in place reads
+  as a blink rather than as motion. It is now a **slide**, old page out to the leading edge as the
+  new one comes in from the trailing edge. That solves the ghosting by construction instead of
+  timing around it, since the two Laumas are never in the same place, and it matches what the flow
+  actually is, a sequence of pages moving forward. The flow only ever advances, which is why the
+  transition is one direction and not a pair. Both bands are `.clipped()`, or the outgoing page is
+  visible travelling across the strips. `OnboardingMotion.beat` is damped to 0.96, close to
+  critical: a page sliding across should settle, not bounce.
+
+### Pricing: three plans, and the trial is the highlighted one (2026-09-04)
+
+Asked for directly, and it **reverses** the "Pro Annual is deliberately not offered here" line
+below, which argued two options was the ask and a third was a conversion decision. It was made
+deliberately, so it is an amendment rather than drift, and the vault should say so.
+
+- **Yearly is on the screen at $39**, the vault's Pro Annual price. "SAVE 35%" beside it is
+  arithmetic, not a claim: $5 a month is $60 a year against $39. If either price moves in the
+  vault, that number moves with it.
+- **The trial is now 7 days, not 14.** Still absent from the vault either way, and still a StoreKit
+  introductory offer that has to be configured in App Store Connect. Shortening it does not make it
+  less of a pricing decision the vault needs.
+- **Each plan wears its own brand colour** and the chosen card is filled with it, rather than three
+  identical outlined boxes that had to be read to be told apart. YELLOW for the trial, TEAL for
+  monthly, CORAL for yearly, all from `BrandColor`. Every label on a filled card is measured with
+  `legibleForeground` rather than assumed.
+- **The colour stripe is an `.overlay`, not a row in the `HStack`.** As a child it was a bare
+  `Color`, which is greedy for height, so it stretched the two unchosen cards about 60% taller than
+  the chosen one and the three stopped reading as a set.
+- **The hero scrolls at accessibility sizes.** Three cards plus the headline and the paragraph are
+  taller than the band, and an overflowing hero pushed the action band clean off the bottom of the
+  screen, leaving no way to subscribe *or* to dismiss. That was already true with two cards; the
+  third made it obvious. The buttons survive because they live in their own band, outside the
+  scroll. Verified by screenshot at accessibility-extra-large. Note CLAUDE.md's own warning that
+  the simulator cannot exercise scrolling, so the scroll itself is a device check.
+- The title and its badge sit side by side through `ViewThatFits` and stack once they do not fit.
+  At accessibility sizes the row was too wide and the title truncated to "7 days f...", which is
+  the one string on the card that has to survive.
+
+Everything in "The plan screen is design only" below still applies unchanged: **none of this is
+wired to StoreKit**, and a purchase screen that does not purchase is its own guideline 3.1.1
+rejection. Adding a third plan and a discount badge raises the stakes on that, it does not lower
+them.
+
+### The StoreKit seam, ready to wire (added 2026-09-04)
+
+`Services/ProStore.swift` is where In-App Purchase will go. Nothing talks to StoreKit yet, and the
+point is that every screen offering Pro already calls **through** it, so wiring is writing one
+conforming type rather than reworking onboarding. `PlaceholderProStore` answers `.notConfigured`
+and callers behave exactly as before. The file itself carries the step-by-step checklist; the parts
+worth knowing away from the code:
+
+- **Two products, not three.** `ProProduct` has `monthly` and `annual`. The trial is an
+  **introductory offer on the monthly product**, which is why `Plan` on the plan beat has three
+  cases and `ProProduct` has two. Both subscriptions must sit in **one subscription group**, or a
+  reader cannot switch between them without double-paying.
+- **A Restore Purchases control has to be added when wiring.** App Review requires a restore path
+  for auto-renewable subscriptions. `restore()` is on the protocol so the call site is obvious, but
+  there is deliberately no dead button for it today.
+- Whatever trial length is configured in App Store Connect has to match the plan beat's copy, and
+  it still needs adding to the vault, which does not mention a trial at all.
+
+**Two bugs were fixed in the same pass, both real today and both worse once money is involved:**
+
+- **An existing subscriber was pitched a trial for what they already pay for.** All three answers to
+  the account ask now leave through `advanceFromAccountAsk()`, which skips the plan beat when
+  `ProEntitlement.isPaid()` says the account is on `pro` or `business`. That reads `GET /api/me`,
+  the same endpoint `SubscriptionView` and the web's `usePlan` use, so it works today with no
+  StoreKit: the plan lives server side and a subscriber signing in on the phone is known at once.
+  A failed request answers false and shows the offer, because being pitched something you own is a
+  smaller harm than never being able to buy it.
+- **An already signed-in reader got an incoherent account ask.** The advance was driven by
+  `onChange(of: clerk.user?.id)`, which only fires when the id *changes*, so a session restored at
+  launch left the beat asking an authenticated reader to create an account, with both buttons
+  opening `AuthView` for a user already in it. It now checks `clerk.user` when the beat renders and
+  offers a single Continue, with the supporting copy switched to match. This was hit constantly in
+  testing, because `-show-onboarding` on a signed-in device reproduces it every launch.
+
+### The plan screen is design only (added 2026-09-03)
+
+A fifth beat, `plan`, sits after the account ask: a flat BLURPLE field offering a 14-day free trial
+or a monthly subscription, with "Not now". **Nothing on it is wired to StoreKit**, at Chris's
+request, and three things must happen before it can ship in a submitted build:
+
+1. **Guideline 3.1.1.** Digital goods must go through In-App Purchase. These buttons currently just
+   end onboarding, and a purchase screen that does not purchase is itself a rejection risk. Wire it
+   or hide it before submission.
+2. **The 14-day trial is not in the vault.** `Claude Skill.md` section 3 lists Pro Monthly $5,
+   Pro Annual $39 and the $9 Pro Pass, with no trial. A trial is a StoreKit introductory offer
+   configured in App Store Connect, and if it stays it is a pricing decision the vault needs.
+   The $5 monthly figure on screen does come from the vault.
+3. Pro Annual is deliberately not offered here. Two options was the ask; adding a third is a
+   conversion decision, not a layout one.
+
+It keeps a "Not now" exit for the same reason the account ask does.
+
+### The launch screen carries the brand moment, not a slide (decided 2026-09-03)
+
+`UILaunchScreen` was `{}`, an empty dict, which is why launch showed a blank white frame and why
+"a blank white frame is launch lag, not a crash" is a note further up this file. It is now CORAL
+with Lauma's head centred, which is the design Chris mocked up.
+
+That mock was originally proposed as onboarding's *first screen*, and it read as incomplete for a
+structural reason worth keeping: a wordless logo screen is an interstitial, not a screen. Asking it
+to be a content screen gives it nothing to say and costs a tap. As a launch screen it is free, it
+is exactly where a wordless brand moment belongs, and it replaces a white flash. The introduction
+Chris wanted then became onboarding's first *real* screen, with words.
+
+Two constraints that shaped it:
+
+- **A launch screen cannot run Swift**, so it cannot read `BrandColor`. The coral therefore lives
+  in the `LaunchBackground` colour asset, and that is the single sanctioned copy of a brand value
+  outside `DesignSystem/`. If the brand coral ever moves, change it in both places.
+- **`UILaunchScreen` centres exactly one image**, so the wordmark cannot sit at the bottom the way
+  the mock had it. Hence the head alone here, and `ColorSenseWordmark` on the `hello` beat instead.
+
+One open question: the teal is `BrandColor.teal` (#4ECDC4, the vault's value). Chris supplied a
+swatch image that read slightly softer, but a pasted image cannot be sampled, and hardcoding a
+second teal outside `DesignSystem/` would break this file's own rule. If a different teal is
+wanted, add it to `BrandColor` with its hex rather than inlining it.
+
+**`UILaunchScreen` now sets a colour and no image, and that is a retreat, not a preference.**
+`UIImageName` worked with a portrait full-body sprite (once its 1x/2x/3x were exact multiples: a 3x
+one pixel wide of 3x the 1x makes the image silently skip, with no build warning and no runtime
+error) but rendered nothing at all for the landscape head, across a fresh install, a simulator
+reboot, exact multiples and a renamed asset. Rather than keep paying for that, the launch screen is
+CORAL only and the app's `splash` beat paints the same coral with the head on it. Same colour,
+so the handover has no seam, and a launch screen that is only a colour cannot get it wrong.
+
+**The `UILaunchScreen` key is required even when it carries only a colour.** Deleting the key
+outright (which happened here while removing `UIImageName`) leaves the app with no launch screen,
+and iOS silently falls back to compatibility mode: every screen renders letterboxed inside black
+bars instead of full bleed. It builds, it runs, and nothing warns. If the app ever stops filling
+the screen, check this key first.
+
+**Do not try to crop a head out of a full-body pose.** It was tried: the cut was made at the
+measured narrowest silhouette row (52% of height, the neck), the least-bad horizontal cut available,
+and it still read as a chopped chin on device. Her head and body are a single shape with no neck
+between them, so the jaw curve continues past every candidate cut line and any horizontal crop
+flattens it. `LaumaHead` is instead matted out of the **dedicated head render** Chris supplied,
+which has a complete jaw and needed only a background flood fill.
+
+**The full-body emotion set landed 2026-09-03** in `NextCloud/ColorSense` (delighted, curious,
+surprised, unsure, sad) and is cut and installed. `LaumaCurious` is now full-body, replacing the
+chest-framed bust of the same name; the remaining bust, `LaumaReassuring`, was deleted because its
+framing is off-system. `LaumaSurprised`, `LaumaUnsure` and `LaumaSad` ship unused, for error and
+empty states.
+
+**The shadow is a ground shadow, not a drop shadow** (changed 2026-09-03). `.shadow()` on the
+sprite traces its outline, which is exactly what makes a flat character read as a sticker laid on
+the surface: a second Lauma, in grey, peeking out from behind the first. Chris called it out as
+"sticker like". A standing figure lit from the front does not do that; it puts a pool on the floor
+beneath itself. So `LaumaStage.groundShadow` is an ellipse at her feet with a radial gradient
+(dense centre, vanishing rim) drawn with `.blendMode(.multiply)`. Multiply matters: it *darkens the
+band it lands on* rather than laying neutral grey over it, which is the difference between a shadow
+on CORAL looking like deeper coral and looking like dirt. It correctly disappears on a near-black
+band such as the Bold palette's first swatch, because there is nothing left to darken.
+
+**The blink is real animation frames, not synthesis** (added 2026-09-03). Chris supplied
+`Downloads/2026-09-03 13:43:33.MOV`, a 24fps generated animation of her head blinking. The video
+itself is not shippable: a "KlingAI 3.0" watermark is burned into the top-right and bottom-right,
+and a 4.7MB H.264 with an audio track is a silly way to play 0.4s of eyelid. What made it usable is
+that the head's bounding box is **pixel-identical across all 35 frames** (195,660,780,1176) and
+sits clear of both watermarks, so cropping to the head drops the watermarks and the frames swap
+with no jitter. Ten frames were kept (open, three closing, shut, four opening, open), matted off
+the video's coral, which is *not* `BrandColor.coral`, so they must be composited rather than laid
+on a matching field. `LaumaBlink` plays them on the `splash` beat.
+
+Note the animation's Lauma drifts slightly from the still art (a larger, paler muzzle), so the
+splash head and the `hello` full body are not quite the same rendition. Only worth fixing if it
+reads as wrong on device.
+
+**Three beats now use animation rather than a drawn pose** (added 2026-09-04), all through
+`LaumaClip`:
+
+- `hello` uses `.wave`, from `Downloads/2026-09-04 00:14:10.MP4` (784x1176, 24fps, 3.042s).
+- `naming` uses `.naming`, from `Downloads/2026-09-04 01:09:50.MP4` (960x960, same length).
+- `plan` uses `.cheer`, from `Downloads/2026-09-04 01:00:33.MP4` (960x960, same length).
+
+Each is cut to 30 frames at roughly 10fps, in `LaumaWave00`...`29`, `LaumaName00`...`29` and
+`LaumaCheer00`...`29`. Same two problems as the blink clip and the same answers: a burned-in "KlingAI 3.0" watermark, painted
+back to white before anything reads the pixels, and a solid white plate rather than alpha, cut by
+flood-filling inward from the border.
+
+**Find the watermark as the part of the picture that never changes, not by position.** It is burned
+in, so it is in every frame at the same place in the same colour, while Lauma moves. The first
+extractor instead took "the bottom-right corner of the frame where she is smallest", which is fine
+for a clip where she recedes and wrong for one where she does not: on `.cheer` it stretched the box
+to x=480-941 and painted her back leg white. The change-based detector puts it at x=764-941, clear
+of her. If a third clip is ever cut, this is the part to keep.
+
+Three things about these clips differ from every still pose and are load-bearing:
+
+- **All 30 frames share one crop box.** The still poses are each trimmed to their own alpha bounds,
+  which is what lets `LaumaStage` stand them on a band seam. Doing that here would cancel out any
+  movement toward or away from the camera, which in `.wave` is the whole animation: she is full
+  size for the first third, recedes to about a fifth of that, and returns. `.cheer` stays at one
+  distance throughout, which is why it suits a screen where she is a reaction rather than the
+  subject.
+- **The ground shadow is driven by a measured table**, `Clip.stand`, holding each frame's
+  silhouette centre, width and bottom as fractions of the frame. A fixed ellipse would sit at full
+  size under a Lauma who has receded, which is exactly the detached-sticker look the shadow exists
+  to prevent. The numbers come out of the extractor, not out of a guess.
+- It is clock-driven like `LaumaBlink`, for the reason recorded there. Note the **Reduce Motion
+  split is deliberate**: `LaumaClip` holds frame 0 under Reduce Motion, because these clips move
+  her through space, which is what the setting is for. `LaumaBlink` does not, because an eyelid
+  moves nothing. Getting this wrong once already cost real time: with Reduce Motion left on after
+  the accessibility sweep, the blink never played on device and the animated wave rendered as a
+  still that looked like the old pose, which read as three separate bugs.
+
+**The recession is worth a second opinion.** She shrinks to a distant figure for roughly a third of
+the loop, under a speech bubble introducing her, which can read as her walking away rather than
+waving hello. It ships whole because that is the clip that was asked for; trimming to the full-size
+frames (0 to 8 and 25 to 29) is a one-line change to `frameCount` and the table if it reads wrong.
+
+**Bundle size is now the thing to watch.** The three clips add about 13.6MB (`.wave` 4.6MB at
+900px tall, `.naming` 4.9MB at 620px, `.cheer` 4.1MB at 520px), taking the asset catalog to roughly
+20MB, and the whole of the rest of the app is small next to it. Each clip costs about 4.5MB, so a
+fourth is another 4.5MB and the trend matters more than any single one.
+
+If it needs trimming, cut the frame **height** rather than the frame count: 30 frames over 3s is
+already only about 10fps and dropping lower will stutter, whereas each clip is currently sized for
+its 3x display height with no headroom to spare but no waste either. The real lever, if it ever
+comes to it, is that these are lossless PNGs of flat cartoon art with soft edges; a shared sprite
+sheet or a palette-reduced export would cut this substantially without touching the animation.
+None of that is worth doing until an actual size limit is in view.
+
+**The blink exists only for the head**, because that is the only pose the animation covers. Two
+earlier attempts to synthesise one over the still art were built and rejected:
+
+1. Fur-coloured lids drawn over the measured eye boxes. The eye positions were found properly (the
+   sclera is the only pure-white region inside the figure; the cream muzzle is 247,229,201, a
+   46-wide channel range) but a flat fill cannot match the art's paper texture, so the lids read as
+   two stamps on her face. Also worth knowing for any future overlay: **apply the frame before the
+   overlay**, or the eyelids' `GeometryReader` measures the unconstrained image and they land in
+   the middle of her forehead.
+2. Lids baked into a small patch by painting the eye out with neighbouring pixels. The fur sampling
+   walked into the cream ear and left ghost outlines where the sclera had been.
+
+A convincing blink needs **closed-eye art per pose**, which is one more generation pass on the kit.
+Ask for that rather than attempting a third synthesis.
+
+### `.background()` bleeds into the safe area by default (fixed 2026-09-04)
+
+`View.background(_:ignoresSafeAreaEdges:)` defaults those edges to **`.all`**. That is exactly right
+for the full-bleed bands, which is presumably why nobody looked at it, and wrong for any control
+sitting near a screen edge.
+
+The onboarding primary button was `.background(primaryFill)`. On the signed-in `keep` beat, where
+Continue is the only control and therefore sits next to the bottom safe area, its fill painted
+straight through that inset to the edge of the screen: a 52pt button rendered as an 88pt block
+running off the bottom. With three controls the primary sits far enough up that nothing showed,
+which is why it appeared the moment the signed-in single-button path was added.
+
+**The frame was correct the entire time. Only the paint was wrong**, and that is what made this
+expensive: a minimum height, `.fixedSize(vertical:)` on the control, `.fixedSize` on the band, and
+finally a definite `@ScaledMetric` height were all tried and all measured identical, because none of
+them was ever the problem. The thing that identified it was setting the height to a deliberately
+absurd value and seeing the block *not* change. If a SwiftUI view renders larger than its frame and
+changing the frame does nothing, look at what is painting, not at what is sizing.
+
+Fixed with `.background(primaryFill, ignoresSafeAreaEdges: [])`. Any future control with a
+background near an edge needs the same, and the bands must keep the default.
+
+Two measurement lessons from the same session, both of which produced confidently wrong readings
+before being caught:
+
+- **`sips` writes 32-bit BGRA top-down BMPs**, not the 24-bit bottom-up assumed by the recipe in
+  "Measuring UI alignment". Read `biBitCount` at offset 28 and treat a negative `biHeight` at offset
+  22 as top-down, or every sample lands somewhere else in the image.
+- **Uninstalling from the simulator wipes the persisted palette**, so a "clean reinstall" also
+  changes every band colour and any detector keyed to a colour silently stops matching.
+
+### The account ask is a soft gate (decided 2026-09-03)
+
+iOS asks every reader to sign in or create a free account at the end of onboarding, and **the "no
+signup required" line is gone from the app**. That promise is now web-only. This reverses the
+vault's own positioning, and `Claude Skill.md` **has been reconciled** (2026-09-03) in four places:
+section 2's product line and Positioning paragraph, section 3's free-tier row, and the iOS
+paragraph in section 22. The rule for copy is now: "no signup required" is a claim about the *web
+app*, never a blanket ColorSense claim. "Free, unlimited, no paywall" is still true everywhere.
+
+It is a **soft** gate: create an account, sign in, or "Maybe later". Two App Review rules drove
+that, and both still need watching:
+
+- **Guideline 5.1.1(v)** does not allow requiring registration for features that do not need an
+  account. The Extractor and WCAG checker run entirely on device, so a hard wall in front of them
+  is a plausible rejection. The "Maybe later" exit is what keeps this safe.
+- **Guideline 4.8** requires Sign in with Apple wherever a third-party sign-in is offered. Clerk's
+  `AuthView` currently shows Google and no Apple button, confirmed by screenshot. **Apple must be
+  provisioned before this ships**, or the account screen is a rejection on its own. See "Auth"
+  below for what is still outstanding there.
+
+`AuthView(mode: .signUp)` and `AuthView(mode: .signIn)` are distinct flows, which is why the two
+buttons are honest rather than decorative.
+
+### Voice
+
+Copy follows the vault's section 9 rules, and the first attempt did not. Two that bite:
+
+- **No em dashes or en dashes in anything a user can read.** Section 9 makes this a mandatory
+  output gate and section 21 repeats it. The first onboarding draft was full of them. Scan the
+  literal characters before shipping copy; reading for them is how a dozen got missed once before.
+- **"Specific and grounded. Not generic observations."** This is the written form of the complaint
+  above. "Which of these feels like you?" is abstract; naming CORAL and Bittersweet is not. Color
+  words go in ALL CAPS.
+
+### The mascot kit
+
+`ColorSense Lauma Mascot` (18 PNGs, delivered 2026-09-03) supersedes the single waving prototype.
+It has a four-view turnaround, four full-body poses the sheets name WELCOME, GUIDE, WALK and
+CELEBRATE, and six expression busts (HAPPY, CURIOUS, THINKING, UNSURE, DISAPPOINTED, REASSURING).
+Eight are in the catalog as `Lauma*` imagesets; `LaumaPrototype` was deleted.
+
+Two things to know before touching the art again:
+
+- **The source files have no alpha.** All 18 are RGB on white, and her eye whites sample at the
+  same 254 to 255 as the paper, so a global white key punches holes straight through her eyes. The
+  cutouts were made by **flood-filling inward from the border** (background is connected to the
+  frame edge, eye whites are enclosed), then one box-blur pass for a ~1px soft edge, then a trim to
+  the alpha bounding box. That trim matters: the bottom of each sprite is the bottom of her hooves,
+  which is what lets `LaumaStage` stand her exactly on a band seam. If new art arrives, prefer an
+  export with real transparency over repeating this.
+- **`Image(decorative:)`, always.** A plain `Image(_:)` adopts its asset name as an accessibility
+  label, which is how the literal string "LaumaPrototype" ended up in the accessibility tree.
+
+`LaumaStage` now does very little, because the drawn poses carry the expression: a slow breath and
+a cross-fade between poses, both suppressed under Reduce Motion.
+
+Swept at accessibility-extra-large, in light and dark, and with Reduce Motion on.
 
 ## Running the app
 

@@ -16,7 +16,9 @@
 
 	<!--
 	  No tracking. Nothing here is combined with data from other companies' apps or sites, and
-	  there is no ad network, attribution SDK or analytics SDK in the project.
+	  there is no ad network or attribution SDK. PostHog provides pseudonymous product analytics
+	  and crash diagnostics, but its random installation ID is never linked to the Clerk account
+	  or used to track a person across other companies' apps or sites.
 
 	  Clerk does have a telemetry subsystem, but TelemetryCollector.shouldRecord() returns false
 	  with reason "production instance", and ColorSense ships a production (pk_live_) key — so it
@@ -96,6 +98,25 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!--
+		  Fatal crash reports sent through PostHog on the next launch, which is what
+		  `errorTrackingConfig.autoCapture = true` in AnalyticsService turns on. Reports contain
+		  stack traces and technical app/device diagnostics, carry only PostHog's random
+		  installation ID, and do not include interaction breadcrumbs, logs, account identity or
+		  user-created content.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCrashData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
 	</array>
