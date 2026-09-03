@@ -20,6 +20,8 @@ struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
+    @State private var feedbackIsPresented = false
+
     /// `@colorsensehq` on every platform, per the vault. The URLs are built from that handle rather
     /// than recorded anywhere, so they are worth checking once against the live accounts.
     private static let socials: [(name: String, url: String)] = [
@@ -44,6 +46,30 @@ struct AboutView: View {
                     hero
 
                     group("Reach us") {
+                        // Feedback first: it is the one that stays inside the app and reaches a
+                        // person without the reader having to compose anything themselves.
+                        Button {
+                            feedbackIsPresented = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "text.bubble")
+                                    .font(.system(size: 15))
+                                    .frame(width: 22)
+                                Text("Send feedback")
+                                    .font(BrandFont.ui(16))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .foregroundStyle(Color.primary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 50)
                         link("Email us", "envelope", "mailto:hello@colorsense.online")
                     }
 
@@ -74,6 +100,7 @@ struct AboutView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .sheet(isPresented: $feedbackIsPresented) { FeedbackView() }
         }
     }
 
@@ -82,8 +109,8 @@ struct AboutView: View {
             ColorSenseAuthLogo()
                 .padding(.bottom, -14)
 
-            Text("Color tools that stay free.")
-                .font(BrandFont.display(30))
+            Text("ColorSense")
+                .font(BrandFont.display(34))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -95,15 +122,52 @@ struct AboutView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Made by Chris Mendez")
-                .font(BrandFont.ui(14, weight: .medium))
-                .padding(.top, 6)
+            author
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 26)
         .padding(.horizontal, 20)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
     }
+
+    /// Who built it, with a portrait when one is in the catalog.
+    ///
+    /// The image is looked up rather than assumed: `UIImage(named:)` returns nil when the asset is
+    /// absent, and a missing photo falls back to initials instead of leaving a blank circle or
+    /// crashing a preview. That matters because the portrait arrived after the layout did.
+    private var author: some View {
+        HStack(spacing: 10) {
+            Group {
+                if UIImage(named: Self.portraitAsset) != nil {
+                    Image(Self.portraitAsset)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Text("CM")
+                        .font(BrandFont.ui(15, weight: .bold))
+                        .foregroundStyle(PaletteColor(color: BrandColor.teal).legibleForeground)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(BrandColor.teal)
+                }
+            }
+            .frame(width: 40, height: 40)
+            .clipShape(Circle())
+            .overlay { Circle().stroke(Color.primary.opacity(0.12), lineWidth: 1) }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Developed by")
+                    .font(BrandFont.ui(12))
+                    .foregroundStyle(.secondary)
+                Text("Chrisanto Mendez")
+                    .font(BrandFont.ui(15, weight: .bold))
+            }
+        }
+        .padding(.top, 10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Developed by Chrisanto Mendez")
+    }
+
+    private static let portraitAsset = "AuthorPortrait"
 
     private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {

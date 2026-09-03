@@ -686,6 +686,30 @@ away:
 - **No "Leave a review".** There is no App Store listing yet, so it would go nowhere. It belongs
   here the day the App Store record exists, with the real App ID.
 
+**Feedback posts to `POST /api/feedback`**, the same route the web form uses, so a message from a
+phone lands in the same table and fires the same Loops `feedback_received` event that reaches
+hello@. Three things about it are load-bearing:
+
+- **Nothing in this app talks to Loops.** `LOOPS_API_KEY` is a server secret and stays one. The app
+  posts to our own API and the server does the rest. An SDK or a direct Loops call from the client
+  would mean shipping that key.
+- **The route takes no auth, and that is correct.** Someone whose problem *is* that they cannot
+  sign in has to be able to say so, which is why `FeedbackService` deliberately does not go through
+  `SavedPaletteService.authorizedRequest`. Name and email are prefilled from Clerk when there is a
+  user, and typed when there is not.
+- **The `website` honeypot is never sent.** The server treats any value there as a bot and silently
+  accepts without recording. A native form must simply not have the field, so "add the missing
+  field" is exactly the wrong instinct when reading that API later.
+
+Client-side validation mirrors the route's own bounds (name at least 2, plausible email, message
+10 to 2000) so the button gates before a round trip, and the server's written reason is shown as
+returned rather than reworded, including the 429 rate-limit message.
+
+**The portrait is looked up, not assumed.** `UIImage(named: "AuthorPortrait")` returning nil falls
+back to initials, so the layout is final whether or not the asset is present. Note the web's
+`public/author-chrisanto.png` is **not** usable here: it is a Canva "Canvassador 2026" badge frame
+carrying Canva's logo, and shipping a third-party mark in an About screen is wrong.
+
 The social URLs are **constructed** from the `@colorsensehq` handle rather than recorded anywhere,
 so they are worth checking once against the live accounts. The hero line is written for the app and
 is not a vault-owned tagline; if the brand ever settles one, the vault wins.

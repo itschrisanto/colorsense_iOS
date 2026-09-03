@@ -50,6 +50,10 @@ enum AnalyticsService {
         // anything else the reader supplied.
         // Whether anyone actually opens a file once inside SVG Recolor, which `toolOpened` cannot
         // tell us. Carries only a count, never the file, its name or any colour from it.
+        // That feedback was sent, never what it said. The message itself is user content and
+        // belongs only in the API's own table.
+        case feedbackSent = "feedback_sent"
+
         case svgFileOpened = "svg_file_opened"
 
         case onboardingViewed = "onboarding_viewed"
