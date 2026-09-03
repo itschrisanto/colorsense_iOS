@@ -1073,6 +1073,18 @@ Three things keep hosting an untrusted document safe, and all three must stay:
   the same implementation. It matters most on **export**, where the file leaves for applications
   this app does not control, rather than in the preview where script cannot run anyway.
 
+**The preview takes the artwork's shape** (changed 2026-09-04). It was a flat 240pt box whatever
+the file was, so a wide banner sat small between two bands of checkerboard and a tall logo sat
+narrow between two more. `SvgRecolor.aspectRatio(of:)` reads the `viewBox` (preferring it over
+`width`/`height`, since it is the coordinate system the drawing is authored in and survives files
+that give no size at all) and the canvas matches it, clamped between 150pt and 330pt so a long
+banner cannot collapse to a sliver and a tall crest cannot push every row off the screen.
+
+**The palette in the picker is the live one**, which is the whole "one palette, many tools" point:
+whatever the Extractor pulled out of a photo, or Generate produced, is what the SVG tool offers.
+Nothing had to be built for that, and nothing should be: the tool takes `store.palette` like every
+other tool does.
+
 **The choosing lives in a sheet, not in the rows** (changed 2026-09-04). The first version put a
 strip of palette swatches under every found colour, so a five-colour file repeated the same five
 circles five times and it read as a wall of dots with no order to it. Now each colour is one compact

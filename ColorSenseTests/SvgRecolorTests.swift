@@ -69,6 +69,25 @@ struct SvgRecolorTests {
         #expect(SvgRecolor.recolor(svg, mapping: mapping) == SvgRecolor.recolor(svg, mapping: mapping))
     }
 
+    @Test("The preview shape comes from viewBox first, then width and height")
+    func readsAspectRatio() {
+        #expect(SvgRecolor.aspectRatio(of: #"<svg viewBox="0 0 200 100">"#) == 2)
+        // Commas are legal separators, and a non-zero origin must not be mistaken for the size.
+        #expect(SvgRecolor.aspectRatio(of: #"<svg viewBox="10,10,300,100">"#) == 3)
+        // No viewBox: fall back to the attributes, ignoring units.
+        #expect(SvgRecolor.aspectRatio(of: #"<svg width="50px" height="100px">"#) == 0.5)
+        // viewBox wins when both are present.
+        #expect(SvgRecolor.aspectRatio(of: #"<svg width="10" height="10" viewBox="0 0 400 100">"#) == 4)
+    }
+
+    @Test("A file that says nothing usable about its shape returns nil, not a crash")
+    func aspectRatioIsOptional() {
+        #expect(SvgRecolor.aspectRatio(of: "<svg>") == nil)
+        // A zero height would be a divide by zero, so it counts as saying nothing.
+        #expect(SvgRecolor.aspectRatio(of: #"<svg viewBox="0 0 100 0">"#) == nil)
+        #expect(SvgRecolor.aspectRatio(of: #"<svg width="0" height="10">"#) == nil)
+    }
+
     @Test("Sanitising removes what could act rather than draw")
     func sanitiseStripsActiveContent() {
         let svg = """

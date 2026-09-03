@@ -109,6 +109,45 @@ enum SvgRecolor {
         )
     }
 
+    // MARK: - Shape
+
+    /// Width over height, read from the file so the preview can take the artwork's shape instead of
+    /// sitting in a fixed box.
+    ///
+    /// `viewBox` is preferred because it is the coordinate system the drawing is actually authored
+    /// in, and it survives files that give no `width`/`height` at all, which is common for anything
+    /// meant to scale. Falling back to the attributes handles the opposite case. Units are ignored
+    /// rather than converted: only the ratio is wanted, and `px`, `pt` and friends cancel out.
+    ///
+    /// Returns nil when the file says nothing useful, or says something impossible like a zero
+    /// height, so the caller can choose its own default rather than be handed a divide by zero.
+    static func aspectRatio(of svg: String) -> Double? {
+        if let box = firstMatch(in: svg, pattern: #"viewBox\s*=\s*["']\s*([-\d.eE\s,]+)["']"#) {
+            let parts = box
+                .replacingOccurrences(of: ",", with: " ")
+                .split(whereSeparator: \.isWhitespace)
+                .compactMap { Double($0) }
+            if parts.count == 4, parts[2] > 0, parts[3] > 0 {
+                return parts[2] / parts[3]
+            }
+        }
+
+        let width = firstMatch(in: svg, pattern: #"\bwidth\s*=\s*["']\s*([\d.]+)"#).flatMap(Double.init)
+        let height = firstMatch(in: svg, pattern: #"\bheight\s*=\s*["']\s*([\d.]+)"#).flatMap(Double.init)
+        if let width, let height, width > 0, height > 0 {
+            return width / height
+        }
+        return nil
+    }
+
+    private static func firstMatch(in text: String, pattern: String) -> String? {
+        guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+              let match = re.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let range = Range(match.range(at: 1), in: text)
+        else { return nil }
+        return String(text[range])
+    }
+
     // MARK: - Safety
 
     /// Strips the parts of an untrusted SVG that could do something other than draw.

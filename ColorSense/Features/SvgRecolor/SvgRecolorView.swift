@@ -135,6 +135,21 @@ struct SvgRecolorView: View {
         }
     }
 
+    /// The preview takes the artwork's own shape rather than a fixed box.
+    ///
+    /// It used to be a flat 240pt tall whatever the file was, so a wide banner sat small between
+    /// two bands of checkerboard and a tall logo sat narrow between two more. Reading the `viewBox`
+    /// lets the canvas match what was drawn, which is both a better use of the space and a truer
+    /// preview.
+    ///
+    /// Clamped at both ends. Unclamped, a long banner collapses to a sliver and a tall crest pushes
+    /// every row off the screen, and the ratio in a file is not always sane.
+    private var previewHeight: CGFloat {
+        let ratio = source.flatMap(SvgRecolor.aspectRatio(of:)) ?? 1
+        let width: CGFloat = 320
+        return min(max(width / ratio, 150), 330)
+    }
+
     private var preview: some View {
         ZStack {
             // Drawn here rather than in the document, so transparency in the file reads as
@@ -145,7 +160,8 @@ struct SvgRecolorView: View {
                     .padding(12)
             }
         }
-        .frame(height: 240)
+        .frame(height: previewHeight)
+        .animation(.easeInOut(duration: 0.2), value: previewHeight)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
