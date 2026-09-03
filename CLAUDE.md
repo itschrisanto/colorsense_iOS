@@ -1097,6 +1097,21 @@ Three things keep hosting an untrusted document safe, and all three must stay:
   the same implementation. It matters most on **export**, where the file leaves for applications
   this app does not control, rather than in the preview where script cannot run anyway.
 
+**Polish pass, 2026-09-04.** Four things worth not regressing:
+
+- **The error alert lives on the whole screen, not on the editor.** It was attached inside
+  `editor`, which is the one state that cannot be showing when a load fails: a failure means there
+  is no source, so the chooser is up. The message was unreachable in exactly the case it existed
+  for. It also uses a real binding rather than `.constant`, so any dismissal clears it.
+- **A file with no colours says so.** Painting entirely with `currentColor` or with gradients is
+  legitimate and not an error, but it leaves nothing to remap, and an empty list explains nothing.
+- **The checkerboard follows the appearance.** Hardcoded light greys glowed in dark mode, reading
+  as a rendering fault rather than as "nothing here".
+- **The preview is one accessibility element with a label.** It is a `WKWebView`, so VoiceOver
+  would otherwise walk its DOM, which is worse than useless; the rows below carry the information.
+
+Swept in dark mode and at accessibility-extra-large.
+
 **The preview takes the artwork's shape** (changed 2026-09-04). It was a flat 240pt box whatever
 the file was, so a wide banner sat small between two bands of checkerboard and a tall logo sat
 narrow between two more. `SvgRecolor.aspectRatio(of:)` reads the `viewBox` (preferring it over

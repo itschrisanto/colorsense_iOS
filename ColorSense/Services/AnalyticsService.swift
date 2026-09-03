@@ -48,6 +48,10 @@ enum AnalyticsService {
         // The first-launch funnel. `onboardingMood` and `onboardingChoice` carry only closed
         // enum values from `OnboardingMood` and `OnboardingPath` — never free text, a hex, or
         // anything else the reader supplied.
+        // Whether anyone actually opens a file once inside SVG Recolor, which `toolOpened` cannot
+        // tell us. Carries only a count, never the file, its name or any colour from it.
+        case svgFileOpened = "svg_file_opened"
+
         case onboardingViewed = "onboarding_viewed"
         case onboardingMood = "onboarding_mood"
         case onboardingChoice = "onboarding_choice"

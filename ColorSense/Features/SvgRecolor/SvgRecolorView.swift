@@ -53,6 +53,21 @@ struct SvgRecolorView: View {
                     }
                 }
             }
+            // On the whole screen, not on the editor.
+            //
+            // It was attached inside `editor`, which is the one state that cannot be showing when a
+            // load fails: a failure means there is no source, so the chooser is up and the alert
+            // was not in the hierarchy at all. The message was therefore unreachable in exactly the
+            // case it existed for. A real binding rather than `.constant`, so any dismissal clears
+            // it and not just the button.
+            .alert(
+                "That file could not be read",
+                isPresented: Binding(get: { loadError != nil }, set: { if !$0 { loadError = nil } })
+            ) {
+                Button("OK") { loadError = nil }
+            } message: {
+                Text(loadError ?? "")
+            }
             .fileImporter(
                 isPresented: $importerIsPresented,
                 allowedContentTypes: [.svg],
@@ -89,6 +104,15 @@ struct SvgRecolorView: View {
             VStack(alignment: .leading, spacing: 18) {
                 preview
 
+                if found.isEmpty {
+                    // Legitimate and not an error: a file can paint entirely with `currentColor`,
+                    // or with gradients referenced by url(), and there is nothing here to remap.
+                    Text("This file has no colours to change. It paints with currentColor or with gradients only, so there is nothing to remap.")
+                        .font(BrandFont.ui(14))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 HStack {
                     Text("\(found.count) \(found.count == 1 ? "colour" : "colours") found")
                         .font(BrandFont.ui(13, weight: .bold))
@@ -96,6 +120,7 @@ struct SvgRecolorView: View {
                     Spacer()
                     Button("Map to palette") { mapAllToPalette() }
                         .font(BrandFont.ui(13, weight: .medium))
+                        .disabled(found.isEmpty)
                 }
 
                 VStack(spacing: 0) {
@@ -127,11 +152,7 @@ struct SvgRecolorView: View {
                 )
             )
         }
-        .alert("That file could not be read", isPresented: .constant(loadError != nil)) {
-            Button("OK") { loadError = nil }
-        } message: {
-            Text(loadError ?? "")
-        }
+
     }
 
     /// The preview takes the artwork's own shape rather than a fixed box.
@@ -157,10 +178,15 @@ struct SvgRecolorView: View {
             if let recolored {
                 SvgPreview(svg: recolored)
                     .padding(12)
+                    .accessibilityHidden(true)
             }
         }
         .frame(height: previewHeight)
         .animation(.easeInOut(duration: 0.2), value: previewHeight)
+        // The web view cannot describe itself, and VoiceOver reading its DOM would be worse than
+        // useless. The rows below carry the actual information.
+        .accessibilityElement()
+        .accessibilityLabel("Preview of the recoloured file")
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
@@ -244,7 +270,7 @@ struct SvgRecolorView: View {
             found = colors
             mapping = Dictionary(uniqueKeysWithValues: colors.map { ($0, $0) })
             name = url.deletingPathExtension().lastPathComponent
-            AnalyticsService.capture(.toolOpened, ["tool": "svg_loaded"])
+            AnalyticsService.capture(.svgFileOpened, ["colors": String(colors.count)])
         } catch {
             loadError = "It could not be read as text. SVG files are XML, so a binary image saved with an .svg extension will not open."
         }
@@ -264,13 +290,18 @@ struct SvgRecolorView: View {
 }
 
 /// The transparency checkerboard behind the preview.
+///
+/// Both greys follow the appearance. Hardcoded light values glowed in dark mode: a bright panel in
+/// the middle of a dark screen, which reads as a rendering fault rather than as "nothing here".
 private struct Checkerboard: View {
     var square: CGFloat = 10
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         Canvas { context, size in
-            let light = Color(white: 0.98)
-            let dark = Color(white: 0.90)
+            let light = colorScheme == .dark ? Color(white: 0.17) : Color(white: 0.98)
+            let dark = colorScheme == .dark ? Color(white: 0.24) : Color(white: 0.90)
             context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(light))
             var y: CGFloat = 0
             var row = 0
