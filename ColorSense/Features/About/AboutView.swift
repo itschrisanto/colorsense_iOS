@@ -144,25 +144,25 @@ struct AboutView: View {
                         .scaledToFill()
                 } else {
                     Text("CM")
-                        .font(BrandFont.ui(15, weight: .bold))
+                        .font(BrandFont.ui(24, weight: .bold))
                         .foregroundStyle(PaletteColor(color: BrandColor.teal).legibleForeground)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(BrandColor.teal)
                 }
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 72, height: 72)
             .clipShape(Circle())
             .overlay { Circle().stroke(Color.primary.opacity(0.12), lineWidth: 1) }
 
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Developed by")
-                    .font(BrandFont.ui(12))
+                    .font(BrandFont.ui(13))
                     .foregroundStyle(.secondary)
                 Text("Chrisanto Mendez")
-                    .font(BrandFont.ui(15, weight: .bold))
+                    .font(BrandFont.ui(17, weight: .bold))
             }
         }
-        .padding(.top, 10)
+        .padding(.top, 14)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Developed by Chrisanto Mendez")
     }
