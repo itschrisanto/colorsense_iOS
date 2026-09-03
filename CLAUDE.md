@@ -412,6 +412,34 @@ it is Chris's call and not a silent fix. Note the onboarding beats already *do* 
 measured ink, so the app is currently inconsistent with itself on this point. If the answer is ever
 "make it pass", the change is one line in `PrimaryActionButtonStyle`.
 
+## Leaving a tool: Back, and not losing work on the way out
+
+`DesignSystem/SheetChrome.swift` holds both halves.
+
+**Tools say Back, on the leading edge, with a chevron.** "Done" was wrong twice over: it sat on the
+*trailing* edge in the older tools and the leading edge in the newer ones, so the control moved
+depending on which tool you opened, and it implies finishing something when nothing here is
+submitted and the palette saves itself continuously. Only the five tools reached from the Tools
+sheet use it; settings screens and nested editors keep Done and Cancel, where those words are true.
+
+Note a toolbar **collapses a `Label` to its icon**, which left a bare chevron and none of the word
+that was the point. It is an explicit `HStack` of image and text for that reason.
+
+**A swipe must not throw away work.** `confirmsDiscard` pairs `interactiveDismissDisabled` with a
+confirmation, because either alone leaves a hole: the modifier stops the accidental gesture, the
+dialog covers the deliberate tap on Back.
+
+It is applied **only where something would actually be lost**, which is two places:
+
+- **SVG Recolor** with a file open. The file and its mapping live nowhere else; exporting is the
+  only thing that keeps them.
+- **Feedback** with a message typed but not sent.
+
+Deliberately *not* applied to the Visualizer, Health, Contrast or Library. A palette edit in the
+Visualizer has already been written to `PaletteStore` before you could swipe, so a guard there would
+be friction protecting nothing, and friction that protects nothing is what teaches people to dismiss
+these dialogs without reading them.
+
 ## Measuring UI alignment
 
 Icon alignment complaints have come up twice and eyeballing got it wrong both times — one

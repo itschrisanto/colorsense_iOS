@@ -59,7 +59,7 @@ struct VisualizerView: View {
             .navigationTitle("Visualizer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+                BackToPalette { dismiss() }
             }
             .sheet(item: $suggestion) { found in
                 PaletteSuggestionSheet(

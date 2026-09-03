@@ -73,9 +73,7 @@ struct WCAGCheckerView: View {
                     }
                     .accessibilityLabel("Swap text and background colors")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
+                BackToPalette { dismiss() }
             }
         }
         .presentationBackground(.ultraThinMaterial)

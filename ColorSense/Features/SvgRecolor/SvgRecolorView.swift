@@ -25,6 +25,7 @@ struct SvgRecolorView: View {
     @State private var loadError: String?
     /// Which found colour is being reassigned, if any. One sheet, not one picker per row.
     @State private var editing: EditingSvgColor?
+    @State private var isConfirmingExit = false
 
     private var recolored: String? {
         source.map { SvgRecolor.recolor($0, mapping: mapping) }
@@ -44,8 +45,10 @@ struct SvgRecolorView: View {
             .navigationTitle("SVG Recolor")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                BackToPalette {
+                    // An open file and its mapping live only on this screen: nothing here has been
+                    // written anywhere, so leaving really does lose it. Ask first.
+                    if source != nil { isConfirmingExit = true } else { dismiss() }
                 }
                 if isPro, source != nil {
                     ToolbarItem(placement: .primaryAction) {
@@ -67,6 +70,13 @@ struct SvgRecolorView: View {
                 Button("OK") { loadError = nil }
             } message: {
                 Text(loadError ?? "")
+            }
+            .confirmsDiscard(
+                hasWork: source != nil,
+                message: "The file you opened and the colors you have mapped are only here. Exporting is the only thing that keeps them.",
+                isAsking: $isConfirmingExit
+            ) {
+                dismiss()
             }
             .fileImporter(
                 isPresented: $importerIsPresented,

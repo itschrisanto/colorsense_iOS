@@ -57,9 +57,7 @@ struct PaletteHealthView: View {
             .navigationTitle("Palette health")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
+                BackToPalette { dismiss() }
             }
         }
     }

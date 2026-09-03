@@ -20,6 +20,7 @@ struct FeedbackView: View {
     @State private var isSending = false
     @State private var failure: String?
     @State private var didSend = false
+    @State private var isConfirmingExit = false
     @FocusState private var messageIsFocused: Bool
 
     private var problem: String? {
@@ -46,11 +47,25 @@ struct FeedbackView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(didSend ? "Done" : "Cancel") { dismiss() }
+                    Button(didSend ? "Done" : "Cancel") {
+                        // A typed message exists nowhere else until it is sent.
+                        if !didSend, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            isConfirmingExit = true
+                        } else {
+                            dismiss()
+                        }
+                    }
                 }
             }
         }
         .presentationDetents([.large])
+        .confirmsDiscard(
+            hasWork: !didSend && !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            message: "Your message has not been sent yet, and leaving discards it.",
+            isAsking: $isConfirmingExit
+        ) {
+            dismiss()
+        }
         .onAppear(perform: prefill)
     }
 

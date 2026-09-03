@@ -45,9 +45,7 @@ struct LibraryView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 200)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
+                BackToPalette { dismiss() }
             }
         }
     }
