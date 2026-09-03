@@ -11,6 +11,7 @@ enum Tool: String, CaseIterable, Identifiable {
     case contrast
     case health
     case svg
+    case visualizer
     case library
 
     var id: String { rawValue }
@@ -21,6 +22,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .contrast: return "Contrast"
         case .health: return "Health"
         case .svg: return "SVG Recolor"
+        case .visualizer: return "Visualizer"
         case .library: return "Library"
         }
     }
@@ -31,6 +33,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .contrast: return "circle.lefthalf.filled"
         case .health: return "heart.text.square"
         case .svg: return "wand.and.stars"
+        case .visualizer: return "rectangle.3.group"
         case .library: return "books.vertical"
         }
     }
@@ -41,6 +44,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .contrast: return "Check WCAG AA / AAA"
         case .health: return "Score the palette and get a report"
         case .svg: return "Recolour an SVG with this palette"
+        case .visualizer: return "See the palette in real designs"
         case .library: return "Your saved palettes and the curated library"
         }
     }

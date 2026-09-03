@@ -1126,6 +1126,7 @@ disagreeing about the same hex.
 | `Services/PaletteHealthReport.swift` | `lib/paletteHealthReport.ts` | Role assignment, contrast-row selection and ordering, and the summary wording |
 | `ContrastCalculator.suggestFix` | `suggestFix()` in `lib/wcagContrast.ts` | 0.01 lightness steps, hue and saturation held, direction away from the anchor, 8-bit quantised before each measurement |
 | `Services/ColorBlindness.swift` | `lib/colorBlind.ts` | Machado 2009 matrices at severity 1.0, applied in linear sRGB; ΔE < 14 confusable threshold |
+| `Services/VisualizerScenes.swift` | `VisualizerPanel.tsx` | All eleven scenes' geometry, the `readableOn` luminance rule, `toFive` padding, and which scenes are Pro |
 | `Services/SvgRecolor.swift` | `SvgRecolorPanel.tsx` | `normalizeColor`, `extractColorsFromSvg`, `colorVariants`, `recolorSvg`: which properties are read, the four skipped non-colours, shorthand expansion, and the `found[i] -> palette[i % n]` mapping |
 | `Services/SavedPaletteService.swift` | `routes/saved-palettes.ts`, `lib/savedPalettes.ts` | `POST /api/saved-palettes`, `{name, colors}`, uppercase `#RRGGBB`, Bearer token, ≤20 colors |
 
@@ -1167,6 +1168,43 @@ Also note `isDark()` in labColor.ts picks label color by perceived luminance
 (0.299/0.587/0.114), while iOS uses `ContrastCalculator.prefersLightText` (WCAG ratio), because
 CLAUDE.md requires contrast decisions to route through `ContrastCalculator`. They agree on every
 color tested so far, but they *can* disagree on mid-tones. Deliberate, not an oversight.
+
+## Visualizer (added 2026-09-04)
+
+Eleven scenes showing the current palette as real work: three interface mockups, four branding
+pieces, a type poster, two patterns and an illustration. `Services/VisualizerScenes.swift` is the
+port, `Features/Visualizer/` the screen, and `VisualizerTests` pins it.
+
+**The scenes emit SVG rather than SwiftUI shapes.** On the web each mockup *is* an SVG drawing, so
+regenerating the same markup means the two platforms cannot disagree about what a palette looks like
+in a business card, which is what the port table asks for. Redrawing eleven scenes as SwiftUI paths
+would be several times the code and would drift the first time either side was touched. They render
+through the same sandboxed `SvgPreview` built for SVG Recolor: JavaScript off, no network.
+
+**`readableOn` deliberately does *not* use `ContrastCalculator`, and this is the one place that is
+right.** The rule everywhere else stands: when the app picks a label colour for **its own UI**, it
+routes through `ContrastCalculator`. These scenes reproduce a drawing the web already makes, and the
+web picks with perceived luminance (0.299/0.587/0.114 over 0.55), which can disagree with a WCAG
+ratio on mid-tones. Using the better rule here would mean the same palette produced a visibly
+different picture on each platform, which is a port failure rather than an improvement. Tests pin
+the values near the threshold so nobody "fixes" it later.
+
+**Give generated SVG an explicit `width` and `height`, not just a `viewBox`.** An SVG with only a
+viewBox has no intrinsic size, and the preview's `width:auto; height:auto` collapses it to nothing:
+the scene renders as an empty box, with no error in the console or anywhere else. The web never hit
+this because its `<svg>` is sized by a CSS class instead.
+
+Two deliberate divergences from the web panel:
+
+- **One scene at a time, not a grid of eleven.** Eleven live web views in a scrolling grid is slow
+  and unreadable on a phone. A category row plus a list does the browsing the grid was for.
+- **No palette editing in the tool.** The web panel carries its own swatches, locks and shuffle,
+  because on the web the Lab palette lives inside the panel. Here the palette *is* the screen behind
+  the sheet, so editing it here would be a second place to do the same thing.
+
+Locked scenes are **blurred, not hidden**, so a free reader can see what Pro would give them. Same
+reasoning as `ContrastFixSheet` showing the fix it declines to apply. Export writes the scene as an
+SVG for the share sheet, which is what it already is, and stays sharp at any size.
 
 ## SVG Recolor (added 2026-09-04)
 
