@@ -111,9 +111,11 @@ private struct ExploreContent: View {
         .overlay {
             if palettes.isEmpty && isLoading { ProgressView() }
             if palettes.isEmpty && !isLoading && loadError == nil && !query.isEmpty {
-                Text("No palettes match “\(query)”.")
-                    .font(BrandFont.ui(15))
-                    .foregroundStyle(.secondary)
+                LaumaNotice(
+                    pose: .unsure,
+                    title: "Nothing matches that",
+                    message: "No palettes match “\(query)”. Try a shorter word, or a color name."
+                )
             }
         }
         .task { if palettes.isEmpty { await load(nextPage: false) } }

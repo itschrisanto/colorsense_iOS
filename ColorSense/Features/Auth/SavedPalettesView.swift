@@ -109,35 +109,20 @@ struct SavedPalettesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "bookmark")
-                .font(.system(size: 34))
-                .foregroundStyle(BrandColor.coral)
-            Text("No saved palettes yet")
-                .font(BrandFont.ui(17, weight: .bold))
-            Text("Save a palette from the share menu and it appears here and on colorsense.online.")
-                .font(BrandFont.ui(14))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        LaumaNotice(
+            pose: .curious,
+            title: "No saved palettes yet",
+            message: "Save a palette from the share menu and it appears here and on colorsense.online."
+        )
     }
 
     private func errorState(_ error: SavedPaletteService.SaveError) -> some View {
-        VStack(spacing: 12) {
-            Text(error.message)
-                .font(BrandFont.ui(15))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        LaumaNotice(pose: .sad, title: "That did not load", message: error.message) {
             // Only offered where it could actually work — see SaveError.isRetryable.
             if error.isRetryable {
                 Button("Try again") { Task { await load() } }
-                    .font(BrandFont.ui(15, weight: .medium))
             }
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func load() async {

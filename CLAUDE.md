@@ -209,6 +209,9 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
 ColorSense/
   App/              ColorSenseApp.swift (entry point, Clerk.configure, owns PaletteStore), AppConfig.swift
   DesignSystem/      BrandColor.swift, BrandFont.swift, SpeechBubble.swift — brand kit as Swift, not hardcoded per-view
+                     LaumaStage.swift  the mascot's poses; lives here, not under Onboarding, because
+                                       she is brand and is now used across the app
+                     LaumaNotice.swift the one way an empty, failed or refused screen speaks
   Models/            PaletteColor, ExtractedPalette (+ .brandDefault, .sample)
   Services/
     ColorNameService.swift   Nearest Name That Color match
@@ -225,9 +228,10 @@ ColorSense/
       PaletteGenerator.swift Drift for Generate, plus the fresh-palette suggestion
       PaletteExportService.swift    Hex list / CSS vars / shareable PNG
     Onboarding/
-      OnboardingFlowView.swift  The four-beat first run, built out of palette bands
-      LaumaStage.swift          The mascot's poses, and the only place her art is referenced
-      OnboardingMood.swift      The four starting palettes offered in beat two
+      OnboardingFlowView.swift  The six-beat first run, built out of palette bands
+      LaumaClip.swift           Her animated clips, cut from video; first run only
+      LaumaBlink.swift          The splash blink, ten frames driven by the clock
+      OnboardingMood.swift      The four starting palettes offered in beat three
     WCAGChecker/      ContrastCalculator (WCAG 2.x luminance) + a sheet seeded from the palette
     Auth/             AccountView wraps Clerk's AuthView/UserButton, presented as a sheet
   Resources/
@@ -890,6 +894,37 @@ Copy follows the vault's section 9 rules, and the first attempt did not. Two tha
 - **"Specific and grounded. Not generic observations."** This is the written form of the complaint
   above. "Which of these feels like you?" is abstract; naming CORAL and Bittersweet is not. Color
   words go in ALL CAPS.
+
+### Where Lauma appears outside onboarding (decided 2026-09-04)
+
+**The clips are the first run. Everywhere else she is a still.** The drawn poses are already in the
+bundle, so a notice costs no bundle at all, while each animated clip is about 4.5MB. That rule is
+what keeps her usable everywhere without the asset catalog growing.
+
+`DesignSystem/LaumaNotice.swift` is the one way an empty, failed or refused screen speaks: pose,
+title, message, optional actions. It replaced four hand-rolled copies of the same shape (a coral SF
+Symbol over two lines) that had drifted apart in spacing. `LaumaStage` moved from `Features/
+Onboarding/` to `DesignSystem/` in the same pass, because the mascot is brand rather than an
+onboarding detail.
+
+In use, with the pose chosen to mean something:
+
+- Saved palettes and saved colors, empty: **CURIOUS**.
+- Both of those failing to load: **SAD**, with the existing retryable-only "Try again".
+- Photo permission refused: **UNSURE**, not SAD. A refused permission is a shrug, not a failure,
+  and three routes forward are offered, so nobody is stuck.
+- Library search with no matches: **UNSURE**.
+
+**Where she deliberately does not go**, and this is the half that keeps her worth something:
+
+- **Not on the palette screen.** It is the product, and a mascot standing on somebody's colours is
+  the sticker problem in another costume.
+- **Not on spinners.** There are a dozen `ProgressView`s in this app and nearly all resolve in well
+  under a second; a mascot that flashes for 400ms is noise. A wait has to be long enough to be
+  *felt*, roughly over 1.5s, before she improves it.
+- **Not on tool sheets, detail views or settings.** Utility surfaces, where she would be decoration.
+
+Adding her somewhere new is a judgement about whether there is a *moment* there, not a free win.
 
 ### The mascot kit
 

@@ -143,33 +143,28 @@ struct PhotoSourcePicker: View {
     }
 
     private var deniedState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "photo.on.rectangle")
-                .font(.system(size: 34))
-                .foregroundStyle(BrandColor.coral)
-            Text("ColorSense can't see your photos")
-                .font(BrandFont.ui(17, weight: .bold))
-            Text("Allow photo access to pull a palette from a picture you already have. You can still take a new photo.")
-                .font(BrandFont.ui(14))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Open Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
+        // UNSURE rather than SAD: a refused permission is a shrug, not a failure, and the three
+        // routes below mean the reader is not actually stuck.
+        LaumaNotice(
+            pose: .unsure,
+            title: "ColorSense can't see your photos",
+            message: "Allow photo access to pull a palette from a picture you already have. You can still take a new photo."
+        ) {
+            VStack(spacing: 12) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Take a photo instead") { cameraIsPresented = true }
+                // Still works with access denied: PhotosPicker runs out of process, so the system
+                // hands back the one chosen image without this app ever seeing the library.
+                PhotosPicker(selection: $fallbackItem, matching: .images) {
+                    Text("Choose a photo instead")
+                        .font(BrandFont.ui(15, weight: .medium))
                 }
             }
-            .font(BrandFont.ui(15, weight: .medium))
-            Button("Take a photo instead") { cameraIsPresented = true }
-                .font(BrandFont.ui(15, weight: .medium))
-            // Still works with access denied: PhotosPicker runs out of process, so the system
-            // hands back the one chosen image without this app ever seeing the library.
-            PhotosPicker(selection: $fallbackItem, matching: .images) {
-                Text("Choose a photo instead")
-                    .font(BrandFont.ui(15, weight: .medium))
-            }
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Photos
