@@ -10,19 +10,30 @@ import SwiftUI
 /// unreadable at that size. A picker plus one large preview shows the thing you are actually
 /// looking at, and the grid's job, browsing, is what the category row does instead.
 ///
-/// **No palette editing here.** The web panel carries its own swatches, locks and shuffle, because
-/// on the web the Lab palette lives inside the panel. This app is built the other way round: the
-/// palette *is* the screen behind this sheet, so editing it here would be a second place to do the
-/// same thing. Close the sheet, change the palette, come back.
+/// **The palette is editable here, and it is still the same palette.** This was left out at first,
+/// on the reasoning that the palette is the screen behind the sheet. That was wrong in practice:
+/// the whole point of seeing a palette in a mockup is to change it and look again, and closing the
+/// sheet to do that breaks the loop the tool exists for. So the strip below writes straight through
+/// to `PaletteStore` rather than keeping a copy. Change a colour here and the bands behind, every
+/// other tool, and the saved palette all change with it. There is no second palette.
 struct VisualizerView: View {
-    let palette: ExtractedPalette
     var isPro = false
 
+    @Environment(PaletteStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var scene: VisualizerScene = .webLanding
     @State private var category: VisualizerScene.Category?
+    @State private var editing: EditingSwatch?
 
+    private struct EditingSwatch: Identifiable {
+        let index: Int
+        let swatch: PaletteColor
+        var id: Int { index }
+    }
+
+    private var palette: ExtractedPalette { store.palette }
     private var hexes: [String] { palette.colors.map { $0.hex } }
 
     private var scenes: [VisualizerScene] {
@@ -37,6 +48,7 @@ struct VisualizerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     preview
+                    paletteStrip
                     categories
                     sceneList
                 }
@@ -46,6 +58,11 @@ struct VisualizerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+            }
+            .sheet(item: $editing) { entry in
+                VisualizerColorEditor(swatch: entry.swatch) { updated in
+                    store.replace(at: entry.index, with: updated)
+                }
             }
         }
     }
@@ -98,6 +115,63 @@ struct VisualizerView: View {
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 24)
+        }
+    }
+
+    /// The palette, editable in place.
+    ///
+    /// Tapping a swatch changes that colour; the lock keeps it through Shuffle. Both write to
+    /// `PaletteStore`, so this is the same palette the bands behind the sheet are showing, not a
+    /// working copy that would have to be committed or discarded.
+    private var paletteStrip: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Palette")
+                    .font(BrandFont.ui(13, weight: .bold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
+                        store.generate()
+                    }
+                } label: {
+                    Label("Shuffle", systemImage: "arrow.triangle.2.circlepath")
+                        .font(BrandFont.ui(13, weight: .medium))
+                }
+                .accessibilityHint("Regenerates the unlocked colours")
+            }
+
+            HStack(spacing: 8) {
+                ForEach(Array(palette.colors.enumerated()), id: \.element.id) { index, swatch in
+                    VStack(spacing: 6) {
+                        Button {
+                            editing = EditingSwatch(index: index, swatch: swatch)
+                        } label: {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(swatch.color)
+                                .frame(height: 52)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(swatch.name), \(swatch.hex). Change")
+
+                        Button {
+                            store.toggleLock(for: swatch.id)
+                        } label: {
+                            Image(systemName: swatch.isLocked ? "lock.fill" : "lock.open")
+                                .font(.system(size: 11))
+                                .foregroundStyle(swatch.isLocked ? BrandColor.coral : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(swatch.isLocked
+                            ? "\(swatch.hex) is locked. Unlock"
+                            : "\(swatch.hex) is unlocked. Lock")
+                    }
+                }
+            }
         }
     }
 

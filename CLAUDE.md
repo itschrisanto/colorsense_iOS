@@ -1194,13 +1194,28 @@ viewBox has no intrinsic size, and the preview's `width:auto; height:auto` colla
 the scene renders as an empty box, with no error in the console or anywhere else. The web never hit
 this because its `<svg>` is sized by a CSS class instead.
 
-Two deliberate divergences from the web panel:
+**The palette is editable inside the tool, and it is still the same palette** (added 2026-09-04,
+reversing the first attempt). It was left out at first on the reasoning that the palette is the
+screen behind the sheet, so editing it here would be a second place to do the same thing. That was
+wrong in practice, and Chris said so: the point of seeing a palette in a mockup is to change it and
+look again, and closing the sheet to do that breaks the loop the tool exists for.
+
+The strip writes straight through to `PaletteStore` rather than holding a copy. Change a colour and
+the bands behind the sheet, every other tool and the saved palette all change with it, so there is
+nothing to commit or discard and no second palette to reconcile. Shuffle calls the same
+`store.generate()` the dock's Generate does, and the per-swatch locks are the same locks, so this is
+one behaviour reached from two places rather than two behaviours. Editing a colour uses the shared
+`CustomColorEditor`, so entering a colour behaves the same here as everywhere else.
+
+One deliberate divergence from the web panel remains:
 
 - **One scene at a time, not a grid of eleven.** Eleven live web views in a scrolling grid is slow
   and unreadable on a phone. A category row plus a list does the browsing the grid was for.
-- **No palette editing in the tool.** The web panel carries its own swatches, locks and shuffle,
-  because on the web the Lab palette lives inside the panel. Here the palette *is* the screen behind
-  the sheet, so editing it here would be a second place to do the same thing.
+
+**The free and Pro split is the web's, unchanged:** free are Web Landing Page, Business Card and
+Typography Poster; the other eight are Pro, as is the web's PNG download. That is 8 of 11 behind a
+tier that currently has no in-app purchase route, which is worth revisiting when the paywall is
+built rather than being assumed settled.
 
 Locked scenes are **blurred, not hidden**, so a free reader can see what Pro would give them. Same
 reasoning as `ContrastFixSheet` showing the fix it declines to apply. Export writes the scene as an

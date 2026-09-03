@@ -133,7 +133,7 @@ struct RootView: View {
             SvgRecolorView(palette: store.palette, isPro: isPro)
         }
         .sheet(isPresented: $visualizerIsPresented) {
-            VisualizerView(palette: store.palette, isPro: isPro)
+            VisualizerView(isPro: isPro)
         }
         .sheet(isPresented: $shareIsPresented) {
             ShareSheet(
