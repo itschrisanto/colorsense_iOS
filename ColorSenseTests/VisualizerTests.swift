@@ -38,11 +38,20 @@ struct VisualizerTests {
         }
     }
 
-    @Test("The free and Pro split matches the web's registry")
-    func proSplit() {
-        let free = VisualizerScene.allCases.filter { !$0.isPro }
-        #expect(Set(free) == Set([.webLanding, .businessCard, .typography]))
-        #expect(VisualizerScene.allCases.count == 11)
+    @Test("The ported scenes keep the web's free and Pro split")
+    func proSplitOfPortedScenes() {
+        let ported = VisualizerScene.allCases.filter { !$0.isIOSOnly }
+        #expect(ported.count == 11)
+        #expect(Set(ported.filter { !$0.isPro }) == Set([.webLanding, .businessCard, .typography]))
+    }
+
+    @Test("The iOS-only scenes are marked, so the port table stays honest")
+    func iOSOnlyScenesAreMarked() {
+        let extra = VisualizerScene.allCases.filter(\.isIOSOnly)
+        #expect(Set(extra) == Set([.uiComponents, .charts, .appIcons, .packaging, .slide]))
+        // The two that answer "does this palette work" are free, for the same reason the WCAG
+        // checker is.
+        #expect(extra.filter { !$0.isPro }.count == 2)
     }
 
     @Test("A short palette still produces a scene rather than crashing")

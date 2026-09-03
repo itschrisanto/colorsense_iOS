@@ -85,16 +85,38 @@ struct VisualizerView: View {
             .accessibilityElement()
             .accessibilityLabel("\(scene.title), drawn with this palette")
 
-            HStack {
-                Text(scene.title).font(BrandFont.ui(16, weight: .bold))
-                Spacer()
-                if !locked, let file = exportURL() {
-                    ShareLink(item: file) {
-                        Label("Export", systemImage: "square.and.arrow.up")
-                            .font(BrandFont.ui(14, weight: .medium))
-                    }
-                }
+            Text(scene.title).font(BrandFont.ui(16, weight: .bold))
+
+            export
+        }
+    }
+
+    /// Export is Pro for **every** scene, including the free ones, which is what the web does with
+    /// its PNG download. A free reader can look at three scenes and change the palette under them;
+    /// taking the file away is the line.
+    ///
+    /// Full width and in the house style, so it reads as the same action as SVG Recolor's export
+    /// rather than a link tucked beside a title. When it is locked it says why and offers no route
+    /// to buy, the same as everywhere else in this app: there is no in-app purchase yet, and
+    /// guideline 3.1.1 forbids pointing at an outside one.
+    @ViewBuilder
+    private var export: some View {
+        if isPro, let file = exportURL() {
+            ShareLink(item: file) {
+                Label("Export this scene", systemImage: "square.and.arrow.up")
             }
+            .buttonStyle(.primaryAction)
+        } else {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.fill").font(.system(size: 13, weight: .semibold))
+                Text("Exporting scenes is a Pro feature")
+            }
+            .font(BrandFont.ui(14, weight: .medium))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 13))
+            .accessibilityElement(children: .combine)
         }
     }
 

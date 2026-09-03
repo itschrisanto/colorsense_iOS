@@ -1219,10 +1219,25 @@ the content shape the padding is empty space that does not receive the touch, so
 changes nothing. The glyph itself stays small; only the target grows. Verified by tapping toward the
 edge of the new box rather than the centre of the glyph, which is the area that did not work before.
 
-**The free and Pro split is the web's, unchanged:** free are Web Landing Page, Business Card and
-Typography Poster; the other eight are Pro, as is the web's PNG download. That is 8 of 11 behind a
-tier that currently has no in-app purchase route, which is worth revisiting when the paywall is
-built rather than being assumed settled.
+**Export is Pro for every scene, free ones included**, which is what the web does with its PNG
+download. A free reader can look at the free scenes and change the palette underneath them; the file
+is the line. The button is full width and in the house style so it reads as the same action as SVG
+Recolor's export, and when locked it names Pro and offers no route to buy, like everywhere else.
+
+**Sixteen scenes now, and five of them are not ports.** The eleven from `VisualizerPanel.tsx` keep
+the web's free and Pro split exactly. The five added for iOS are UI Components, Charts & Data, App
+Icon Set, Product Packaging and Presentation Slide, and `VisualizerScene.isIOSOnly` marks them so
+the port table stays honest: **`VisualizerScenes.swift` is no longer a pure port**, and these five
+should go back to the web if the two products are to stay in step.
+
+They exist because the ported eleven are mostly showpieces, and the two questions a designer
+actually has to answer about a palette are "does it survive an interface" and "does it survive a
+chart". **UI Components and Charts & Data are therefore free**, on the same reasoning that keeps the
+WCAG checker free: charging somebody to discover their palette fails in a chart would sit badly
+beside a contrast checker that costs nothing. The other three are Pro.
+
+That makes 5 free and 11 Pro. Still worth revisiting when the paywall is built rather than being
+assumed settled.
 
 Locked scenes are **blurred, not hidden**, so a free reader can see what Pro would give them. Same
 reasoning as `ContrastFixSheet` showing the fix it declines to apply. Export writes the scene as an

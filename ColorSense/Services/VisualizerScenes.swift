@@ -21,11 +21,12 @@ import Foundation
 /// the `isDark()` note in CLAUDE.md, applied in the opposite direction and for the same reason:
 /// match the thing being ported.
 enum VisualizerScene: String, CaseIterable, Identifiable {
-    case mobileUI, webLanding, dashboard
-    case brandingPoster, logoGrid, businessCard, socialPost
+    case mobileUI, webLanding, dashboard, uiComponents
+    case brandingPoster, logoGrid, businessCard, socialPost, appIcons, packaging, slide
     case typography
     case patternGeometric, patternWaves
     case abstractIllustration
+    case charts
 
     var id: String { rawValue }
 
@@ -42,6 +43,11 @@ enum VisualizerScene: String, CaseIterable, Identifiable {
         case .patternGeometric: return "Geometric Pattern"
         case .patternWaves: return "Wave Pattern"
         case .abstractIllustration: return "Abstract Illustration"
+        case .uiComponents: return "UI Components"
+        case .charts: return "Charts & Data"
+        case .appIcons: return "App Icon Set"
+        case .packaging: return "Product Packaging"
+        case .slide: return "Presentation Slide"
         }
     }
 
@@ -51,24 +57,41 @@ enum VisualizerScene: String, CaseIterable, Identifiable {
         case typography = "Typography"
         case pattern = "Pattern"
         case illustration = "Illustration"
+        case data = "Data"
     }
 
     var category: Category {
         switch self {
-        case .mobileUI, .webLanding, .dashboard: return .interface
-        case .brandingPoster, .logoGrid, .businessCard, .socialPost: return .branding
+        case .mobileUI, .webLanding, .dashboard, .uiComponents: return .interface
+        case .brandingPoster, .logoGrid, .businessCard, .socialPost, .appIcons, .packaging, .slide: return .branding
         case .typography: return .typography
         case .patternGeometric, .patternWaves: return .pattern
         case .abstractIllustration: return .illustration
+        case .charts: return .data
         }
     }
 
     /// Which scenes the web gates behind Pro. Kept identical so the same palette in the same scene
     /// costs the same on both platforms.
+    /// The eleven ported scenes keep the web's split exactly. The five added for iOS are a fresh
+    /// decision, and two of them are free on purpose: **UI Components** and **Charts & Data** are
+    /// the two that answer "does this palette actually work", which is the same question the
+    /// Extractor and the WCAG checker answer for nothing. Charging to find out a palette fails in a
+    /// chart would sit badly beside a free contrast checker.
     var isPro: Bool {
         switch self {
-        case .webLanding, .businessCard, .typography: return false
+        case .webLanding, .businessCard, .typography, .uiComponents, .charts: return false
         default: return true
+        }
+    }
+
+    /// Scenes the web does not have. Kept visible so the port table stays honest: these are the
+    /// reason `VisualizerScenes.swift` is no longer a pure port, and they should go back to the web
+    /// if the two are to stay in step.
+    var isIOSOnly: Bool {
+        switch self {
+        case .uiComponents, .charts, .appIcons, .packaging, .slide: return true
+        default: return false
         }
     }
 }
@@ -120,6 +143,11 @@ enum VisualizerSVG {
         case .patternGeometric: body = patternGeometric(c)
         case .patternWaves: body = patternWaves(c)
         case .abstractIllustration: body = abstractIllustration(c)
+        case .uiComponents: body = uiComponents(c)
+        case .charts: body = charts(c)
+        case .appIcons: body = appIcons(c)
+        case .packaging: body = packaging(c)
+        case .slide: body = slide(c)
         }
         // `width` and `height` as well as the viewBox, on purpose. An SVG with only a viewBox has
         // no intrinsic size, and the preview's `width:auto; height:auto` then collapses it to
@@ -380,6 +408,181 @@ enum VisualizerSVG {
             out += logoTile(x: 18 + (i % 3) * 122, y: 16 + (i / 3) * 124, fill: fill)
         }
         return out
+    }
+
+    // MARK: - Scenes added for iOS
+    //
+    // Not in `VisualizerPanel.tsx`. They exist because the ported eleven are mostly *showpieces*,
+    // and the two questions a designer actually has to answer about a palette are "does it survive
+    // an interface" and "does it survive a chart". See `isIOSOnly`.
+
+    /// Buttons, inputs, badges and states. The scene a palette most often fails: a set that looks
+    /// handsome as five bands can leave no usable disabled state or no distinguishable danger tone.
+    private static func uiComponents(_ c: [String]) -> String {
+        let on1 = readableOn(c[0]), on2 = readableOn(c[1]), on3 = readableOn(c[2])
+        var chips = ""
+        for (i, hex) in [c[0], c[1], c[2], c[3]].enumerated() {
+            let x = 30 + i * 66
+            chips += """
+            <rect x="\(x)" y="196" width="56" height="22" rx="11" fill="\(hex)" opacity="0.16"/>\
+            <circle cx="\(x + 13)" cy="207" r="4" fill="\(hex)"/>\
+            <rect x="\(x + 22)" y="205" width="24" height="4" rx="2" fill="\(hex)"/>
+            """
+        }
+        return """
+        <rect width="400" height="280" fill="\(frame)"/>\
+        <rect x="16" y="16" width="368" height="248" rx="14" fill="\(surface)" filter="url(#sh)"/>\
+        <text x="30" y="42" font-family="system-ui" font-size="11" font-weight="800" fill="\(muted2)" letter-spacing="1">COMPONENTS</text>\
+        <rect x="30" y="56" width="96" height="34" rx="10" fill="\(c[0])"/>\
+        <text x="78" y="77" font-family="system-ui" font-size="11" font-weight="800" text-anchor="middle" fill="\(on1)">Primary</text>\
+        <rect x="136" y="56" width="96" height="34" rx="10" fill="\(surface)" stroke="\(c[0])" stroke-width="2"/>\
+        <text x="184" y="77" font-family="system-ui" font-size="11" font-weight="700" text-anchor="middle" fill="\(c[0])">Secondary</text>\
+        <rect x="242" y="56" width="60" height="34" rx="10" fill="\(muted)" opacity="0.45"/>\
+        <text x="272" y="77" font-family="system-ui" font-size="11" font-weight="700" text-anchor="middle" fill="\(muted2)">Off</text>\
+        <rect x="312" y="56" width="58" height="34" rx="17" fill="\(c[1])"/>\
+        <circle cx="354" cy="73" r="12" fill="\(on2)"/>\
+        <rect x="30" y="104" width="180" height="30" rx="8" fill="\(surface)" stroke="\(hairline)" stroke-width="1.5"/>\
+        <rect x="40" y="116" width="70" height="5" rx="2.5" fill="\(muted)"/>\
+        <rect x="222" y="104" width="148" height="30" rx="8" fill="\(surface)" stroke="\(c[2])" stroke-width="2"/>\
+        <rect x="232" y="116" width="90" height="5" rx="2.5" fill="\(ink)" opacity="0.65"/>\
+        <rect x="30" y="146" width="340" height="38" rx="10" fill="\(c[2])" opacity="0.14"/>\
+        <circle cx="50" cy="165" r="9" fill="\(c[2])"/>\
+        <text x="50" y="169" font-family="system-ui" font-size="11" font-weight="900" text-anchor="middle" fill="\(on3)">!</text>\
+        <rect x="68" y="157" width="120" height="5" rx="2.5" fill="\(ink)" opacity="0.75"/>\
+        <rect x="68" y="168" width="200" height="4" rx="2" fill="\(muted2)"/>\
+        \(chips)\
+        <rect x="30" y="232" width="340" height="8" rx="4" fill="\(muted)" opacity="0.4"/>\
+        <rect x="30" y="232" width="210" height="8" rx="4" fill="\(c[0])"/>
+        """
+    }
+
+    /// Bars, a line and a donut in one frame. Adjacent series are the fastest way to see that two
+    /// palette colours are too close to tell apart, which five separate bands will never show.
+    private static func charts(_ c: [String]) -> String {
+        var bars = ""
+        let heights = [46, 72, 34, 88, 60, 78]
+        for (i, h) in heights.enumerated() {
+            let x = 44 + i * 30
+            bars += #"<rect x="\#(x)" y="\#(168 - h)" width="18" height="\#(h)" rx="3" fill="\#(c[i % 5])"/>"#
+        }
+        var legend = ""
+        for i in 0..<5 {
+            let x = 40 + i * 68
+            legend += """
+            <circle cx="\(x)" cy="248" r="5" fill="\(c[i])"/>\
+            <rect x="\(x + 10)" y="245" width="34" height="5" rx="2.5" fill="\(muted2)"/>
+            """
+        }
+        // A stacked donut: each colour takes a slice, so neighbours sit directly against each other.
+        var donut = ""
+        var offset = 0.0
+        let circumference = 2.0 * 3.14159 * 34.0
+        for (i, share) in [0.32, 0.24, 0.19, 0.14, 0.11].enumerated() {
+            let dash = circumference * share
+            donut += """
+            <circle cx="316" cy="120" r="34" fill="none" stroke="\(c[i])" stroke-width="22" \
+            stroke-dasharray="\(String(format: "%.1f", dash)) \(String(format: "%.1f", circumference - dash))" \
+            stroke-dashoffset="\(String(format: "%.1f", -offset))" transform="rotate(-90 316 120)"/>
+            """
+            offset += dash
+        }
+        return """
+        <rect width="400" height="280" fill="\(frame)"/>\
+        <rect x="16" y="16" width="368" height="248" rx="14" fill="\(surface)" filter="url(#sh)"/>\
+        <text x="32" y="42" font-family="system-ui" font-size="11" font-weight="800" fill="\(muted2)" letter-spacing="1">QUARTERLY</text>\
+        <line x1="32" y1="168" x2="240" y2="168" stroke="\(hairline)" stroke-width="1.5"/>\
+        \(bars)\
+        <polyline points="53,120 83,96 113,130 143,74 173,104 203,86" fill="none" stroke="\(c[4])" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>\
+        \(donut)\
+        <circle cx="316" cy="120" r="18" fill="\(surface)"/>\
+        <text x="316" y="125" font-family="system-ui" font-size="12" font-weight="900" text-anchor="middle" fill="\(ink)">5</text>\
+        <line x1="32" y1="226" x2="368" y2="226" stroke="\(hairline)" stroke-width="1"/>\
+        \(legend)
+        """
+    }
+
+    /// The palette as app icons, at the size an icon is actually judged: small, square, rounded.
+    private static func appIcons(_ c: [String]) -> String {
+        var icons = ""
+        for i in 0..<5 {
+            let x = 26 + i * 72, on = readableOn(c[i])
+            icons += """
+            <rect x="\(x)" y="66" width="58" height="58" rx="14" fill="\(c[i])" filter="url(#sh)"/>\
+            <circle cx="\(x + 29)" cy="90" r="11" fill="\(on)" opacity="0.92"/>\
+            <rect x="\(x + 18)" y="102" width="22" height="5" rx="2.5" fill="\(on)" opacity="0.6"/>\
+            <rect x="\(x + 12)" y="132" width="34" height="4" rx="2" fill="\(muted)"/>
+            """
+        }
+        var small = ""
+        for i in 0..<5 {
+            let x = 40 + i * 40, on = readableOn(c[i])
+            small += """
+            <rect x="\(x)" y="180" width="28" height="28" rx="7" fill="\(c[i])"/>\
+            <circle cx="\(x + 14)" cy="191" r="5" fill="\(on)" opacity="0.92"/>\
+            <rect x="\(x + 8)" y="198" width="12" height="3" rx="1.5" fill="\(on)" opacity="0.6"/>
+            """
+        }
+        return """
+        <rect width="400" height="280" fill="\(frame)"/>\
+        <text x="26" y="42" font-family="system-ui" font-size="11" font-weight="800" fill="\(muted2)" letter-spacing="1">APP ICON</text>\
+        \(icons)\
+        <text x="40" y="168" font-family="system-ui" font-size="9" font-weight="700" fill="\(muted2)" letter-spacing="1">AT HOME SCREEN SIZE</text>\
+        \(small)\
+        <rect x="26" y="230" width="348" height="26" rx="8" fill="\(surface)"/>\
+        <text x="38" y="247" font-family="system-ui" font-size="9" font-weight="600" fill="\(muted2)">An icon is judged at 28 points, not at 58.</text>
+        """
+    }
+
+    /// A box and a label. The scene that shows how a palette behaves on a physical product, where
+    /// one colour has to carry the whole surface.
+    private static func packaging(_ c: [String]) -> String {
+        let on1 = readableOn(c[0]), on2 = readableOn(c[1])
+        return """
+        <rect width="400" height="280" fill="\(frame)"/>\
+        <polygon points="60,96 176,60 176,214 60,250" fill="\(c[0])" filter="url(#sh)"/>\
+        <polygon points="176,60 276,92 276,238 176,214" fill="\(c[1])"/>\
+        <polygon points="60,96 176,60 276,92 160,130" fill="\(c[2])"/>\
+        <circle cx="112" cy="150" r="22" fill="\(on1)" opacity="0.9"/>\
+        <circle cx="112" cy="150" r="11" fill="\(c[0])"/>\
+        <rect x="80" y="188" width="70" height="6" rx="3" fill="\(on1)" opacity="0.8"/>\
+        <rect x="80" y="200" width="46" height="4" rx="2" fill="\(on1)" opacity="0.5"/>\
+        <rect x="196" y="120" width="60" height="6" rx="3" fill="\(on2)" opacity="0.85"/>\
+        <rect x="196" y="134" width="42" height="4" rx="2" fill="\(on2)" opacity="0.55"/>\
+        <rect x="196" y="182" width="60" height="26" rx="6" fill="\(c[3])"/>\
+        <rect x="300" y="96" width="76" height="118" rx="10" fill="\(surface)" filter="url(#sh)"/>\
+        <rect x="300" y="96" width="76" height="34" rx="10" fill="\(c[3])"/>\
+        <rect x="312" y="142" width="52" height="5" rx="2.5" fill="\(ink)" opacity="0.75"/>\
+        <rect x="312" y="154" width="38" height="4" rx="2" fill="\(muted2)"/>\
+        <rect x="312" y="176" width="52" height="22" rx="5" fill="\(c[4])"/>\
+        <text x="60" y="272" font-family="system-ui" font-size="9" font-weight="700" fill="\(muted2)" letter-spacing="1">PACKAGING</text>
+        """
+    }
+
+    /// A title slide with a chart, which is the deliverable a palette most often ends up inside.
+    private static func slide(_ c: [String]) -> String {
+        let on1 = readableOn(c[0])
+        var columns = ""
+        for (i, h) in [34, 52, 40, 66].enumerated() {
+            columns += #"<rect x="\#(238 + i * 30)" y="\#(196 - h)" width="18" height="\#(h)" rx="3" fill="\#(c[(i + 1) % 5])"/>"#
+        }
+        return """
+        <rect width="400" height="280" fill="\(frame)"/>\
+        <rect x="20" y="26" width="360" height="228" rx="8" fill="\(c[0])" filter="url(#sh)"/>\
+        <rect x="20" y="26" width="360" height="6" fill="\(c[1])"/>\
+        <text x="46" y="94" font-family="Georgia, serif" font-size="26" font-weight="900" fill="\(on1)">Brand review</text>\
+        <rect x="46" y="108" width="120" height="4" rx="2" fill="\(c[1])"/>\
+        <text x="46" y="136" font-family="system-ui" font-size="10" font-weight="600" fill="\(on1)" opacity="0.72">Quarter three · Design team</text>\
+        <rect x="46" y="158" width="150" height="5" rx="2.5" fill="\(on1)" opacity="0.4"/>\
+        <rect x="46" y="170" width="118" height="5" rx="2.5" fill="\(on1)" opacity="0.4"/>\
+        <rect x="46" y="182" width="134" height="5" rx="2.5" fill="\(on1)" opacity="0.4"/>\
+        <rect x="222" y="120" width="136" height="92" rx="8" fill="\(surface)" opacity="0.96"/>\
+        <line x1="234" y1="196" x2="348" y2="196" stroke="\(hairline)" stroke-width="1.5"/>\
+        \(columns)\
+        <circle cx="46" cy="228" r="6" fill="\(c[2])"/>\
+        <circle cx="62" cy="228" r="6" fill="\(c[3])"/>\
+        <circle cx="78" cy="228" r="6" fill="\(c[4])"/>\
+        <text x="332" y="232" font-family="system-ui" font-size="9" font-weight="700" fill="\(on1)" opacity="0.6">01 / 12</text>
+        """
     }
 
     private static func dashboard(_ c: [String]) -> String {
