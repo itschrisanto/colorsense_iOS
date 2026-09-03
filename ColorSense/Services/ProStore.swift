@@ -25,7 +25,12 @@ import Foundation
 /// 5. **Add a Restore Purchases control to the plan beat.** App Review requires a restore path for
 ///    auto-renewable subscriptions, and there is deliberately no dead button for it today. The
 ///    method is already on this protocol so the call site is obvious.
-/// 6. Re-check `PrivacyInfo.xcprivacy`: StoreKit does not add a required-reason API, but confirm
+/// 6. **Show `Product.displayPrice`, never the strings below.** The App Store prices in the
+///    viewer's own storefront and currency, and Apple's price points do not map one-to-one onto
+///    "$5". The prices on `ProProduct` are right for the descriptive list they feed today and are
+///    wrong the moment anything can be bought, for anyone outside the US. `SubscriptionView` and
+///    the onboarding plan beat both read them, so both change together.
+/// 7. Re-check `PrivacyInfo.xcprivacy`: StoreKit does not add a required-reason API, but confirm
 ///    nothing else moved with the SDK bump.
 ///
 /// # Why the plan beat still shows while this is a placeholder

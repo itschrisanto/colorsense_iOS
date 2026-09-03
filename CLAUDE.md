@@ -44,6 +44,17 @@ the canonical account-side checklist. When enrolment completes, work that list, 
    third-party sign-in is offered. The account beat offers Google today, so the account screen is a
    rejection on its own until Apple is enabled for the App ID and on the production Clerk instance.
 
+**Settle at finalisation, before submitting.**
+
+5. **The version number.** `MARKETING_VERSION` is still `0.1.0` and `CURRENT_PROJECT_VERSION` is
+   `1`. The plumbing is correct and verified: the built binary really declares those, and About
+   reads them from the bundle rather than hardcoding. What is unsettled is the *value*. `0.1.0` has
+   not moved since the project was created, through onboarding, Palette Health, the Pro fixes and
+   SVG Recolor, and it reads as a prototype to anyone who sees it. Decide the real number at
+   submission, and remember **App Store Connect rejects a reused build number**, so the build must
+   increment on every upload including re-uploads of the same marketing version. Nothing in the repo
+   bumps these today; they are hand-edited in `project.yml`.
+
 **Not blocked, and can move at any time.**
 
 3. **The trial is not in the vault.** `Claude Skill.md` section 3 lists Pro Monthly $5, Pro Annual
