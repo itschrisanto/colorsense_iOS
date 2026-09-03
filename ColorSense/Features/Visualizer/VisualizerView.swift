@@ -26,6 +26,8 @@ struct VisualizerView: View {
     @State private var scene: VisualizerScene = .webLanding
     @State private var category: VisualizerScene.Category?
     @State private var editing: EditingSwatch?
+    @State private var suggestion: PaletteImprover.Suggestion?
+    @State private var noSuggestion = false
 
     private struct EditingSwatch: Identifiable {
         let index: Int
@@ -58,6 +60,24 @@ struct VisualizerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+            }
+            .sheet(item: $suggestion) { found in
+                PaletteSuggestionSheet(
+                    suggestion: found,
+                    current: store.palette.colors,
+                    isPro: isPro
+                ) { colors in
+                    withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
+                        store.recolor(to: colors)
+                    }
+                }
+            }
+            .alert("This palette already scores well", isPresented: $noSuggestion) {
+                Button("OK") { noSuggestion = false }
+            } message: {
+                // Saying "nothing found" would read as a failure. Nothing was found because there
+                // was nothing to find, which is worth saying as the compliment it is.
+                Text("Nothing scored higher than what you have, with your locked colors kept. Lock fewer colors to give it more room.")
             }
             .sheet(item: $editing) { entry in
                 VisualizerColorEditor(swatch: entry.swatch) { updated in

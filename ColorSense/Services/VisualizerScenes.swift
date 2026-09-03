@@ -24,8 +24,8 @@ enum VisualizerScene: String, CaseIterable, Identifiable {
     case mobileUI, webLanding, dashboard, uiComponents
     case brandingPoster, logoGrid, businessCard, socialPost, appIcons, packaging, slide
     case typography
-    case patternGeometric, patternWaves
-    case abstractIllustration
+    case patternGeometric, patternWaves, patternStripes, patternTerrazzo
+    case abstractIllustration, illustrationLandscape, illustrationBotanical
     case charts
 
     var id: String { rawValue }
@@ -48,6 +48,10 @@ enum VisualizerScene: String, CaseIterable, Identifiable {
         case .appIcons: return "App Icon Set"
         case .packaging: return "Product Packaging"
         case .slide: return "Presentation Slide"
+        case .patternStripes: return "Stripe Pattern"
+        case .patternTerrazzo: return "Terrazzo"
+        case .illustrationLandscape: return "Landscape"
+        case .illustrationBotanical: return "Botanical"
         }
     }
 
@@ -65,8 +69,8 @@ enum VisualizerScene: String, CaseIterable, Identifiable {
         case .mobileUI, .webLanding, .dashboard, .uiComponents: return .interface
         case .brandingPoster, .logoGrid, .businessCard, .socialPost, .appIcons, .packaging, .slide: return .branding
         case .typography: return .typography
-        case .patternGeometric, .patternWaves: return .pattern
-        case .abstractIllustration: return .illustration
+        case .patternGeometric, .patternWaves, .patternStripes, .patternTerrazzo: return .pattern
+        case .abstractIllustration, .illustrationLandscape, .illustrationBotanical: return .illustration
         case .charts: return .data
         }
     }
@@ -90,7 +94,8 @@ enum VisualizerScene: String, CaseIterable, Identifiable {
     /// if the two are to stay in step.
     var isIOSOnly: Bool {
         switch self {
-        case .uiComponents, .charts, .appIcons, .packaging, .slide: return true
+        case .uiComponents, .charts, .appIcons, .packaging, .slide,
+             .patternStripes, .patternTerrazzo, .illustrationLandscape, .illustrationBotanical: return true
         default: return false
         }
     }
@@ -148,6 +153,10 @@ enum VisualizerSVG {
         case .appIcons: body = appIcons(c)
         case .packaging: body = packaging(c)
         case .slide: body = slide(c)
+        case .patternStripes: body = patternStripes(c)
+        case .patternTerrazzo: body = patternTerrazzo(c)
+        case .illustrationLandscape: body = illustrationLandscape(c)
+        case .illustrationBotanical: body = illustrationBotanical(c)
         }
         // `width` and `height` as well as the viewBox, on purpose. An SVG with only a viewBox has
         // no intrinsic size, and the preview's `width:auto; height:auto` then collapses it to
@@ -582,6 +591,108 @@ enum VisualizerSVG {
         <circle cx="62" cy="228" r="6" fill="\(c[3])"/>\
         <circle cx="78" cy="228" r="6" fill="\(c[4])"/>\
         <text x="332" y="232" font-family="system-ui" font-size="9" font-weight="700" fill="\(on1)" opacity="0.6">01 / 12</text>
+        """
+    }
+
+    /// Diagonal stripes at varying widths. A pattern reads a palette as *proportion*, which is the
+    /// one thing five equal bands can never show: a colour that looks balanced as a fifth of a
+    /// swatch row can dominate a surface completely.
+    private static func patternStripes(_ c: [String]) -> String {
+        var stripes = ""
+        var x = -160.0
+        var i = 0
+        let widths = [34.0, 12.0, 22.0, 8.0, 46.0, 16.0, 28.0]
+        while x < 560 {
+            let w = widths[i % widths.count]
+            stripes += #"<rect x="\#(String(format: "%.0f", x))" y="-60" width="\#(String(format: "%.0f", w))" height="400" fill="\#(c[i % 5])"/>"#
+            x += w
+            i += 1
+        }
+        return """
+        <rect width="400" height="280" fill="\(c[4])"/>\
+        <g transform="rotate(-24 200 140)">\(stripes)</g>
+        """
+    }
+
+    /// Terrazzo: chips of every colour scattered over one of them. The scene that shows whether a
+    /// palette holds together when its colours are broken up and mixed rather than laid side by
+    /// side in order.
+    private static func patternTerrazzo(_ c: [String]) -> String {
+        // A fixed pseudo-random walk, so the pattern is the same every time a palette is applied
+        // and two screenshots of the same colours can be compared.
+        var seed: UInt64 = 0x9E3779B97F4A7C15
+        func next(_ limit: Double) -> Double {
+            seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17
+            return Double(seed % 10_000) / 10_000 * limit
+        }
+        var chips = ""
+        for i in 0..<86 {
+            let x = next(400), y = next(280), r = 3 + next(9)
+            let fill = c[(i + Int(next(5))) % 5]
+            if i % 3 == 0 {
+                chips += #"<circle cx="\#(String(format: "%.0f", x))" cy="\#(String(format: "%.0f", y))" r="\#(String(format: "%.1f", r))" fill="\#(fill)"/>"#
+            } else {
+                let w = r * 2.2, h = r * 1.5, angle = next(90)
+                chips += """
+                <rect x="\(String(format: "%.0f", x))" y="\(String(format: "%.0f", y))" \
+                width="\(String(format: "%.1f", w))" height="\(String(format: "%.1f", h))" rx="2" fill="\(fill)" \
+                transform="rotate(\(String(format: "%.0f", angle)) \(String(format: "%.0f", x)) \(String(format: "%.0f", y)))"/>
+                """
+            }
+        }
+        return #"<rect width="400" height="280" fill="\#(c[4])"/>\#(chips)"#
+    }
+
+    /// Layered hills under a sun. The classic test of whether a palette has a usable *range*: put
+    /// its colours in depth order and a set with no light or no dark collapses into one plane.
+    private static func illustrationLandscape(_ c: [String]) -> String {
+        """
+        <rect width="400" height="280" fill="\(c[4])"/>\
+        <circle cx="300" cy="86" r="38" fill="\(c[2])"/>\
+        <path d="M0,150 C60,120 110,168 170,146 C230,124 280,158 340,140 L400,150 L400,280 L0,280 Z" fill="\(c[3])"/>\
+        <path d="M0,182 C70,152 130,196 200,176 C264,158 320,190 400,172 L400,280 L0,280 Z" fill="\(c[1])"/>\
+        <path d="M0,214 C80,190 150,226 220,210 C290,194 340,220 400,206 L400,280 L0,280 Z" fill="\(c[0])"/>\
+        <path d="M96,214 L128,150 L160,214 Z" fill="\(c[0])" opacity="0.55"/>\
+        <path d="M236,206 L272,140 L308,206 Z" fill="\(c[0])" opacity="0.4"/>\
+        <ellipse cx="120" cy="256" rx="46" ry="7" fill="\(c[4])" opacity="0.35"/>\
+        <circle cx="64" cy="60" r="5" fill="\(c[1])"/>\
+        <circle cx="118" cy="42" r="3.5" fill="\(c[3])"/>\
+        <circle cx="176" cy="70" r="3" fill="\(c[1])"/>
+        """
+    }
+
+    /// Stems, leaves and a bloom. Organic shapes overlap far more than interface rectangles do, so
+    /// this is where two colours of similar weight stop reading as two colours.
+    private static func illustrationBotanical(_ c: [String]) -> String {
+        var leaves = ""
+        let placements: [(Double, Double, Double, Int)] = [
+            (156, 176, -34, 1), (244, 176, 34, 1),
+            (150, 132, -52, 3), (250, 132, 52, 3),
+            (162, 214, -20, 2), (238, 214, 20, 2),
+        ]
+        for (x, y, angle, index) in placements {
+            leaves += """
+            <ellipse cx="\(String(format: "%.0f", x))" cy="\(String(format: "%.0f", y))" rx="34" ry="14" fill="\(c[index])" \
+            transform="rotate(\(String(format: "%.0f", angle)) \(String(format: "%.0f", x)) \(String(format: "%.0f", y)))"/>
+            """
+        }
+        var petals = ""
+        for i in 0..<6 {
+            let angle = Double(i) * 60
+            petals += """
+            <ellipse cx="200" cy="72" rx="13" ry="30" fill="\(c[1])" opacity="0.92" \
+            transform="rotate(\(String(format: "%.0f", angle)) 200 96)"/>
+            """
+        }
+        return """
+        <rect width="400" height="280" fill="\(c[4])"/>\
+        <path d="M200,250 C196,200 196,150 200,104" stroke="\(c[3])" stroke-width="6" fill="none" stroke-linecap="round"/>\
+        <path d="M200,190 C172,178 158,160 152,138" stroke="\(c[3])" stroke-width="4" fill="none" stroke-linecap="round"/>\
+        <path d="M200,190 C228,178 242,160 248,138" stroke="\(c[3])" stroke-width="4" fill="none" stroke-linecap="round"/>\
+        \(leaves)\(petals)\
+        <circle cx="200" cy="96" r="15" fill="\(c[2])"/>\
+        <rect x="150" y="250" width="100" height="18" rx="6" fill="\(c[0])"/>\
+        <rect x="158" y="242" width="84" height="10" rx="4" fill="\(c[0])" opacity="0.75"/>
         """
     }
 

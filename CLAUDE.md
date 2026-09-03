@@ -1219,6 +1219,33 @@ the content shape the padding is empty space that does not receive the touch, so
 changes nothing. The glyph itself stays small; only the target grows. Verified by tapping toward the
 edge of the new box rather than the centre of the glyph, which is the area that did not work before.
 
+**"Improve" suggests a better palette, and it invents no colour maths** (added 2026-09-04).
+`Services/PaletteImprover.swift` composes two existing ports rather than adding a third:
+`PaletteGenerator` (the web's `relatedPalette()`) proposes candidates and `PaletteHealth` (the web's
+`scorePalette()`) judges them. The only new logic is the search. A bespoke "make this nicer"
+heuristic would have been a fourth opinion about colour that the web does not share and that nothing
+could be checked against.
+
+**Locked swatches are the constraint, not a hint.** They become the generator's anchors and are
+copied into every candidate untouched, so locking a brand colour is a promise the feature keeps.
+That promise is the whole point: "regenerate until it looks nicer" is what Generate already does.
+
+**The search is stochastic, and that is inherited.** `PaletteGenerator` jitters with
+`Double.random` because `relatedPalette()` does, so the same palette asked twice can give two
+different suggestions. An earlier version of this file's doc comment claimed determinism and a test
+caught it. It suits the feature, since declining and asking again offers another option, but the
+guarantee is the contract and not the answer: locks never move, slot ids survive, and nothing is
+offered unless it scores higher. When nothing does, the alert says the palette already scores well
+rather than reporting a failure.
+
+**It proposes, it does not apply.** `PaletteSuggestionSheet` shows both scores and every slot,
+including the ones that do not change, and nothing happens until Apply. Same rule as the contrast
+fix and the health remap, and for the same reason: changing colours somebody chose, often brand
+colours, without asking is the app overruling its user on the one thing the product is about.
+
+**Twenty scenes now**, after four more for Pattern and Illustration: Stripe Pattern and Terrazzo,
+Landscape and Botanical. All four are iOS-only and marked as such.
+
 **Export is Pro for every scene, free ones included**, which is what the web does with its PNG
 download. A free reader can look at the free scenes and change the palette underneath them; the file
 is the line. The button is full width and in the house style so it reads as the same action as SVG

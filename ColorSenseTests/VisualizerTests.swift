@@ -48,7 +48,9 @@ struct VisualizerTests {
     @Test("The iOS-only scenes are marked, so the port table stays honest")
     func iOSOnlyScenesAreMarked() {
         let extra = VisualizerScene.allCases.filter(\.isIOSOnly)
-        #expect(Set(extra) == Set([.uiComponents, .charts, .appIcons, .packaging, .slide]))
+        #expect(Set(extra) == Set([.uiComponents, .charts, .appIcons, .packaging, .slide,
+                                   .patternStripes, .patternTerrazzo,
+                                   .illustrationLandscape, .illustrationBotanical]))
         // The two that answer "does this palette work" are free, for the same reason the WCAG
         // checker is.
         #expect(extra.filter { !$0.isPro }.count == 2)
