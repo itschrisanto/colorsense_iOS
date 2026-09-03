@@ -143,7 +143,7 @@ struct VisualizerView: View {
 
             HStack(spacing: 8) {
                 ForEach(Array(palette.colors.enumerated()), id: \.element.id) { index, swatch in
-                    VStack(spacing: 6) {
+                    VStack(spacing: 0) {
                         Button {
                             editing = EditingSwatch(index: index, swatch: swatch)
                         } label: {
@@ -162,8 +162,15 @@ struct VisualizerView: View {
                             store.toggleLock(for: swatch.id)
                         } label: {
                             Image(systemName: swatch.isLocked ? "lock.fill" : "lock.open")
-                                .font(.system(size: 11))
+                                .font(.system(size: 13))
                                 .foregroundStyle(swatch.isLocked ? BrandColor.coral : .secondary)
+                                // The glyph is 13pt; the *target* is 44, which is the minimum a
+                                // finger can reliably hit. Without this the tappable area is the
+                                // size of the icon, and a lock that needs two attempts is worse
+                                // than no lock. `contentShape` is what makes the padding tappable
+                                // rather than just empty space around the picture.
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(swatch.isLocked
@@ -224,6 +231,10 @@ struct VisualizerView: View {
                     }
                     .foregroundStyle(Color.primary)
                     .padding(.vertical, 12)
+                    // 12 + a 15pt line + 12 lands at about 42, just under the 44 a finger needs.
+                    // Safe as a minimum here because a ScrollView hands its children their ideal
+                    // height and has no surplus to stretch this into.
+                    .frame(minHeight: 44)
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)

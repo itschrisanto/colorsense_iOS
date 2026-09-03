@@ -1212,6 +1212,13 @@ One deliberate divergence from the web panel remains:
 - **One scene at a time, not a grid of eleven.** Eleven live web views in a scrolling grid is slow
   and unreadable on a phone. A category row plus a list does the browsing the grid was for.
 
+**Give a small glyph a 44pt target, not a 44pt picture.** The Visualizer's per-swatch locks were an
+11pt `Image` with no frame, so the tappable area was the size of the icon and the lock took two
+attempts. The fix is `.frame(minWidth: 44, minHeight: 44)` plus **`.contentShape(.rect)`**: without
+the content shape the padding is empty space that does not receive the touch, so the frame alone
+changes nothing. The glyph itself stays small; only the target grows. Verified by tapping toward the
+edge of the new box rather than the centre of the glyph, which is the area that did not work before.
+
 **The free and Pro split is the web's, unchanged:** free are Web Landing Page, Business Card and
 Typography Poster; the other eight are Pro, as is the web's PNG download. That is 8 of 11 behind a
 tier that currently has no in-app purchase route, which is worth revisiting when the paywall is
