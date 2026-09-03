@@ -43,7 +43,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .extractor: return "Pull a palette from a photo"
         case .contrast: return "Check WCAG AA / AAA"
         case .health: return "Score the palette and get a report"
-        case .svg: return "Recolour an SVG with this palette"
+        case .svg: return "Recolor an SVG with this palette"
         case .visualizer: return "See the palette in real designs"
         case .library: return "Your saved palettes and the curated library"
         }
@@ -110,7 +110,15 @@ struct ToolsSheet: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Fill the row, do not just sit in it.
+        //
+        // Cards size to their own content, and the summaries are different lengths, so a row with a
+        // one-line card beside a two-line one drew two different-height backgrounds and the grid
+        // looked ragged. `LazyVGrid` already gives every row the height of its tallest item; this
+        // makes the card take that height instead of leaving a gap under the shorter one. Safe to
+        // stretch here because the row's height is definite, unlike the onboarding buttons that
+        // were sitting next to a greedy hero.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(14)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))

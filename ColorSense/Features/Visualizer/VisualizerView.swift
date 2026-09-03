@@ -138,7 +138,7 @@ struct VisualizerView: View {
                     Label("Shuffle", systemImage: "arrow.triangle.2.circlepath")
                         .font(BrandFont.ui(13, weight: .medium))
                 }
-                .accessibilityHint("Regenerates the unlocked colours")
+                .accessibilityHint("Regenerates the unlocked colors")
             }
 
             HStack(spacing: 8) {

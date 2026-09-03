@@ -84,15 +84,15 @@ struct SvgRecolorView: View {
         LaumaNotice(
             pose: .curious,
             title: "SVG Recolor is a Pro feature",
-            message: "Open any SVG and remap every colour it uses onto this palette, then export it. Logos, icons and illustrations stay perfectly crisp."
+            message: "Open any SVG and remap every color it uses onto this palette, then export it. Logos, icons and illustrations stay perfectly crisp."
         )
     }
 
     private var chooser: some View {
         LaumaNotice(
             pose: .curious,
-            title: "Open an SVG to recolour",
-            message: "Logos, icons and illustrations. Every colour the file paints with becomes a row you can point at a palette swatch."
+            title: "Open an SVG to recolor",
+            message: "Logos, icons and illustrations. Every color the file paints with becomes a row you can point at a palette swatch."
         ) {
             Button("Choose an SVG") { importerIsPresented = true }
                 .buttonStyle(.primaryAction)
@@ -107,14 +107,14 @@ struct SvgRecolorView: View {
                 if found.isEmpty {
                     // Legitimate and not an error: a file can paint entirely with `currentColor`,
                     // or with gradients referenced by url(), and there is nothing here to remap.
-                    Text("This file has no colours to change. It paints with currentColor or with gradients only, so there is nothing to remap.")
+                    Text("This file has no colors to change. It paints with currentColor or with gradients only, so there is nothing to remap.")
                         .font(BrandFont.ui(14))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 HStack {
-                    Text("\(found.count) \(found.count == 1 ? "colour" : "colours") found")
+                    Text("\(found.count) \(found.count == 1 ? "color" : "colors") found")
                         .font(BrandFont.ui(13, weight: .bold))
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -134,7 +134,7 @@ struct SvgRecolorView: View {
                     // `ShareLink` is a Button underneath, so the house style applies to it the
                     // same way it does to every other primary action.
                     ShareLink(item: file) {
-                        Label("Export recoloured SVG", systemImage: "square.and.arrow.up")
+                        Label("Export recolored SVG", systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(.primaryAction)
                     .padding(.top, 4)
@@ -186,7 +186,7 @@ struct SvgRecolorView: View {
         // The web view cannot describe itself, and VoiceOver reading its DOM would be worse than
         // useless. The rows below carry the actual information.
         .accessibilityElement()
-        .accessibilityLabel("Preview of the recoloured file")
+        .accessibilityLabel("Preview of the recolored file")
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)

@@ -49,7 +49,7 @@ struct SvgColorPicker: View {
                         }
                     }
 
-                    Button("Put the original colour back") {
+                    Button("Put the original color back") {
                         target = original
                         dismiss()
                     }

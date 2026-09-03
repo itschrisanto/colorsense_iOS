@@ -1300,6 +1300,22 @@ One deliberate divergence from the web panel remains:
 - **Export goes to the share sheet**, not a download, because that is what "hand it to the device"
   means on iOS. Same distinction as "Save to my account" versus "Share as image".
 
+## Two things the newer tools got wrong, and the rules that follow
+
+**American spelling, always.** SVG Recolor and the Visualizer shipped with British "colour",
+"recolour" and "recoloured" in user-visible strings, against an app, a brand and a domain that are
+all *ColorSense*. Nine strings were wrong before anyone noticed, because each one reads fine on its
+own. Scan literals, not prose: the doc comments in this repo say "colour" all over and that is
+harmless, but a `Text(...)` is the product speaking.
+
+**Cards in a grid must fill their row, not just sit in it.** `LazyVGrid` already gives every row the
+height of its tallest item, but a card that sizes to its own content draws a shorter background and
+the grid looks ragged, which is what happened once the Tools sheet had six entries with summaries of
+different lengths. `.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)`
+before the background fixes it. Note this is the *opposite* of the onboarding button lesson: a
+greedy frame is right when the container's height is definite, as a grid row's is, and wrong when it
+sits next to something greedy like the onboarding hero.
+
 ## Color names (ported from the web app, 2026-09-02)
 
 `Resources/ColorNames.json` is the same 1,566-entry Name That Color dataset the web app bundles
