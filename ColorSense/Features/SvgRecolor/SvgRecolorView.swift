@@ -23,6 +23,8 @@ struct SvgRecolorView: View {
     @State private var mapping: [String: String] = [:]
     @State private var importerIsPresented = false
     @State private var loadError: String?
+    /// Which found colour is being reassigned, if any. One sheet, not one picker per row.
+    @State private var editing: EditingSvgColor?
 
     private var recolored: String? {
         source.map { SvgRecolor.recolor($0, mapping: mapping) }
@@ -97,8 +99,11 @@ struct SvgRecolorView: View {
                         .font(BrandFont.ui(13, weight: .medium))
                 }
 
-                ForEach(found, id: \.self) { color in
-                    row(for: color)
+                VStack(spacing: 0) {
+                    ForEach(Array(found.enumerated()), id: \.element) { index, color in
+                        if index > 0 { Divider() }
+                        row(for: color)
+                    }
                 }
 
                 if let recolored, let file = exportURL(for: recolored) {
@@ -112,6 +117,16 @@ struct SvgRecolorView: View {
                 }
             }
             .padding(20)
+        }
+        .sheet(item: $editing) { entry in
+            SvgColorPicker(
+                original: entry.id,
+                palette: palette.colors,
+                target: Binding(
+                    get: { mapping[entry.id] ?? entry.id },
+                    set: { mapping[entry.id] = $0 }
+                )
+            )
         }
         .alert("That file could not be read", isPresented: .constant(loadError != nil)) {
             Button("OK") { loadError = nil }
@@ -138,47 +153,43 @@ struct SvgRecolorView: View {
         }
     }
 
+    /// One line per colour in the file: what it is, what it becomes, and a tap to change it.
+    ///
+    /// Every choice used to be inline, which meant the palette's swatches were repeated under every
+    /// row. On a five-colour file that is the same five circles five times over, and Chris read it,
+    /// correctly, as clutter. The choosing moved into `SvgColorPicker`.
     private func row(for color: String) -> some View {
         let target = mapping[color] ?? color
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
+        let isChanged = target.caseInsensitiveCompare(color) != .orderedSame
+        return Button {
+            editing = EditingSvgColor(id: color)
+        } label: {
+            HStack(spacing: 12) {
                 swatch(hex: color)
-                Text(color)
-                    .brandMono(12, weight: .regular)
-                    .foregroundStyle(.secondary)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-                swatch(hex: target)
-                Text(target)
-                    .brandMono(12, weight: .regular)
-                Spacer(minLength: 0)
-            }
-
-            // The palette, as the choices. The web also offers a free colour picker here; on a
-            // phone the palette is the point, and an arbitrary colour is what the swatch editor on
-            // the main screen is for.
-            HStack(spacing: 8) {
-                ForEach(palette.colors) { swatchColor in
-                    Button {
-                        mapping[color] = swatchColor.hex.lowercased()
-                    } label: {
-                        Circle()
-                            .fill(swatchColor.color)
-                            .frame(width: 26, height: 26)
-                            .overlay {
-                                Circle().stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                            }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(color)
+                        .brandMono(12, weight: .regular)
+                        .foregroundStyle(.secondary)
+                        .strikethrough(isChanged, color: .secondary)
+                    if isChanged {
+                        Text(target).brandMono(12, weight: .medium)
+                    } else {
+                        Text("Unchanged").font(BrandFont.ui(11)).foregroundStyle(.tertiary)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Use \(swatchColor.hex) for \(color)")
                 }
-                Button("Reset") { mapping[color] = color }
-                    .font(BrandFont.ui(12, weight: .medium))
-                    .padding(.leading, 2)
+                Spacer(minLength: 8)
+                swatch(hex: target)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.tertiary)
             }
+            .padding(.vertical, 10)
+            .contentShape(.rect)
         }
-        .padding(.vertical, 6)
+        .buttonStyle(.plain)
+        .accessibilityLabel(isChanged
+            ? "\(color), replaced by \(target). Change"
+            : "\(color), unchanged. Change")
     }
 
     private func swatch(hex: String) -> some View {

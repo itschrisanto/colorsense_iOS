@@ -13,8 +13,9 @@ struct AddColorView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var customColor: Color
-    @State private var hexDigits: String
-    @State private var hexError: String?
+    /// Whether what is currently typed in the hex field is a colour. Owned by `CustomColorEditor`,
+    /// kept here because the Add button is gated on it.
+    @State private var hexIsValid = true
     @State private var savedColors: [SavedPaletteService.SavedColor] = []
     @State private var loadState: LoadState = .loading
     @FocusState private var hexIsFocused: Bool
@@ -34,7 +35,6 @@ struct AddColorView: View {
     init(insertionIndex: Int, initialSwatch: PaletteColor) {
         self.insertionIndex = insertionIndex
         _customColor = State(initialValue: initialSwatch.color)
-        _hexDigits = State(initialValue: String(initialSwatch.hex.dropFirst()))
     }
 
     var body: some View {
@@ -72,8 +72,7 @@ struct AddColorView: View {
             // Keep the visible name, hex and inserted value byte-for-byte aligned with the text
             // field. Converting an sRGB `Color` back through `UIColor` can otherwise move a
             // channel by one due to floating-point color-space conversion.
-            let swatch = PaletteColor(hexString: hexDigits, dominance: 0)
-                ?? PaletteColor(color: customColor)
+            let swatch = PaletteColor(color: customColor)
             VStack(spacing: 14) {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(customColor)
@@ -92,7 +91,7 @@ struct AddColorView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                colorControls
+                CustomColorEditor(color: $customColor, isValid: $hexIsValid)
 
                 Button {
                     add(swatch)
@@ -110,69 +109,6 @@ struct AddColorView: View {
             }
             .padding(14)
             .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
-        }
-    }
-
-    private var colorControls: some View {
-        VStack(spacing: 0) {
-            ColorPicker(selection: $customColor, supportsOpacity: false) {
-                Label("Color wheel and sliders", systemImage: "paintpalette")
-                    .font(BrandFont.ui(14, weight: .medium))
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 48)
-            .onChange(of: customColor) { _, color in
-                let newDigits = String(PaletteColor(color: color).hex.dropFirst())
-                if hexDigits != newDigits { hexDigits = newDigits }
-                hexError = nil
-            }
-
-            Divider().padding(.leading, 12)
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 8) {
-                    Text("#")
-                        .brandMono(15, weight: .medium)
-                        .foregroundStyle(.secondary)
-                    TextField("RRGGBB", text: $hexDigits)
-                        .brandMono(15, weight: .medium)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                        .keyboardType(.asciiCapable)
-                        .submitLabel(.done)
-                        .focused($hexIsFocused)
-                        .onSubmit { validateHex() }
-                        .onChange(of: hexIsFocused) { _, isFocused in
-                            if !isFocused { validateHex() }
-                        }
-                        .onChange(of: hexDigits) { _, value in
-                            updateFromTypedHex(value)
-                        }
-
-                    PasteButton(payloadType: String.self) { values in
-                        if let value = values.first { applyPastedHex(value) }
-                    }
-                    .labelStyle(.titleAndIcon)
-                    .tint(BrandColor.coral)
-                }
-
-                if let hexError {
-                    Text(hexError)
-                        .font(BrandFont.ui(11))
-                        .foregroundStyle(.red)
-                } else {
-                    Text("Type or paste a six-digit hex value.")
-                        .font(BrandFont.ui(11))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-        }
-        .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(.primary.opacity(0.08), lineWidth: 0.5)
         }
     }
 
@@ -253,10 +189,9 @@ struct AddColorView: View {
     }
 
     private func add(_ swatch: PaletteColor) {
-        guard hexIsValid else {
-            validateHex()
-            return
-        }
+        // The editor reports this, and also shows the reason inline, so there is nothing to
+        // re-validate here: refusing quietly is enough.
+        guard hexIsValid else { return }
         var inserted = false
         withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
             inserted = store.insert(swatch, at: insertionIndex)
@@ -265,44 +200,9 @@ struct AddColorView: View {
         dismiss()
     }
 
-    private var hexIsValid: Bool {
-        PaletteColor(hexString: hexDigits, dominance: 0) != nil
-    }
 
-    private func updateFromTypedHex(_ value: String) {
-        var candidate = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        if candidate.hasPrefix("#") {
-            candidate.removeFirst()
-        } else if candidate.hasPrefix("0X") {
-            candidate.removeFirst(2)
-        }
-        let filtered = String(candidate.filter(\.isHexDigit).prefix(6))
-        if filtered != value {
-            hexDigits = filtered
-            return
-        }
 
-        guard let swatch = PaletteColor(hexString: filtered, dominance: 0) else {
-            if filtered.count == 6 { hexError = "Enter a valid hex color." }
-            return
-        }
-        customColor = swatch.color
-        hexError = nil
-    }
 
-    private func applyPastedHex(_ value: String) {
-        guard let swatch = PaletteColor(hexString: value, dominance: 0) else {
-            hexError = "That clipboard value is not a six-digit hex color."
-            return
-        }
-        hexDigits = String(swatch.hex.dropFirst())
-        customColor = swatch.color
-        hexError = nil
-    }
-
-    private func validateHex() {
-        hexError = hexIsValid ? nil : "Enter all six hex digits."
-    }
 
     private func loadSavedColors() async {
         guard clerk.user != nil else {

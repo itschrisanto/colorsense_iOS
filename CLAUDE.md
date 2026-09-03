@@ -216,6 +216,8 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
 ColorSense/
   App/              ColorSenseApp.swift (entry point, Clerk.configure, owns PaletteStore), AppConfig.swift
   DesignSystem/      BrandColor.swift, BrandFont.swift, SpeechBubble.swift — brand kit as Swift, not hardcoded per-view
+                     CustomColorEditor.swift  the one hex field and colour wheel, shared by every
+                                              screen that lets somebody enter a colour
                      LaumaStage.swift  the mascot's poses; lives here, not under Onboarding, because
                                        she is brand and is now used across the app
                      LaumaNotice.swift the one way an empty, failed or refused screen speaks
@@ -1071,11 +1073,20 @@ Three things keep hosting an untrusted document safe, and all three must stay:
   the same implementation. It matters most on **export**, where the file leaves for applications
   this app does not control, rather than in the preview where script cannot run anyway.
 
-Two deliberate divergences from the web panel:
+**The choosing lives in a sheet, not in the rows** (changed 2026-09-04). The first version put a
+strip of palette swatches under every found colour, so a five-colour file repeated the same five
+circles five times and it read as a wall of dots with no order to it. Now each colour is one compact
+line, tappable, and `SvgColorPicker` does the choosing: the palette first, because it is the reason
+the tool exists, then any colour, then a way back to the original.
 
-- **No free colour picker per row.** The web offers an arbitrary colour alongside the palette
-  swatches. Here the palette is the point, and an arbitrary colour is what the swatch editor on the
-  main screen is for.
+**The arbitrary-colour control is the app's existing one.** `CustomColorEditor` was extracted from
+`AddColorView`, which owned the only copy, and is now shared by both. Entering a colour therefore
+works identically everywhere: same field, same filtering as you type, same message when the
+clipboard holds something that is not a colour. A second implementation would have drifted, and
+this one has behaviour worth keeping.
+
+One deliberate divergence from the web panel remains:
+
 - **Export goes to the share sheet**, not a download, because that is what "hand it to the device"
   means on iOS. Same distinction as "Save to my account" versus "Share as image".
 
