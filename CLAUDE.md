@@ -107,6 +107,13 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
   cut from v1, not cut forever.
   - Do not add new tool screens without an explicit ask — that's a scope decision, not
     a code decision.
+  - **Amended 2026-09-04: the rest of the cut list is being brought in, in a decided order.**
+    Asked for directly, so this is an amendment rather than drift, and the vault should say so. The
+    order is SVG Recolor, then Website, then Visualizer, then Schemes, with Brand Kit last. SVG
+    Recolor has landed. Each is a **port of its lab panel**, not of the standalone marketing page,
+    because the panels are the ones that act on the current palette, which is the model this app
+    uses. This does not reopen "no tab bar" or "no landing screen": they are `Tool` cases reached
+    from the Tools sheet, exactly as Health is.
   - **Amended 2026-09-03: Palette Health was added, reversing the half of this that cut it.**
     Asked for directly, so it is an amendment rather than drift — the vault's `Claude Skill.md`
     should say so too. The rest of the cut list still stands: Brand Kit Creator, Website Color
@@ -232,6 +239,9 @@ ColorSense/
       LaumaClip.swift           Her animated clips, cut from video; first run only
       LaumaBlink.swift          The splash blink, ten frames driven by the clock
       OnboardingMood.swift      The four starting palettes offered in beat three
+    SvgRecolor/
+      SvgRecolorView.swift  Open an SVG, map its colours onto the palette, export it
+      SvgPreview.swift      WKWebView, JavaScript off, no network: iOS cannot draw SVG natively
     WCAGChecker/      ContrastCalculator (WCAG 2.x luminance) + a sheet seeded from the palette
     Auth/             AccountView wraps Clerk's AuthView/UserButton, presented as a sheet
   Resources/
@@ -991,6 +1001,7 @@ disagreeing about the same hex.
 | `Services/PaletteHealthReport.swift` | `lib/paletteHealthReport.ts` | Role assignment, contrast-row selection and ordering, and the summary wording |
 | `ContrastCalculator.suggestFix` | `suggestFix()` in `lib/wcagContrast.ts` | 0.01 lightness steps, hue and saturation held, direction away from the anchor, 8-bit quantised before each measurement |
 | `Services/ColorBlindness.swift` | `lib/colorBlind.ts` | Machado 2009 matrices at severity 1.0, applied in linear sRGB; ΔE < 14 confusable threshold |
+| `Services/SvgRecolor.swift` | `SvgRecolorPanel.tsx` | `normalizeColor`, `extractColorsFromSvg`, `colorVariants`, `recolorSvg`: which properties are read, the four skipped non-colours, shorthand expansion, and the `found[i] -> palette[i % n]` mapping |
 | `Services/SavedPaletteService.swift` | `routes/saved-palettes.ts`, `lib/savedPalettes.ts` | `POST /api/saved-palettes`, `{name, colors}`, uppercase `#RRGGBB`, Bearer token, ≤20 colors |
 
 `ColorMathTests.swift` pins the whole chain to values read off the web's own detail card for
@@ -1031,6 +1042,42 @@ Also note `isDark()` in labColor.ts picks label color by perceived luminance
 (0.299/0.587/0.114), while iOS uses `ContrastCalculator.prefersLightText` (WCAG ratio), because
 CLAUDE.md requires contrast decisions to route through `ContrastCalculator`. They agree on every
 color tested so far, but they *can* disagree on mid-tones. Deliberate, not an oversight.
+
+## SVG Recolor (added 2026-09-04)
+
+The first of the remaining web tools to come across. `Services/SvgRecolor.swift` is the port and is
+covered by `SvgRecolorTests`; the screen around it is `Features/SvgRecolor/`.
+
+**It is Pro, matching the web.** The gate follows the `ContrastFixSheet` precedent: it names Pro and
+offers no way to buy it, because there is no In-App Purchase yet and guideline 3.1.1 forbids
+pointing at an outside one. Unlike the contrast fix, the locked state cannot show its value in full,
+because there is nothing to show before a file is opened, so it describes the tool instead. `isPro`
+comes from the same `GET /api/me` read the rest of the app uses.
+
+**iOS cannot draw SVG**, which is the one genuinely unavoidable decision here. There is no
+`UIImage(svg:)`, `Image` does not read it, and the alternatives were a third-party renderer or
+writing a rasteriser. `SvgPreview` is therefore a `WKWebView`, and that does **not** reopen the
+"fresh native SwiftUI, not a WebView wrapper" decision: that ruled out proxying the app's own
+screens to the website, while this draws a local string in a format the platform cannot display.
+
+Three things keep hosting an untrusted document safe, and all three must stay:
+
+- **JavaScript is off** (`allowsContentJavaScript = false`). This is the actual defence, not the
+  sanitiser.
+- **Nothing loads from the network.** The SVG is passed as a string with `baseURL: nil`, and the
+  navigation delegate refuses every navigation except the initial `about:` load.
+- **`SvgRecolor.sanitized` strips `<script>`, `<foreignObject>`, `on*` handlers and
+  `javascript:` URLs.** DOMPurify has no Swift equivalent, so this is the same intent rather than
+  the same implementation. It matters most on **export**, where the file leaves for applications
+  this app does not control, rather than in the preview where script cannot run anyway.
+
+Two deliberate divergences from the web panel:
+
+- **No free colour picker per row.** The web offers an arbitrary colour alongside the palette
+  swatches. Here the palette is the point, and an arbitrary colour is what the swatch editor on the
+  main screen is for.
+- **Export goes to the share sheet**, not a download, because that is what "hand it to the device"
+  means on iOS. Same distinction as "Save to my account" versus "Share as image".
 
 ## Color names (ported from the web app, 2026-09-02)
 

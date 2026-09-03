@@ -10,6 +10,7 @@ enum Tool: String, CaseIterable, Identifiable {
     case extractor
     case contrast
     case health
+    case svg
     case library
 
     var id: String { rawValue }
@@ -19,6 +20,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .extractor: return "Extractor"
         case .contrast: return "Contrast"
         case .health: return "Health"
+        case .svg: return "SVG Recolor"
         case .library: return "Library"
         }
     }
@@ -28,6 +30,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .extractor: return "eyedropper"
         case .contrast: return "circle.lefthalf.filled"
         case .health: return "heart.text.square"
+        case .svg: return "wand.and.stars"
         case .library: return "books.vertical"
         }
     }
@@ -37,6 +40,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .extractor: return "Pull a palette from a photo"
         case .contrast: return "Check WCAG AA / AAA"
         case .health: return "Score the palette and get a report"
+        case .svg: return "Recolour an SVG with this palette"
         case .library: return "Your saved palettes and the curated library"
         }
     }

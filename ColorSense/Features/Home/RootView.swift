@@ -26,6 +26,7 @@ struct RootView: View {
     /// a branded export occasionally is a smaller cost than handing free users the paid feature
     /// every time the network hiccups.
     @State private var isPro = false
+    @State private var svgIsPresented = false
     @State private var pendingRemoval: PaletteStore.Removal?
     @State private var savePaletteIsPresented = false
     @State private var shareIsPresented = false
@@ -126,6 +127,9 @@ struct RootView: View {
                     }
                 }
             )
+        }
+        .sheet(isPresented: $svgIsPresented) {
+            SvgRecolorView(palette: store.palette, isPro: isPro)
         }
         .sheet(isPresented: $shareIsPresented) {
             ShareSheet(
@@ -350,6 +354,7 @@ struct RootView: View {
         case .extractor: sourceChoiceIsPresented = true
         case .contrast: contrastIsPresented = true
         case .health: healthIsPresented = true
+        case .svg: svgIsPresented = true
         case .library: libraryIsPresented = true
         }
     }
