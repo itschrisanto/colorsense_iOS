@@ -1216,6 +1216,31 @@ There is no public API to hide a single social provider from `AuthView`; provide
 from the environment. Hiding the Google button would mean replacing `AuthView` with a custom
 email-only screen built on ClerkKit's lower-level API.
 
+### The plan must be read *after* the session exists (fixed 2026-09-04)
+
+`RootView.refreshPlan()` ran from a bare `.task`, which fires as the view appears, and at a cold
+launch that is **before Clerk has restored the session**. `authorizedRequest` bails with
+`.notSignedIn` before it makes any request, so the plan came back as a failure, `isPro` was set
+false, and nothing retried it until the account sheet happened to open and close. **A paying reader
+was locked out of every Pro feature on every cold launch.**
+
+It went unnoticed for a while because the older Pro surfaces degrade quietly: the contrast fix and
+the health remap still show their value and merely decline to apply it. SVG Recolor is gated
+outright, so it was the first place the bug was visible, and it looked like an SVG bug rather than
+what it is.
+
+Two changes, and both matter:
+
+- `.task(id: clerk.user?.id)`, so the read runs again the moment a session arrives and again when
+  it goes away. This is the same lesson as `LaumaBlink` and the splash timer, in a different
+  costume: **do not read state at appear time that something else is still loading.**
+- A failed request no longer revokes Pro. Signed out is a definite answer and sets false; a failed
+  request while signed in is not an answer at all, and used to drop a paying reader to free on any
+  network blip. It now leaves the last known value alone.
+
+The other `.task { await load() }` calls live inside sheets a reader opens well after launch, and
+they surface a retryable error rather than degrading silently, so they were left alone.
+
 ### API calls need an explicit bearer token
 
 The web relies on Clerk session cookies. Mobile does not — every call to the ColorSense API must

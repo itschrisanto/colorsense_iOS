@@ -165,9 +165,18 @@ struct RootView: View {
         // A soft tap on Generate: the whole screen recolours at once, and a light physical
         // confirmation makes that land as something you did rather than something that happened.
         .sensoryFeedback(.impact(flexibility: .soft), trigger: generateTaps)
-        // Refreshed on launch and whenever the account sheet closes, since signing in or out
-        // there is the only thing in the app that can change the plan.
-        .task { await refreshPlan() }
+        // Keyed on the session, not just on appear.
+        //
+        // A bare `.task` runs as this view appears, which at a cold launch is *before* Clerk has
+        // restored the session. `authorizedRequest` then fails with `.notSignedIn`, the plan reads
+        // as free, and nothing retried it until the account sheet happened to close. A Pro account
+        // was therefore locked out of every Pro feature on every cold launch. It went unnoticed
+        // because the older Pro features degrade quietly; SVG Recolor is gated outright, so it
+        // surfaced there first.
+        //
+        // Keying on the user id means this runs again the moment the session arrives, and again
+        // when it goes away.
+        .task(id: clerk.user?.id) { await refreshPlan() }
         .onChange(of: accountIsPresented) { _, isPresented in
             if !isPresented { Task { await refreshPlan() } }
         }
@@ -359,11 +368,19 @@ struct RootView: View {
         }
     }
 
+    /// Reads the plan, and is careful about what a failure means.
+    ///
+    /// Signed out is a definite answer: no account, no Pro. A *failed request* while signed in is
+    /// not an answer at all, and treating it as one used to drop a paying reader to free on any
+    /// blip. So a failure now leaves the last known value alone rather than revoking Pro over a
+    /// dropped connection.
     private func refreshPlan() async {
+        guard clerk.user != nil else {
+            isPro = false
+            return
+        }
         if case .success(let plan) = await SavedPaletteService.currentPlan() {
             isPro = plan == "pro" || plan == "business"
-        } else {
-            isPro = false
         }
     }
 
