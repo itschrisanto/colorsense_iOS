@@ -425,15 +425,33 @@ sheet use it; settings screens and nested editors keep Done and Cancel, where th
 Note a toolbar **collapses a `Label` to its icon**, which left a bare chevron and none of the word
 that was the point. It is an explicit `HStack` of image and text for that reason.
 
+**Tools are `fullScreenCover`, not `.sheet`.** A sheet can be swiped away, and on a screen somebody
+is working on that is a way to lose work by accident. A full-screen cover has no interactive
+dismissal at all, so Back is the only way out, which is the point. Relabelling the button was the
+first attempt and did not address this; the presentation is what had to change.
+
+Sheets are still right for the things that *are* sheets: the Tools picker itself, Share, Account,
+and the editors a tool puts on top of itself.
+
+**Open the tool on the picker's `onDismiss`, not on selection.** `ToolsSheet` dismisses itself and
+reports the choice in the same turn, and presenting a `fullScreenCover` while a sheet is still going
+away gets the presentation **dropped silently**: the sheet closes and no tool appears. `RootView`
+holds a `pendingTool` and opens it from `onDismiss`, so the order is explicit rather than a race
+between two animations.
+
 **A swipe must not throw away work.** `confirmsDiscard` pairs `interactiveDismissDisabled` with a
-confirmation, because either alone leaves a hole: the modifier stops the accidental gesture, the
-dialog covers the deliberate tap on Back.
+confirmation. With tools now full-screen the first half is belt to braces, but it still matters for
+anything presented as a sheet, and the dialog still covers the deliberate tap on Back.
 
 It is applied **only where something would actually be lost**, which is two places:
 
 - **SVG Recolor** with a file open. The file and its mapping live nowhere else; exporting is the
   only thing that keeps them.
 - **Feedback** with a message typed but not sent.
+
+**Contrast's swap control moved to the trailing edge.** It sat in `topBarLeading` beside Back, so a
+bare up/down arrow read as a second navigation control rather than an action on the two colours.
+Navigation on the left, actions on the right.
 
 Deliberately *not* applied to the Visualizer, Health, Contrast or Library. A palette edit in the
 Visualizer has already been written to `PaletteStore` before you could swipe, so a guard there would

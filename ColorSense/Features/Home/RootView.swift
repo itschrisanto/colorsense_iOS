@@ -15,6 +15,8 @@ struct RootView: View {
     @State private var forcedOnboardingDismissed = false
 
     @State private var toolsArePresented = false
+    /// The tool chosen in the Tools sheet, opened once that sheet has actually gone. See below.
+    @State private var pendingTool: Tool?
     @State private var contrastIsPresented = false
     @State private var accountIsPresented = false
     @State private var isExtracting = false
@@ -91,13 +93,26 @@ struct RootView: View {
         // One screen for both sources — recent photos as a grid with the camera as its first
         // cell — rather than asking which source before showing either. PhotoSourcePicker owns
         // the camera, the library and every permission state between them.
+        // Tools are pages, not sheets.
+        //
+        // A sheet can be swiped away, and on a screen somebody is working on that is a way to lose
+        // work by accident. `fullScreenCover` has no interactive dismissal at all, so `Back` is the
+        // only way out, which is the point. Sheets are still right for the things that *are*
+        // sheets: the Tools picker itself, Share, Account, and the editors a tool puts on top of
+        // itself.
         .sheet(isPresented: $sourceChoiceIsPresented) {
             PhotoSourcePicker { extract($0) }
         }
-        .sheet(isPresented: $toolsArePresented) {
-            ToolsSheet { open($0) }
+        // Opened on dismissal, not on selection.
+        //
+        // `ToolsSheet` dismisses itself and reports the choice in the same turn, and presenting a
+        // `fullScreenCover` while a sheet is still going away gets the presentation dropped
+        // silently: the sheet closes and no tool appears. Waiting for `onDismiss` makes the order
+        // explicit rather than hoping the two animations do not collide.
+        .sheet(isPresented: $toolsArePresented, onDismiss: openPendingTool) {
+            ToolsSheet { pendingTool = $0 }
         }
-        .sheet(isPresented: $contrastIsPresented) {
+        .fullScreenCover(isPresented: $contrastIsPresented) {
             WCAGCheckerView(isPro: isPro, palette: store.palette)
         }
         .sheet(isPresented: $accountIsPresented) {
@@ -115,10 +130,10 @@ struct RootView: View {
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(swatch: swatch)
         }
-        .sheet(isPresented: $libraryIsPresented) {
+        .fullScreenCover(isPresented: $libraryIsPresented) {
             LibraryView()
         }
-        .sheet(isPresented: $healthIsPresented) {
+        .fullScreenCover(isPresented: $healthIsPresented) {
             PaletteHealthView(
                 palette: store.palette,
                 isPro: isPro,
@@ -129,10 +144,10 @@ struct RootView: View {
                 }
             )
         }
-        .sheet(isPresented: $svgIsPresented) {
+        .fullScreenCover(isPresented: $svgIsPresented) {
             SvgRecolorView(palette: store.palette, isPro: isPro)
         }
-        .sheet(isPresented: $visualizerIsPresented) {
+        .fullScreenCover(isPresented: $visualizerIsPresented) {
             VisualizerView(isPro: isPro)
         }
         .sheet(isPresented: $shareIsPresented) {
@@ -359,6 +374,12 @@ struct RootView: View {
         withAnimation(OnboardingMotion.beat(reduceMotion: reduceMotion)) {
             forcedOnboardingDismissed = true
         }
+    }
+
+    private func openPendingTool() {
+        guard let tool = pendingTool else { return }
+        pendingTool = nil
+        open(tool)
     }
 
     private func open(_ tool: Tool) {

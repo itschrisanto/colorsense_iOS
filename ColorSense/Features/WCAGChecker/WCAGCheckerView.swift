@@ -67,18 +67,19 @@ struct WCAGCheckerView: View {
             .onAppear { AnalyticsService.capture(.contrastChecked) }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                BackToPalette { dismiss() }
+                // Trailing, and labelled. Sitting on the leading edge next to Back, a bare
+                // up/down arrow read as a second navigation control rather than as an action on
+                // the two colours, which is what Chris ran into.
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { viewModel.swap() } label: {
-                        Image(systemName: "arrow.up.arrow.down")
+                        Label("Swap", systemImage: "arrow.up.arrow.down")
+                            .labelStyle(.titleAndIcon)
                     }
                     .accessibilityLabel("Swap text and background colors")
                 }
-                BackToPalette { dismiss() }
             }
         }
-        .presentationBackground(.ultraThinMaterial)
-        .presentationCornerRadius(28)
-        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Preview
