@@ -55,6 +55,18 @@ the canonical account-side checklist. When enrolment completes, work that list, 
    increment on every upload including re-uploads of the same marketing version. Nothing in the repo
    bumps these today; they are hand-edited in `project.yml`.
 
+6. **The designed paywall.** Chris supplied Coolors' Pro screen as a reference and it is worth
+   borrowing from, chiefly its **App Benefits / Website Benefits split**, which answers "am I buying
+   this twice?" for a product that is both a site and an app. Also its hero made of the product's
+   own output, and a persistent Go Pro entry point rather than a plain Settings row.
+   Deliberately **not built yet**, for two reasons. A paywall's only job is conversion and nothing
+   can be bought, so an appealing purchase screen that cannot purchase makes the 3.1.1 exposure
+   worse rather than better. And the harder problem is the offer, not the design: iOS Pro currently
+   unlocks four things (SVG Recolor, the contrast fix, the health remap, Pro export formats) against
+   the web's much longer list, and a well-designed list makes a thin offer *more* visible. The
+   argument is to build this after Visualizer and Schemes land, alongside the StoreKit work, when
+   the offer is real and `Product.displayPrice` can supply real prices.
+
 **Not blocked, and can move at any time.**
 
 3. **The trial is not in the vault.** `Claude Skill.md` section 3 lists Pro Monthly $5, Pro Annual
