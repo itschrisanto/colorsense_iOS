@@ -43,8 +43,7 @@ struct SvgColorPicker: View {
                                 target = PaletteColor(color: customColor).hex.lowercased()
                                 dismiss()
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(BrandColor.coral)
+                            .buttonStyle(.primaryAction)
                             .disabled(!customIsValid)
                             .opacity(customIsValid ? 1 : 0.55)
                         }

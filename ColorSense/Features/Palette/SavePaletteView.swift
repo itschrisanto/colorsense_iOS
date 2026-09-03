@@ -48,13 +48,8 @@ struct SavePaletteView: View {
                             Label("Save to my account", systemImage: "bookmark")
                         }
                     }
-                    .font(BrandFont.ui(15, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .background(BrandColor.coral, in: RoundedRectangle(cornerRadius: 13))
+                .buttonStyle(.primaryAction)
                 .disabled(isSaving || trimmedName.isEmpty)
                 .opacity(trimmedName.isEmpty ? 0.55 : 1)
 

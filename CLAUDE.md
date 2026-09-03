@@ -365,6 +365,30 @@ One thing to fix *outside* this repo before external testing: the web privacy po
 same API, same data — but a reviewer checks that the policy covers the app. Deliberately parked
 until the Replit side is being touched anyway.
 
+## The primary button, and the one place the app fails its own checker
+
+`DesignSystem/PrimaryActionButton.swift` is the house primary action: full width, 15pt medium,
+14pt vertical padding, white on CORAL, 13pt radius. `SavePaletteView` and `ColorDetailView` had
+already converged on exactly this and spelled it out twice; SVG Recolor then arrived using
+`.borderedProminent` with a coral tint, which is the *system* button and differs in padding, radius,
+font and label colour. It is now one named style and every primary action uses it. **Do not reach
+for `.borderedProminent`**: it looks close enough to pass review and is wrong in four ways at once.
+
+**The white label is a house choice, not a measured one, and the app's own tool disagrees with it.**
+Measured through `ContrastCalculator` rather than by hand:
+
+| label on CORAL | ratio | `ContrastCalculator.rating` |
+|---|---|---|
+| white (shipping) | 2.78 | **POOR 2/5** |
+| black | 7.57 | GREAT 5/5 |
+
+So the primary button in a contrast-checking app is rated POOR by that same checker, and
+`legibleForeground` would pick black. This is deliberate for now rather than unnoticed: it is the
+established look, it matches the web, and changing it alters five buttons and the brand's feel, so
+it is Chris's call and not a silent fix. Note the onboarding beats already *do* invert to the band's
+measured ink, so the app is currently inconsistent with itself on this point. If the answer is ever
+"make it pass", the change is one line in `PrimaryActionButtonStyle`.
+
 ## Measuring UI alignment
 
 Icon alignment complaints have come up twice and eyeballing got it wrong both times — one

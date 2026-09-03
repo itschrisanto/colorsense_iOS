@@ -80,8 +80,7 @@ struct SvgRecolorView: View {
             message: "Logos, icons and illustrations. Every colour the file paints with becomes a row you can point at a palette swatch."
         ) {
             Button("Choose an SVG") { importerIsPresented = true }
-                .buttonStyle(.borderedProminent)
-                .tint(BrandColor.coral)
+                .buttonStyle(.primaryAction)
         }
     }
 
@@ -107,12 +106,12 @@ struct SvgRecolorView: View {
                 }
 
                 if let recolored, let file = exportURL(for: recolored) {
+                    // `ShareLink` is a Button underneath, so the house style applies to it the
+                    // same way it does to every other primary action.
                     ShareLink(item: file) {
                         Label("Export recoloured SVG", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(BrandColor.coral)
+                    .buttonStyle(.primaryAction)
                     .padding(.top, 4)
                 }
             }
