@@ -29,17 +29,29 @@ The first-run flow is finished, filmed and committed: splash, hello, naming, moo
 was verified on a physical iPhone 17 Pro Max end to end, and swept in the simulator in dark mode, at
 accessibility text sizes and with Reduce Motion on. 85 tests pass.
 
-What is deliberately *not* done, and is the first thing to pick up if this is reopened:
+Four gaps are **parked on purpose** (agreed 2026-09-04), not forgotten. Three of them cannot be
+closed without the paid Apple Developer Program, so they wait for it rather than being worked around.
+Do not treat any of them as a bug to fix in isolation.
+
+**Blocked on developer access.** These join the list under "Distributing to testers" below, which is
+the canonical account-side checklist. When enrolment completes, work that list, not this one.
 
 1. **The plan beat does not purchase anything.** `Services/ProStore.swift` is the seam and carries
-   the checklist. Guideline 3.1.1 makes a purchase screen that cannot purchase a rejection risk, so
-   this must be wired or hidden before any build is submitted.
-2. **The trial is still not in the vault.** `Claude Skill.md` section 3 lists Pro Monthly $5, Pro
-   Annual $39 and the $9 Pro Pass, with no trial of any length.
-3. **Sign in with Apple is still unprovisioned**, and guideline 4.8 requires it wherever a
-   third-party sign-in is offered. The account beat offers Google today.
-4. **The asset catalog is about 20MB**, nearly all of it the three Lauma clips. Fine now, worth
-   watching before a fourth.
+   the step-by-step wiring checklist. Guideline 3.1.1 makes a purchase screen that cannot purchase a
+   rejection risk on its own, so before any build is submitted this must be wired **or** hidden.
+   Hiding it is one line, because `advanceFromAccountAsk()` already routes past the beat.
+2. **Sign in with Apple is still unprovisioned**, and guideline 4.8 requires it wherever a
+   third-party sign-in is offered. The account beat offers Google today, so the account screen is a
+   rejection on its own until Apple is enabled for the App ID and on the production Clerk instance.
+
+**Not blocked, and can move at any time.**
+
+3. **The trial is not in the vault.** `Claude Skill.md` section 3 lists Pro Monthly $5, Pro Annual
+   $39 and the $9 Pro Pass, with no trial of any length. Configuring it needs App Store Connect, but
+   *deciding* it does not, and the app currently shows a 7-day trial the source of truth does not
+   mention. Reconciling that is a vault edit, not an Apple one.
+4. **The asset catalog is about 20MB**, nearly all of it the three Lauma clips at roughly 4.5MB each.
+   Fine now. Worth a decision before a fourth clip, and the lever is frame height, not frame count.
 
 ## Status (as of 2026-09-02)
 
@@ -293,9 +305,18 @@ The repo side is done as far as it can go without an account:
   affiliate link in `AffiliateView` is deliberately untouched: applying to a referral programme is
   not a digital-goods purchase.
 
-Still blocked on the paid account: registering the `online.colorsense.ios` App ID, provisioning
-Sign in with Apple, the App Store Connect record and its privacy questionnaire, and the archive
-itself (`xcodebuild archive` needs a distribution certificate).
+Still blocked on the paid account, and this is the canonical list: registering the
+`online.colorsense.ios` App ID, provisioning Sign in with Apple, the App Store Connect record and
+its privacy questionnaire, and the archive itself (`xcodebuild archive` needs a distribution
+certificate). Onboarding added two more (see "Onboarding is done" at the top of this file):
+
+- **Create the two Pro subscriptions** in one subscription group, with the identifiers in
+  `ProProduct`, attach the trial as an introductory offer on the monthly one, then write
+  `StoreKitProStore` and point `ProStoreRegistry.current` at it. Add a Restore Purchases control at
+  the same time; App Review requires one for auto-renewable subscriptions and there is deliberately
+  no dead button for it today.
+- **Enable Apple for sign-up and sign-in** on the production Clerk instance and register the Team ID
+  and bundle ID as a Clerk Native Application, so the onboarding account ask satisfies guideline 4.8.
 
 ### PostHog open items before the first beta release (added 2026-09-04)
 
