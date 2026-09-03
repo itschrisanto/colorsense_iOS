@@ -706,9 +706,21 @@ Client-side validation mirrors the route's own bounds (name at least 2, plausibl
 returned rather than reworded, including the 429 rate-limit message.
 
 **The portrait is looked up, not assumed.** `UIImage(named: "AuthorPortrait")` returning nil falls
-back to initials, so the layout is final whether or not the asset is present. Note the web's
+back to initials, so the layout survives the asset being absent. Note the web's
 `public/author-chrisanto.png` is **not** usable here: it is a Canva "Canvassador 2026" badge frame
-carrying Canva's logo, and shipping a third-party mark in an About screen is wrong.
+carrying Canva's logo, and shipping a third-party mark in an About screen is wrong. The shipped
+portrait is cropped from `NextCloud/ColorSense/IMG_7904.JPG`.
+
+Two things about producing it, because both cost time:
+
+- **Crop with `CGImage.cropping(to:)`, not `sips --cropOffset`.** Vision reports the face in image
+  pixels; sips' offset convention did not agree with it and produced a picture of the ceiling three
+  times running. An explicit rectangle has nothing to misread. `Scripts`-free helper lives in the
+  session scratch, but the recipe is: `VNDetectFaceRectanglesRequest` for the face box, square of
+  about 2.1 face-heights, eyes set slightly above centre.
+- **`NSImage.lockFocus` renders at the display's scale**, so asking for 512 produced 1024 and a
+  4.6MB PNG for a 72pt avatar. The asset is a **256px JPEG, 23KB**: 72pt at 3x is 216px, and a
+  photograph gains nothing from PNG's lossless storage.
 
 The social URLs are **constructed** from the `@colorsensehq` handle rather than recorded anywhere,
 so they are worth checking once against the live accounts. The hero line is written for the app and
