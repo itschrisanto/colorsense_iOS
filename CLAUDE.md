@@ -725,6 +725,53 @@ to a glyph and nothing churns. A working preview can only be confirmed on device
 One more red herring: `ClosedViewfinderController: Viewfinder still closed …` appears in simulator
 logs whether or not the app has a capture session at all. It is ambient noise, not a signal.
 
+## A frame does not stop a view receiving touches (fixed 2026-09-05)
+
+The camera cell in `PhotoSourcePicker` could not be tapped. Every tap on it opened a *photo*
+instead, extracted a palette and returned to the bands, which read as "the camera is broken" and,
+because the same thing happened when picking a photo, as "the whole picker is broken".
+
+**The cause was `AssetThumbnail`, not the camera.** It draws its image with `scaledToFill()` inside
+a `side x side` frame and `.clipped()`. `scaledToFill` overflows its frame by design, and a portrait
+photo in a square cell is several times taller than the cell. **`.clipped()` clips drawing and not
+hit testing**, so that invisible overflow stayed tappable and reached a full row above the cell it
+belonged to. Photo cells come *after* the camera cell in the grid, so they sit on top of it: the
+photo directly below the camera swallowed every tap aimed at the camera. `.contentShape(.rect)` on
+the thumbnail is the whole fix.
+
+This is the same lesson the Visualizer's per-swatch locks already record, in the other direction.
+There, padding did not *gain* touches without a content shape. Here, a frame did not *stop* them.
+The rule that covers both: **when a cell's drawn bounds and its touchable bounds could differ, say
+which one is tappable.** Any `scaledToFill`, negative padding, `offset`, or overflowing overlay
+inside a tappable cell needs `.contentShape`.
+
+Four things about the hunt are worth keeping, because they cost a night:
+
+- **It was not a crash, and three sources said so before anyone believed them.** No system crash
+  report, no Jetsam event naming the app, and nothing pending in PostHog's bundled PLCrashReporter.
+  An in-app log printing a marker from `ColorSenseApp.init()` settled it: one launch marker spanned
+  an entire multi-minute reproduction, so the process never restarted. "It goes back to the palette"
+  meant the picker dismissing correctly after extracting, which is what choosing a photo does.
+- **`devicectl --console` is not a witness.** It forwards stdout and stderr only, and its session
+  ends the moment the app is backgrounded, which it reports as "terminated with exit code 0". That
+  looks exactly like a clean exit and is an artifact. Log to a file in the app container and pull it
+  with `devicectl device copy from --domain-type appDataContainer`; it survives backgrounding,
+  relaunches and a device restart.
+- **The intermittency was the clue, and it was misread twice.** The cell worked earlier the same
+  night and stopped after a restart, which pointed at a wedged camera daemon and cost a reboot.
+  It was the thumbnails: before an image loads the cell is a placeholder colour with nothing to
+  overflow, so the camera was tappable until 300 images finished arriving.
+- **Measure the geometry rather than reason about it.** Logging the cell's frame in global space
+  against the touch's global location is what ended the guessing: the finger was provably inside the
+  camera cell at (73.7, 227) with the cell at (0, 188, 145.3, 145.3), and a different button fired.
+  Everything before that measurement was a theory, including two that were wrong.
+
+The reproduction harness lives on the `diagnostics/photo-picker-repro` branch rather than main: a
+container-file logger, a `-photo-source` flag that opens the picker at launch, an `-auto-pick` flag
+that drives a successful selection without a finger, and per-cell geometry and touch logging. Bring
+it back if this screen ever misbehaves again; `osascript` has no assistive access on this machine,
+so temporary launch flags are the only way to script this screen at all.
+
 ## Onboarding, and Lauma (rebuilt 2026-09-03)
 
 First launch is a **full-screen flow built out of the app's own palette bands**. No cards, no

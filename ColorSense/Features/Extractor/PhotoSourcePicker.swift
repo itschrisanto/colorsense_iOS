@@ -128,7 +128,11 @@ struct PhotoSourcePicker: View {
                 // triggers that prompt, and the picker should not ask before the user shows any
                 // interest in the camera.
                 if cameraAuthorized {
+                    // A `UIView` has `isUserInteractionEnabled` on by default, so a representable
+                    // inside a Button's label can take the touch meant for the button. The preview
+                    // is decorative; the button handles the tap.
                     CameraPreviewTile(session: preview.session)
+                        .allowsHitTesting(false)
                 }
                 Image(systemName: "camera.fill")
                     .font(.system(size: 24, weight: .medium))
@@ -137,6 +141,9 @@ struct PhotoSourcePicker: View {
             }
             .frame(width: side, height: side)
             .clipped()
+            // Explicit for the same reason the thumbnails need it, in the other direction: state
+            // the cell's tappable area rather than inheriting whatever its contents claim.
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Take a photo")
@@ -278,6 +285,13 @@ private struct AssetThumbnail: View {
         }
         .frame(width: side, height: side)
         .clipped()
+        // **This line is load-bearing.** `.clipped()` clips drawing, not hit testing, and
+        // `scaledToFill` deliberately overflows its frame: a portrait photo in a square cell is
+        // several times taller than the cell. Without an explicit shape that invisible overflow
+        // stays tappable, so a thumbnail steals touches from its neighbours — in particular from
+        // the camera cell above it, which comes *earlier* in the grid and is therefore underneath.
+        // See CLAUDE.md, "A frame does not stop a view receiving touches".
+        .contentShape(.rect)
         .onAppear(perform: load)
     }
 
