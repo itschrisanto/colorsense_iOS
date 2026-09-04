@@ -202,6 +202,11 @@ struct RootView: View {
             }
 
             Button {
+                // The discriminating trace. If this line lands immediately before an unexpected
+                // `sheet binding false -> true`, a real second activation of this button is
+                // reopening the picker. If the binding flips with no line here, SwiftUI is
+                // re-presenting on its own and the ordering inside choose(_:) is the suspect.
+                diagLog("dock plus action, tap=\(plusTaps + 1)")
                 plusTaps += 1
                 sourceChoiceIsPresented = true
             } label: {
