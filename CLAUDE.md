@@ -135,8 +135,8 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
     order is SVG Recolor, then Website, then Visualizer, then Schemes, with Brand Kit last. SVG
     Recolor has landed. Each is a **port of its lab panel**, not of the standalone marketing page,
     because the panels are the ones that act on the current palette, which is the model this app
-    uses. This does not reopen "no tab bar" or "no landing screen": they are `Tool` cases reached
-    from the Tools sheet, exactly as Health is.
+    uses. This does not reopen "no landing screen": they are `Tool` cases in the shared tool
+    workspace, exactly as Health is.
   - **Amended 2026-09-03: Palette Health was added, reversing the half of this that cut it.**
     Asked for directly, so it is an amendment rather than drift — the vault's `Claude Skill.md`
     should say so too. The rest of the cut list still stands: Brand Kit Creator, Website Color
@@ -193,12 +193,13 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
   colorsense.online; the palette screen matches them — full-bleed color bands splitting the
   screen, large mono hex, ntc color name beneath, label color flipping per swatch via
   `ContrastCalculator`.
-- **One palette, many tools** (decided 2026-09-02, replaces the original tab-bar navigation).
-  The app *is* the current palette; there is no tab bar and no landing/upload screen. Tools
-  are actions on that one palette, reached from a collapsed Tools sheet — the model the web
-  app states outright in its own Tools sheet ("All work on the same palette"). A sheet was
-  chosen over tabs specifically so the tool list can grow past the three or four items a tab
-  bar tolerates. `PaletteStore` owns the palette; `RootView` is the screen.
+- **One palette, many tools** (decided 2026-09-02; navigation amended 2026-09-04).
+  The app *is* the current palette; there is no landing/upload screen. `PaletteStore` owns that
+  palette and the five view-like tools live as state-preserving panels in one full-screen
+  `ToolWorkspaceView`. Its horizontally scrollable strip changes the lens in one tap and can grow
+  without squeezing every label. Extractor remains the dock's central action because it replaces
+  the palette and returns; Share remains a destination action. The old collapsed Tools sheet and
+  separate cover per tool were removed because they made changing lenses a three-step round trip.
 - **All chrome is one floating glass dock** (decided 2026-09-02, from a reference Chris supplied).
   Share · Tools · **+** · Generate · Account, icon-only, in a single `.ultraThinMaterial` capsule.
   There is no navigation bar — once every action moved into the dock, the bar held only a title,
@@ -250,8 +251,9 @@ ColorSense/
     PaletteStore.swift       THE palette: current state, generation count, JSON persistence
   Features/
     Home/
-      RootView.swift         The app's only screen — bands + Tools/Generate bar + nav actions
-      ToolsSheet.swift       Collapsed tool picker; add a `Tool` case to add a tool
+      RootView.swift         Palette screen — bands + Share/Tools/Extractor/Generate/Account dock
+      ToolsSheet.swift       Tool model and horizontally scrollable persistent ToolStrip
+      ToolWorkspaceView.swift Shared state-preserving container for the five tool panels
     Palette/
       PaletteBandsView.swift Full-bleed bands, tap to copy
     Extractor/
@@ -359,8 +361,11 @@ certificate). Onboarding added two more (see "Onboarding is done" at the top of 
 
 ### PostHog open items before the first beta release (added 2026-09-04)
 
-The app integration and the pinned **iOS Retention & Reliability** dashboard are configured. The
-PostHog project also has exception autocapture enabled. These release-only tasks remain:
+The app integration and the pinned **iOS Retention & Reliability** dashboard are configured. Its
+five tiles cover weekly retention, daily active installs, first-time app opens, fatal exception
+volume, and installs affected by fatal exceptions. The first-time-open tile is only an install
+proxy: App Store Connect remains authoritative for downloads, including downloads that never open
+the app. The PostHog project also has exception autocapture enabled. These release-only tasks remain:
 
 1. **Complete and publish the App Store Connect App Privacy answers.** They must match the app and
    every bundled SDK, including PostHog and PHPLCrashReporter: Product Interaction and Other Usage
@@ -379,7 +384,7 @@ PostHog project also has exception autocapture enabled. These release-only tasks
    and both reliability tiles, and remove any temporary crash trigger before external distribution.
 4. **Check the uploaded privacy report and monitoring once App Store processing finishes.** Treat
    Apple's server-side privacy-manifest report as the authoritative aggregation, resolve any warning,
-   and confirm the dashboard's four tiles still query the production project. Retention will remain
+   and confirm the dashboard's five tiles still query the production project. Retention will remain
    sparse until at least a second weekly cohort interval has elapsed; that is expected, not a setup
    failure.
 
@@ -438,6 +443,35 @@ behind it stopped responding to taps** — reported as the dock not working afte
 Clearing `route` on `clerk.user?.id` becoming nil is what dismisses it, because the binding is what
 holds it open.
 
+## One workspace, and the tab-bar decision reversed (2026-09-04)
+
+Adapted from a Canva screen Chris supplied. **This reverses "don't reintroduce a tab bar"**, and
+the reversal is sound rather than convenient: that decision was made because a tab bar tolerates
+three or four items and the tool list was expected to grow. A horizontally scrolling strip has no
+such ceiling, so the reason no longer applies, and the growth it was worried about is exactly what
+made the old route tiresome. Back, Tools, tap was three actions to change lens on one palette.
+
+**The tools are panels, not screens.** `ToolWorkspaceView` keeps every panel mounted and shows one,
+so switching keeps what each had: the SVG you opened, the scene you chose, the Contrast pairing, the
+Library tab. Presenting each as its own cover would tear that down every time, which is why this was
+a refactor and not a restyle.
+
+Three consequences worth knowing:
+
+- **The workspace owns the navigation chrome.** Every tool used to be its own `NavigationStack` with
+  its own Back; inside one workspace that is five nested stacks and a bar belonging to whichever
+  panel happens to be visible. One stack here gives one title that follows the strip and one Back,
+  which is also the only way out.
+- **Two toolbar actions moved into content.** Contrast's Swap now sits beside the pair it acts on,
+  and SVG's "Open another" beside the color list. Both read better there: an action on two colours
+  looks like a navigation control when it is up in the bar next to Back.
+- **Only the visible panel renders its web view.** `isActive` on the SVG and Visualizer panels, so
+  two `WKWebView`s are not drawing behind an invisible panel.
+
+**The Tools sheet is gone.** Once the strip is always present, a separate picker is a second route
+to the same place. The **Extractor stays out of the strip** and keeps its dock `+`: it returns a
+palette and closes, which is an action rather than somewhere you stand.
+
 ## Leaving a tool: Back, and not losing work on the way out
 
 `DesignSystem/SheetChrome.swift` holds both halves.
@@ -445,25 +479,23 @@ holds it open.
 **Tools say Back, on the leading edge, with a chevron.** "Done" was wrong twice over: it sat on the
 *trailing* edge in the older tools and the leading edge in the newer ones, so the control moved
 depending on which tool you opened, and it implies finishing something when nothing here is
-submitted and the palette saves itself continuously. Only the five tools reached from the Tools
-sheet use it; settings screens and nested editors keep Done and Cancel, where those words are true.
+submitted and the palette saves itself continuously. Only the five panels in the tool workspace
+use it; settings screens and nested editors keep Done and Cancel, where those words are true.
 
 Note a toolbar **collapses a `Label` to its icon**, which left a bare chevron and none of the word
 that was the point. It is an explicit `HStack` of image and text for that reason.
 
-**Tools are `fullScreenCover`, not `.sheet`.** A sheet can be swiped away, and on a screen somebody
-is working on that is a way to lose work by accident. A full-screen cover has no interactive
-dismissal at all, so Back is the only way out, which is the point. Relabelling the button was the
-first attempt and did not address this; the presentation is what had to change.
+**The tool workspace is one `fullScreenCover`, not a sheet or five separate covers.** A sheet can be
+swiped away, and on a screen somebody is working on that is a way to lose work by accident. The
+workspace keeps every panel mounted in a `ZStack`; switching visibility preserves an imported SVG,
+Visualizer scene, Library tab, and contrast pairing. Back dismisses the whole workspace.
 
-Sheets are still right for the things that *are* sheets: the Tools picker itself, Share, Account,
-and the editors a tool puts on top of itself.
+Sheets are still right for the things that *are* sheets: Share, Account, and the editors a tool puts
+on top of itself.
 
-**Open the tool on the picker's `onDismiss`, not on selection.** `ToolsSheet` dismisses itself and
-reports the choice in the same turn, and presenting a `fullScreenCover` while a sheet is still going
-away gets the presentation **dropped silently**: the sheet closes and no tool appears. `RootView`
-holds a `pendingTool` and opens it from `onDismiss`, so the order is explicit rather than a race
-between two animations.
+**The strip contains panels, not actions.** Contrast, Health, SVG Recolor, Visualizer, and Library
+belong there because they are places somebody stays and works. Extractor replaces the palette, so it
+stays on the dock's central + button. Share sends the palette elsewhere and also stays on the dock.
 
 **A swipe must not throw away work.** `confirmsDiscard` pairs `interactiveDismissDisabled` with a
 confirmation. With tools now full-screen the first half is belt to braces, but it still matters for
@@ -1424,7 +1456,7 @@ harmless, but a `Text(...)` is the product speaking.
 
 **Cards in a grid must fill their row, not just sit in it.** `LazyVGrid` already gives every row the
 height of its tallest item, but a card that sizes to its own content draws a shorter background and
-the grid looks ragged, which is what happened once the Tools sheet had six entries with summaries of
+the grid looks ragged, which is what happened when the former Tools sheet had six entries with summaries of
 different lengths. `.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)`
 before the background fixes it. Note this is the *opposite* of the onboarding button lesson: a
 greedy frame is right when the container's height is definite, as a grid row's is, and wrong when it
@@ -1604,8 +1636,8 @@ does this in one shared helper; route new endpoints through it rather than repea
   unlimited/no-signup forever on the web app; the iOS versions inherit that rule.
 - Don't add the other 5 web tools (Brand Kit Creator, Palette Health Score, Website
   Analyzer, Scheme Generator, Color Picker from Image) as `Tool` cases without asking —
-  that reopens the MVP scope decision above. `ToolsSheet` makes adding one mechanically
-  trivial, which is exactly why the restraint has to be deliberate.
+  that reopens the MVP scope decision above. Adding a case to `Tool.panels` is mechanically trivial,
+  which is exactly why the restraint has to be deliberate.
 - Don't reintroduce a tab bar or a separate upload/landing screen. The app opens on the
   user's palette by design — see "One palette, many tools" above.
 - Don't invent or hand-calculate WCAG contrast ratios in code comments, sample data, or

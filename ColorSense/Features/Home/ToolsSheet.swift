@@ -1,11 +1,8 @@
 import SwiftUI
 
-/// The tools available on the current palette. Adding a tool should be a matter of adding a case
-/// here and handling it in `RootView` — the sheet lays itself out from `allCases`.
-///
-/// v1 ships two (vault-locked scope: Extractor + WCAG Contrast Checker only). The other web tools
-/// — Brand Kit, Palette Health, Website Analyzer, Scheme Generator — are deliberately absent, not
-/// forgotten; see CLAUDE.md before adding any of them.
+/// Everything that can be launched from the palette. Extractor is intentionally an action rather
+/// than a panel: it replaces the current palette and returns immediately. The remaining cases live
+/// together in `ToolWorkspaceView`, where changing tools preserves each panel's local state.
 enum Tool: String, CaseIterable, Identifiable {
     case extractor
     case contrast
@@ -15,6 +12,8 @@ enum Tool: String, CaseIterable, Identifiable {
     case library
 
     var id: String { rawValue }
+
+    static let panels: [Tool] = [.contrast, .health, .svg, .visualizer, .library]
 
     var title: String {
         switch self {
@@ -50,83 +49,47 @@ enum Tool: String, CaseIterable, Identifiable {
     }
 }
 
-/// Collapsed tool picker, presented from the bottom bar. Kept as a sheet rather than a tab bar so
-/// the list can grow past the three or four items a tab bar tolerates.
-struct ToolsSheet: View {
-    let onSelect: (Tool) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    private var columns: [GridItem] { AdaptiveColumns.cards(for: dynamicTypeSize) }
+/// The persistent lens switcher at the bottom of the shared tool workspace. It scrolls instead of
+/// squeezing labels, so adding a future panel does not make today's five targets too small.
+struct ToolStrip: View {
+    @Binding var selection: Tool
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(Tool.allCases) { tool in
-                        Button {
-                            dismiss()
-                            onSelect(tool)
-                        } label: {
-                            card(for: tool)
+        VStack(spacing: 0) {
+            Divider()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(Tool.panels) { tool in
+                        Button { selection = tool } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: tool.systemImage)
+                                    .font(.system(size: 17, weight: .semibold))
+                                Text(tool.title)
+                                    .font(BrandFont.ui(11, weight: .medium))
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(selection == tool ? Color.white : Color.primary)
+                            .frame(minWidth: 68, minHeight: 48)
+                            .padding(.horizontal, 4)
+                            .background {
+                                Capsule()
+                                    .fill(selection == tool ? BrandColor.coral : Color.clear)
+                            }
+                            .contentShape(.capsule)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(tool.title)
+                        .accessibilityAddTraits(selection == tool ? .isSelected : [])
                     }
                 }
-                .padding(16)
-            }
-            .navigationTitle("Tools")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .safeAreaInset(edge: .top) {
-                Text("All work on the same palette")
-                    .font(BrandFont.ui(13))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 4)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
             }
         }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
-
-    private func card(for tool: Tool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: tool.systemImage)
-                .font(.system(size: 20))
-                .foregroundStyle(BrandColor.coral)
-            Text(tool.title)
-                .font(BrandFont.ui(16, weight: .medium))
-            Text(tool.summary)
-                .font(BrandFont.ui(13))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        // Fill the row, do not just sit in it.
-        //
-        // Cards size to their own content, and the summaries are different lengths, so a row with a
-        // one-line card beside a two-line one drew two different-height backgrounds and the grid
-        // looked ragged. `LazyVGrid` already gives every row the height of its tallest item; this
-        // makes the card take that height instead of leaving a gap under the shorter one. Safe to
-        // stretch here because the row's height is definite, unlike the onboarding buttons that
-        // were sitting next to a greedy hero.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(14)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(.bar)
     }
 }
 
 #Preview {
-    Color.gray.sheet(isPresented: .constant(true)) {
-        ToolsSheet { _ in }
-    }
+    ToolStrip(selection: .constant(.contrast))
 }

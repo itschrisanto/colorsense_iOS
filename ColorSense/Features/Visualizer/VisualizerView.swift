@@ -18,6 +18,9 @@ import SwiftUI
 /// other tool, and the saved palette all change with it. There is no second palette.
 struct VisualizerView: View {
     var isPro = false
+    /// Whether this is the panel currently on screen. Its preview is a `WKWebView`, and rendering
+    /// one behind an invisible panel is real work for nothing.
+    var isActive = true
 
     @Environment(PaletteStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -46,7 +49,6 @@ struct VisualizerView: View {
     private var locked: Bool { scene.isPro && !isPro }
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     preview
@@ -55,11 +57,6 @@ struct VisualizerView: View {
                     sceneList
                 }
                 .padding(20)
-            }
-            .navigationTitle("Visualizer")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                BackToPalette { dismiss() }
             }
             .sheet(item: $suggestion) { found in
                 PaletteSuggestionSheet(
@@ -84,7 +81,6 @@ struct VisualizerView: View {
                     store.replace(at: entry.index, with: updated)
                 }
             }
-        }
     }
 
     private var preview: some View {
@@ -93,8 +89,10 @@ struct VisualizerView: View {
                 // 400x280 is the scenes' own viewBox, so the frame matches what they are drawn in
                 // and nothing is letterboxed.
                 Color(.secondarySystemBackground)
-                SvgPreview(svg: VisualizerSVG.document(scene, palette: hexes))
-                    .accessibilityHidden(true)
+                if isActive {
+                    SvgPreview(svg: VisualizerSVG.document(scene, palette: hexes))
+                        .accessibilityHidden(true)
+                }
                 if locked {
                     lockedOverlay
                 }

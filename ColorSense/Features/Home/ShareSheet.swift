@@ -3,8 +3,8 @@ import SwiftUI
 /// Export options, presented from the dock's share button.
 ///
 /// This was a plain `Menu`, which meant it rendered in iOS's default menu chrome — the one piece
-/// of the app that didn't match anything else. It now mirrors `ToolsSheet` so both dock sheets
-/// look like the same product.
+/// of the app that didn't match anything else. It uses the same card language as the rest of the
+/// product while leaving enough room to explain where each export goes.
 ///
 /// Card summaries carry the destination, because "Save" and "Share" go to genuinely different
 /// places: the account (which syncs to the web Library) versus the device.

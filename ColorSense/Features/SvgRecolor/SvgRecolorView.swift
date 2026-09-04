@@ -14,6 +14,9 @@ import UniformTypeIdentifiers
 struct SvgRecolorView: View {
     let palette: ExtractedPalette
     var isPro = false
+    /// Whether this is the panel currently on screen. Its preview is a `WKWebView`, and rendering
+    /// one behind an invisible panel is real work for nothing.
+    var isActive = true
 
     @Environment(\.dismiss) private var dismiss
 
@@ -32,7 +35,6 @@ struct SvgRecolorView: View {
     }
 
     var body: some View {
-        NavigationStack {
             Group {
                 if !isPro {
                     locked
@@ -40,20 +42,6 @@ struct SvgRecolorView: View {
                     chooser
                 } else {
                     editor
-                }
-            }
-            .navigationTitle("SVG Recolor")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                BackToPalette {
-                    // An open file and its mapping live only on this screen: nothing here has been
-                    // written anywhere, so leaving really does lose it. Ask first.
-                    if source != nil { isConfirmingExit = true } else { dismiss() }
-                }
-                if isPro, source != nil {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Open another") { importerIsPresented = true }
-                    }
                 }
             }
             // On the whole screen, not on the editor.
@@ -85,7 +73,6 @@ struct SvgRecolorView: View {
             ) { result in
                 load(result)
             }
-        }
     }
 
     // MARK: - States
@@ -121,6 +108,14 @@ struct SvgRecolorView: View {
                         .font(BrandFont.ui(14))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack {
+                    // Was a toolbar item; the toolbar belongs to `ToolWorkspace` now and carries
+                    // navigation only.
+                    Button("Open another") { importerIsPresented = true }
+                        .font(BrandFont.ui(13, weight: .medium))
+                    Spacer()
                 }
 
                 HStack {
@@ -185,7 +180,7 @@ struct SvgRecolorView: View {
             // Drawn here rather than in the document, so transparency in the file reads as
             // transparency rather than as whatever the page background happens to be.
             Checkerboard()
-            if let recolored {
+            if isActive, let recolored {
                 SvgPreview(svg: recolored)
                     .padding(12)
                     .accessibilityHidden(true)

@@ -2,13 +2,14 @@ import SwiftUI
 
 /// Leaving a tool.
 ///
-/// Tools are full screens you go *into* from the palette and come back from, so the control says
+/// The shared tool workspace is a full screen you go *into* from the palette and come back from, so
+/// the control says
 /// **Back** and sits on the leading edge with a chevron, which is where a back control belongs on
 /// this platform. "Done" was wrong twice over: it sat on the trailing edge in the older tools and
 /// the leading edge in the newer ones, and it implies finishing something, when nothing here is
 /// submitted and the palette has been saving itself all along.
 ///
-/// This is only for the tools reached from the Tools sheet. Settings screens and nested editors
+/// This is only for the panels in `ToolWorkspaceView`. Settings screens and nested editors
 /// keep Done and Cancel, where those words mean what they say.
 struct BackToPalette: ToolbarContent {
     let action: () -> Void

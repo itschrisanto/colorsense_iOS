@@ -20,9 +20,9 @@ struct WCAGCheckerView: View {
     }
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    swapControl
                     paletteAssigner
                     preview
                     verdict
@@ -61,25 +61,23 @@ struct WCAGCheckerView: View {
                     .presentationDetents([.medium, .large])
                 }
             }
-            .navigationTitle("Contrast")
             // Once per opening rather than on each ratio change: the question is whether the
             // checker gets used at all, not how much the sliders move.
             .onAppear { AnalyticsService.capture(.contrastChecked) }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                BackToPalette { dismiss() }
-                // Trailing, and labelled. Sitting on the leading edge next to Back, a bare
-                // up/down arrow read as a second navigation control rather than as an action on
-                // the two colours, which is what Chris ran into.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { viewModel.swap() } label: {
-                        Label("Swap", systemImage: "arrow.up.arrow.down")
-                            .labelStyle(.titleAndIcon)
-                    }
-                    .accessibilityLabel("Swap text and background colors")
-                }
-            }
+    }
+
+    /// Swap sits in the content, next to the pair it acts on, rather than in the toolbar.
+    ///
+    /// The toolbar now belongs to `ToolWorkspace` and carries navigation only. That is the better
+    /// place for it anyway: an action on two colours reads as an action when it is beside them, and
+    /// as a navigation control when it is up in the bar next to Back.
+    private var swapControl: some View {
+        Button { viewModel.swap() } label: {
+            Label("Swap text and background", systemImage: "arrow.up.arrow.down")
         }
+        .buttonStyle(.secondaryAction)
+        .padding(.horizontal, 20)
+        .accessibilityLabel("Swap text and background colors")
     }
 
     // MARK: - Preview

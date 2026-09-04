@@ -14,10 +14,7 @@ struct RootView: View {
     @AppStorage("onboarding.completed.v1") private var onboardingCompleted = false
     @State private var forcedOnboardingDismissed = false
 
-    @State private var toolsArePresented = false
-    /// The tool chosen in the Tools sheet, opened once that sheet has actually gone. See below.
-    @State private var pendingTool: Tool?
-    @State private var contrastIsPresented = false
+    @State private var toolWorkspaceIsPresented = false
     @State private var accountIsPresented = false
     @State private var isExtracting = false
     @State private var detailSwatch: PaletteColor?
@@ -28,15 +25,11 @@ struct RootView: View {
     /// a branded export occasionally is a smaller cost than handing free users the paid feature
     /// every time the network hiccups.
     @State private var isPro = false
-    @State private var svgIsPresented = false
-    @State private var visualizerIsPresented = false
     @State private var pendingRemoval: PaletteStore.Removal?
     @State private var savePaletteIsPresented = false
     @State private var shareIsPresented = false
-    @State private var libraryIsPresented = false
-    @State private var healthIsPresented = false
-    /// Presents `PhotoSourcePicker`, which is now the only way into an extraction — from the
-    /// dock's + and from the Tools sheet's Extractor alike.
+    /// Presents `PhotoSourcePicker`, which is the only way into extraction. Extractor remains the
+    /// dock's central action rather than a panel because it replaces the palette and returns.
     @State private var sourceChoiceIsPresented = false
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
@@ -93,27 +86,12 @@ struct RootView: View {
         // One screen for both sources — recent photos as a grid with the camera as its first
         // cell — rather than asking which source before showing either. PhotoSourcePicker owns
         // the camera, the library and every permission state between them.
-        // Tools are pages, not sheets.
-        //
-        // A sheet can be swiped away, and on a screen somebody is working on that is a way to lose
-        // work by accident. `fullScreenCover` has no interactive dismissal at all, so `Back` is the
-        // only way out, which is the point. Sheets are still right for the things that *are*
-        // sheets: the Tools picker itself, Share, Account, and the editors a tool puts on top of
-        // itself.
+        // Extraction is an action that replaces the palette, not a panel in the tool workspace.
         .sheet(isPresented: $sourceChoiceIsPresented) {
             PhotoSourcePicker { extract($0) }
         }
-        // Opened on dismissal, not on selection.
-        //
-        // `ToolsSheet` dismisses itself and reports the choice in the same turn, and presenting a
-        // `fullScreenCover` while a sheet is still going away gets the presentation dropped
-        // silently: the sheet closes and no tool appears. Waiting for `onDismiss` makes the order
-        // explicit rather than hoping the two animations do not collide.
-        .sheet(isPresented: $toolsArePresented, onDismiss: openPendingTool) {
-            ToolsSheet { pendingTool = $0 }
-        }
-        .fullScreenCover(isPresented: $contrastIsPresented) {
-            WCAGCheckerView(isPro: isPro, palette: store.palette)
+        .fullScreenCover(isPresented: $toolWorkspaceIsPresented) {
+            ToolWorkspaceView(isPro: isPro)
         }
         .sheet(isPresented: $accountIsPresented) {
             // Signed out, the account screen had nothing on it but a button that opened this —
@@ -129,26 +107,6 @@ struct RootView: View {
         }
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(isPro: isPro, swatch: swatch)
-        }
-        .fullScreenCover(isPresented: $libraryIsPresented) {
-            LibraryView()
-        }
-        .fullScreenCover(isPresented: $healthIsPresented) {
-            PaletteHealthView(
-                palette: store.palette,
-                isPro: isPro,
-                onRemap: { index, swatch in
-                    withAnimation(PaletteMotion.recolor(reduceMotion: reduceMotion)) {
-                        store.replace(at: index, with: swatch)
-                    }
-                }
-            )
-        }
-        .fullScreenCover(isPresented: $svgIsPresented) {
-            SvgRecolorView(palette: store.palette, isPro: isPro)
-        }
-        .fullScreenCover(isPresented: $visualizerIsPresented) {
-            VisualizerView(isPro: isPro)
         }
         .sheet(isPresented: $shareIsPresented) {
             ShareSheet(
@@ -228,7 +186,9 @@ struct RootView: View {
         HStack(spacing: 0) {
             exportMenu
 
-            DockButton("square.grid.2x2", label: "Tools", foreground: dockForeground) { toolsArePresented = true }
+            DockButton("square.grid.2x2", label: "Tools", foreground: dockForeground) {
+                toolWorkspaceIsPresented = true
+            }
 
             Button {
                 plusTaps += 1
@@ -294,8 +254,8 @@ struct RootView: View {
         }
     }
 
-    /// The share button. Opens `ShareSheet` rather than a `Menu` so it matches the Tools sheet
-    /// instead of iOS's default menu chrome.
+    /// The share button. Opens `ShareSheet` rather than a `Menu` so its destinations have room for
+    /// explanatory copy instead of inheriting iOS's compact default menu chrome.
     private var exportMenu: some View {
         Button {
             shareIsPresented = true
@@ -374,24 +334,6 @@ struct RootView: View {
         onboardingCompleted = true
         withAnimation(OnboardingMotion.beat(reduceMotion: reduceMotion)) {
             forcedOnboardingDismissed = true
-        }
-    }
-
-    private func openPendingTool() {
-        guard let tool = pendingTool else { return }
-        pendingTool = nil
-        open(tool)
-    }
-
-    private func open(_ tool: Tool) {
-        AnalyticsService.capture(.toolOpened, ["tool": tool.rawValue])
-        switch tool {
-        case .extractor: sourceChoiceIsPresented = true
-        case .contrast: contrastIsPresented = true
-        case .health: healthIsPresented = true
-        case .svg: svgIsPresented = true
-        case .visualizer: visualizerIsPresented = true
-        case .library: libraryIsPresented = true
         }
     }
 

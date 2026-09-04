@@ -21,31 +21,24 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            // The section picker was a `principal` toolbar item. The toolbar belongs to
+            // `ToolWorkspace` now and carries the tool's name, so this sits at the top of the
+            // content instead, where it is also a bigger target than a bar-height segment.
+            Picker("Library section", selection: $tab) {
+                ForEach(Tab.allCases) { tab in
+                    Text(tab.title).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 10)
+
             Group {
                 switch tab {
                 case .saved: SavedPalettesContent()
                 case .explore: ExploreContent()
                 }
-            }
-            .navigationTitle("Library")
-            .navigationBarTitleDisplayMode(.inline)
-            // Without an explicit surface the bar is translucent glass and the list scrolls
-            // under it, smearing swatch colours through the segmented control. The palette
-            // screen needed the same treatment for the same reason.
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker("Library section", selection: $tab) {
-                        ForEach(Tab.allCases) { tab in
-                            Text(tab.title).tag(tab)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 200)
-                }
-                BackToPalette { dismiss() }
             }
         }
     }

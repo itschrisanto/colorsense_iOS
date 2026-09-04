@@ -25,7 +25,6 @@ struct PaletteHealthView: View {
     }
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     if palette.colors.count < 2 {
@@ -54,12 +53,6 @@ struct PaletteHealthView: View {
                 )
                 .presentationDetents([.medium, .large])
             }
-            .navigationTitle("Palette health")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                BackToPalette { dismiss() }
-            }
-        }
     }
 
     private var notEnoughColors: some View {
