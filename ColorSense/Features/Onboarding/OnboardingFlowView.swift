@@ -332,13 +332,36 @@ struct OnboardingFlowView: View {
         // the wordmark is deliberately `uiFixed`. Inside a `ScrollView` its centring spacers have
         // no height to distribute, so it packed against the top of the screen with her ears cut
         // off by the status bar and two thirds of the display empty underneath.
-        if isAccessibilitySize && beat != .splash {
-            ScrollView {
-                heroContent
-            }
-            .scrollIndicators(.hidden)
-        } else {
+        // A scroll view with a floor, which is the only shape that satisfies both requirements.
+        //
+        // The hero has to *centre* its content when there is room and *give way* when there is not.
+        // A plain `VStack` does the first and not the second: measured on an iPhone SE, the band
+        // stack laid out at 906.5pt on a 667pt screen and the overflow was clipped, taking "Maybe
+        // later" with it. That control is the guideline 5.1.1(v) exit, so this is a submission
+        // blocker rather than a cosmetic one.
+        //
+        // Two things were tried and are recorded so they are not tried again. `ViewThatFits`
+        // cannot see the problem: the hero's centring `Spacer`s make its ideal height compressible,
+        // so the first option always reports that it fits and the content clips instead of
+        // scrolling. And measuring the stack's own height to pick a compact layout measures the
+        // overflow, not the screen — that is where the 906.5 came from.
+        //
+        // `minHeight: proxy.size.height` is the idiom that works. The content is at least a
+        // viewport tall, so the `Spacer`s still centre it on a large phone, and a `ScrollView`
+        // accepts any height, so the action band keeps its own on a small one.
+        //
+        // The splash is exempt: nothing on it scales, and it has no content that could overflow.
+        if beat == .splash {
             heroContent
+        } else {
+            GeometryReader { proxy in
+                ScrollView {
+                    heroContent
+                        .frame(minHeight: proxy.size.height)
+                }
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+            }
         }
     }
 
@@ -642,21 +665,41 @@ struct OnboardingFlowView: View {
     /// same corner. This is the `naming` beat's arrangement, deliberately: `hello`, `naming` and
     /// `keep` now share one vertical order, so the flow reads as a sequence rather than as three
     /// unrelated layouts.
+    /// **Two sizes, chosen by what fits.** On a short screen the full composition does not, and
+    /// the consequence is not cosmetic: a rigid hero squeezes the action band, and the first
+    /// control to go is "Maybe later", the guideline 5.1.1(v) exit. Measured on an iPhone SE it was
+    /// pushed off the display entirely. The compact variant keeps every word and every button on
+    /// screen, and the `ViewThatFits` around the whole hero still scrolls if even that is too tall.
     private var proseHero: some View {
+        keepHero(clipHeight: keepClipHeight)
+    }
+
+    /// The account ask: Lauma on top, the words centred underneath.
+    ///
+    /// She used to be an overlay pinned bottom-trailing with the type ranged left beside her, which
+    /// left the whole upper half of the band empty and made her compete with the headline for the
+    /// same corner. This is the `naming` beat's arrangement, deliberately: `hello`, `naming` and
+    /// `keep` share one vertical order, so the flow reads as a sequence.
+    private func keepHero(
+        clipHeight: CGFloat,
+        headlineSize: CGFloat? = nil,
+        gap: CGFloat = 18,
+        topPadding: CGFloat = 28
+    ) -> some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
             // The animated celebration rather than the still CELEBRATE pose. She skips in and
             // lands in it, which suits a screen whose whole line is "this one is yours".
             // `height` is the whole frame, not Lauma.
-            LaumaClip(clip: .keep, height: keepClipHeight)
+            LaumaClip(clip: .keep, height: clipHeight)
 
             VStack(spacing: 12) {
-                // Larger than `naming`'s headline despite the identical layout: that beat's line
-                // is "Every color has a name." over two long lines, while this one is four short
-                // words, and at 42 it read small against a 236pt mascot.
+                // Larger than `naming`'s headline despite the identical layout: that beat's line is
+                // "Every color has a name." over two long lines, while this is four short words,
+                // and at 42 it read small against a tall mascot.
                 Text(headline)
-                    .font(BrandFont.display(isAccessibilitySize ? 34 : 54))
+                    .font(BrandFont.display(headlineSize ?? (isAccessibilitySize ? 34 : 54)))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -665,19 +708,21 @@ struct OnboardingFlowView: View {
                     .opacity(0.82)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    // A centred paragraph set to the full band width breaks into long ragged
-                    // lines. Capping the measure keeps it reading as a caption under the headline;
-                    // 330 rather than 300 because it saves a line on the signed-out copy.
+                    // A centred paragraph at the full band width breaks into long ragged lines.
+                    // Capping the measure keeps it reading as a caption under the headline; 330
+                    // rather than 300 because it saves a line on the signed-out copy.
                     .frame(maxWidth: 330)
             }
-            .padding(.top, 18)
+            .padding(.top, gap)
 
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
         .foregroundStyle(heroForeground)
         .padding(.horizontal, 22)
-        .padding(.top, 68)
+        // Less than the 68 the text-first beats need to clear the status bar with a headline. She
+        // is the first thing here and carries her own margin inside the frame.
+        .padding(.top, topPadding)
         .padding(.bottom, 8)
     }
 

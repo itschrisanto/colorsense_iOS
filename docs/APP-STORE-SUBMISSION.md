@@ -91,10 +91,19 @@ colorsense.online" and that keeps the About screen's Support row out.
 - [ ] **Authenticate `posthog-cli`.** Copy `Config/PostHogCLI.env.example` to
       `Config/PostHogCLI.env` and fill in a personal API key and project ID. Once Release builds, an
       unauthenticated CLI **fails the build** rather than shipping a release with no symbols.
-- [ ] **Check the layout on an iPhone SE.** Every layout decision through 2026-09-05 was measured on
-      an 874pt simulator. The SE is 667pt. The onboarding account ask only just fits at 874 in its
-      signed-out shape, and the control that overflows first is "Maybe later" — the guideline
-      5.1.1(v) exit. This is the highest-value pre-flight check in this file.
+- [x] **Checked the layout on an iPhone SE (2026-09-05), and it was broken.** Measured: the
+      onboarding band stack laid out at **906.5pt on a 667pt screen** in the account ask's
+      signed-out shape, and the overflow was clipped, taking "Maybe later" with it. That control is
+      the guideline 5.1.1(v) exit, so it was a submission blocker, not a cosmetic one. Fixed by
+      making the hero a scroll view with a floor of its own viewport, so it centres when there is
+      room and gives way when there is not.
+- [ ] **Follow-up: the account ask now scrolls on smaller screens.** The blocker is gone and nothing
+      is unreachable, but the hero is no longer guaranteed to fit, so the last line of the paragraph
+      can sit below the fold. Sizing the composition down until it fits without scrolling is the
+      finishing pass. Do not solve it with `ViewThatFits` or by measuring the stack's own height:
+      both were tried and both fail for reasons recorded in `OnboardingFlowView`.
+- [ ] **Sweep the rest of the flow on an SE.** Only the account ask was checked. `mood` and `plan`
+      carry more content than the beats around them and are the next most likely to overflow.
 - [ ] **Re-check `PrivacyInfo.xcprivacy` if any package version moved.** It covers the whole package
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan
