@@ -402,8 +402,26 @@ struct OnboardingFlowView: View {
         .frame(maxWidth: .infinity)
         .foregroundStyle(heroForeground)
         .padding(.horizontal, 22)
-        .padding(.top, 68)
+        // Less top padding than the text-first beats, which need 68 to clear the status bar with
+        // a headline. She is the first thing here and has her own margin inside the frame, and the
+        // signed-out variant has to fit a 54pt headline, a three-line paragraph and three buttons:
+        // at 68 with a 236pt frame her head was clipped and "Maybe later" fell off the bottom.
+        .padding(.top, 28)
         .padding(.bottom, 8)
+    }
+
+    /// She takes whatever height the action band does not need.
+    ///
+    /// This beat has two shapes. Signed in it offers one Continue; signed out it offers three
+    /// controls, including the "Maybe later" exit that guideline 5.1.1(v) rests on, which is about
+    /// 80pt more. The hero's content is fixed height, so when the two together exceed the screen it
+    /// is the action band that gets squeezed, and the first thing to go is the bottom control. That
+    /// is the one thing on this screen that must never be lost, so she gives way to it instead:
+    /// measured on an 874pt screen, 208 fits the signed-in case comfortably and 150 the signed-out
+    /// one. A taller phone simply leaves more air.
+    private var keepClipHeight: CGFloat {
+        if isAccessibilitySize { return clerk.user != nil ? 132 : 108 }
+        return clerk.user != nil ? 208 : 150
     }
 
     /// One plan, as a card that wears its own colour.
@@ -617,36 +635,50 @@ struct OnboardingFlowView: View {
         }
     }
 
+    /// The account ask: Lauma on top, the words centred underneath.
+    ///
+    /// She used to be an overlay pinned bottom-trailing with the type ranged left beside her, which
+    /// left the whole upper half of the band empty and made her compete with the headline for the
+    /// same corner. This is the `naming` beat's arrangement, deliberately: `hello`, `naming` and
+    /// `keep` now share one vertical order, so the flow reads as a sequence rather than as three
+    /// unrelated layouts.
     private var proseHero: some View {
-        heroStack {
-            headlineText
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
 
-            // The app's own swatch label, in the app's own type, sitting directly under the
-            // claim it is evidence for. Orphaned at the top of the band it read as decoration.
-            if beat == .naming {
-                Text("Bittersweet")
-                    .font(BrandFont.ui(26, weight: .bold))
-                    .padding(.top, 14)
-                Text("#FF6B6B")
-                    .brandMono(15, weight: .medium)
-                    .opacity(0.75)
+            // The animated celebration rather than the still CELEBRATE pose. She skips in and
+            // lands in it, which suits a screen whose whole line is "this one is yours".
+            // `height` is the whole frame, not Lauma.
+            LaumaClip(clip: .keep, height: keepClipHeight)
+
+            VStack(spacing: 12) {
+                // Larger than `naming`'s headline despite the identical layout: that beat's line
+                // is "Every color has a name." over two long lines, while this one is four short
+                // words, and at 42 it read small against a 236pt mascot.
+                Text(headline)
+                    .font(BrandFont.display(isAccessibilitySize ? 34 : 54))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(subhead)
+                    .font(BrandFont.ui(isAccessibilitySize ? 15 : 17))
+                    .opacity(0.82)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // A centred paragraph set to the full band width breaks into long ragged
+                    // lines. Capping the measure keeps it reading as a caption under the headline;
+                    // 330 rather than 300 because it saves a line on the signed-out copy.
+                    .frame(maxWidth: 330)
             }
+            .padding(.top, 18)
 
-            subheadText
-                .padding(.top, 10)
-
-            // `naming` has no picker under it, so a second spacer centres the block in the band
-            // instead of leaving it stranded at the bottom of a tall empty field.
-            if beat == .naming {
-                Spacer(minLength: 12)
-            }
+            Spacer(minLength: 0)
         }
-        .overlay(alignment: .bottomTrailing) {
-            // She stands on the seam between the hero band and the strips below it.
-            LaumaStage(pose: pose, height: laumaHeight)
-                .padding(.trailing, 10)
-                .offset(y: 2)
-        }
+        .frame(maxWidth: .infinity)
+        .foregroundStyle(heroForeground)
+        .padding(.horizontal, 22)
+        .padding(.top, 68)
+        .padding(.bottom, 8)
     }
 
     private func heroStack<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -671,9 +703,6 @@ struct OnboardingFlowView: View {
             .font(BrandFont.ui(15))
             .opacity(0.8)
             .fixedSize(horizontal: false, vertical: true)
-            // Keep the sentence clear of Lauma where she is an overlay pinned bottom-trailing.
-            // On `mood` she is a sibling in an HStack, so the layout already reserves her width.
-            .padding(.trailing, beat == .mood ? 0 : proseInsetForLauma)
     }
 
     private var headline: String {
@@ -700,30 +729,13 @@ struct OnboardingFlowView: View {
         }
     }
 
-    /// Only the beats that place her through the shared overlay read this. `splash`, `hello` and
-    /// `naming` name their own pose inline.
-    private var pose: LaumaPose {
-        switch beat {
-        case .mood: return chosenMood?.pose ?? .guiding
-        case .keep: return .celebrating
-        case .splash, .hello, .naming, .plan: return .welcome
-        }
-    }
-
+    /// Only `mood` still places her through the layout rather than naming her own clip: she is a
+    /// sibling in an HStack there, pointing back at the four choices. Every other beat that shows
+    /// her now names its own clip and height inline, which is why the shared `pose` and the prose
+    /// inset that kept text clear of a bottom-trailing overlay are both gone.
     private var laumaHeight: CGFloat {
         if isAccessibilitySize { return 86 }
-        switch beat {
-        case .mood: return chosenMood == nil ? 150 : 158
-        case .keep: return 176
-        case .splash, .hello, .naming, .plan: return 200
-        }
-    }
-
-    /// Roughly how wide Lauma is at the current pose height. The sprites are trimmed to their
-    /// alpha box and all sit near a 0.62 width-to-height ratio, so one factor covers every pose
-    /// without measuring each one.
-    private var proseInsetForLauma: CGFloat {
-        laumaHeight * 0.62 + 16
+        return chosenMood == nil ? 150 : 158
     }
 
     // MARK: - Mood picker
@@ -774,13 +786,16 @@ struct OnboardingFlowView: View {
                 // screen that has nothing to say yet.
                 Color.clear.frame(height: 1)
 
+            // No skip on either of these. They introduce the product and cost one tap each, and
+            // a second control under a single primary reads as a decision where there is not one.
+            // The two exits that *are* load-bearing stay: `mood` has one because its primary is
+            // disabled until a choice is made, and the account ask and the plan screen keep theirs
+            // for App Review, guidelines 5.1.1(v) and 3.1.1 respectively.
             case .hello:
                 primary("Nice to meet you") { advance(to: .naming) }
-                quiet("Skip for now") { skip() }
 
             case .naming:
                 primary("Show me") { advance(to: .mood) }
-                quiet("Skip for now") { skip() }
 
             case .mood:
                 // Outlined until there is something to keep. A dimmed fill just looked like a
@@ -815,7 +830,17 @@ struct OnboardingFlowView: View {
         .foregroundStyle(actionForeground)
         .padding(.horizontal, 22)
         .padding(.top, 18)
-        .padding(.bottom, 34)
+        // Clearing the home indicator and leaving a visual gap are two different jobs, and one
+        // flat 34 was doing both: measured, the primary's bottom edge landed at 839.7pt on an
+        // 874pt screen, exactly the 34pt safe-area inset, so it sat *on* the indicator with no
+        // breathing room. It went unnoticed while a small "Skip for now" trailed the primary and
+        // absorbed the gap; removing that on `hello` and `naming` exposed it.
+        //
+        // It stays one flat number rather than `safeAreaPadding(.bottom)`, which was tried and
+        // measured: the band stack ignores the safe area for its full-bleed colour, so a child
+        // asking for the inset is told there is almost none and it added 2pt. 54 is the 34pt
+        // indicator plus a 20pt gap, measured on an 874pt screen.
+        .padding(.bottom, 54)
     }
 
     /// The buttons take their height from padding, and pad their label before expanding.

@@ -901,6 +901,39 @@ Load-bearing details:
   visible travelling across the strips. `OnboardingMotion.beat` is damped to 0.96, close to
   critical: a page sliding across should settle, not bounce.
 
+### The account ask is Lauma on top, and she is sized by the buttons (rebuilt 2026-09-05)
+
+`keep` used to pin her bottom-trailing with the type ranged left beside her, which left the entire
+upper half of the band empty and made her compete with the headline for one corner. She is on top
+now with the headline and paragraph centred underneath, which is the `naming` beat's arrangement:
+`hello`, `naming` and `keep` share one vertical order, so the flow reads as a sequence.
+
+She is also **animated**, `LaumaClip(.keep)`, skipping in and landing in a celebration.
+
+**Her height is whatever the action band does not need**, and that is load-bearing rather than
+fussy. This beat has two shapes: signed in it offers one Continue, signed out it offers three
+controls including the "Maybe later" exit that guideline 5.1.1(v) rests on. The hero's content is
+fixed height, so when hero and band together exceed the screen it is the band that gets squeezed and
+the *bottom* control that disappears. That is the one thing here that must never be lost, so
+`keepClipHeight` gives 208 signed in and 150 signed out, measured on an 874pt screen. Enlarging the
+headline to 54 is what first pushed "Maybe later" off the bottom, and it was invisible on the
+developer's own phone because that account was signed in.
+
+**`hello` and `naming` no longer offer "Skip for now".** They introduce the product and cost one tap
+each, and a second control under a single primary reads as a decision where there is not one. Three
+exits stay, and none of them is decoration: `mood` keeps one because its primary is disabled until a
+choice is made and the screen would otherwise have no way out, and the account ask and plan screen
+keep theirs for guidelines 5.1.1(v) and 3.1.1.
+
+**The action band's bottom padding is 54, not 34.** One flat number was doing two jobs, clearing the
+home indicator and being the visual gap, and it went unnoticed for months because a small quiet
+button always trailed the primary and absorbed the difference. Measured once the skips came off: the
+primary's bottom edge sat at 839.7pt on an 874pt screen, exactly the 34pt safe-area inset, so it was
+resting on the indicator. 54 is that inset plus a 20pt gap. `safeAreaPadding(.bottom)` is the
+principled version and does **not** work here, measured: the band stack calls `.ignoresSafeArea()`
+for its full-bleed colour, so a child asking for the inset is told there is almost none and it
+contributed 2pt.
+
 ### Pricing: three plans, and the trial is the highlighted one (2026-09-04)
 
 Asked for directly, and it **reverses** the "Pro Annual is deliberately not offered here" line
@@ -1150,6 +1183,19 @@ Each is cut to 30 frames at roughly 10fps, in `LaumaWave00`...`29`, `LaumaName00
 `LaumaCheer00`...`29`. Same two problems as the blink clip and the same answers: a burned-in "KlingAI 3.0" watermark, painted
 back to white before anything reads the pixels, and a solid white plate rather than alpha, cut by
 flood-filling inward from the border.
+
+**Measure the plate before trusting the watermark detector** (added 2026-09-05, cutting the
+fourth clip). The detector finds ink as "constant across frames AND not the plate", and the second
+half needs a number taken from the clip in hand. On `.keep` the plate is 246-253 rather than white
+and the mark's darkest pixel is 210; the inherited `> 250` test therefore classified the background
+itself as watermark, marking 400,000 pixels across the whole frame. At 240 it finds 772 pixels in a
+box at x=864-1052, y=1020-1058, which is the mark and nothing else. Probe the corners first.
+
+**Check she is inside the frame before cutting.** `.keep` opens with her walking in from off-camera,
+so the first eight frames have her sliced by the source frame edge, and no crop box can recover
+pixels that were never filmed. Re-cutting 30 frames from 0.8s in gives her whole from frame zero and
+leaves `frameCount` and every downstream table untouched, which is much cheaper than a per-clip
+frame count. What it costs is the walk-in; what it keeps is the landing.
 
 **Find the watermark as the part of the picture that never changes, not by position.** It is burned
 in, so it is in every frame at the same place in the same colour, while Lauma moves. The first
