@@ -196,8 +196,8 @@ These were deliberately decided with Chris and shouldn't be re-litigated without
 - **One palette, many tools** (decided 2026-09-02; navigation amended 2026-09-04).
   The app *is* the current palette; there is no landing/upload screen. `PaletteStore` owns that
   palette and the five view-like tools live as state-preserving panels in one full-screen
-  `ToolWorkspaceView`. Its horizontally scrollable strip changes the lens in one tap and can grow
-  without squeezing every label. Extractor remains the dock's central action because it replaces
+  `ToolWorkspaceView`. Its strip changes the lens in one tap and can grow without squeezing every
+  target. Extractor remains the dock's central action because it replaces
   the palette and returns; Share remains a destination action. The old collapsed Tools sheet and
   separate cover per tool were removed because they made changing lenses a three-step round trip.
 - **All chrome is one floating glass dock** (decided 2026-09-02, from a reference Chris supplied).
@@ -242,6 +242,8 @@ ColorSense/
   DesignSystem/      BrandColor.swift, BrandFont.swift, SpeechBubble.swift — brand kit as Swift, not hardcoded per-view
                      CustomColorEditor.swift  the one hex field and colour wheel, shared by every
                                               screen that lets somebody enter a colour
+                     DockChrome.swift  the floating glass bar, shared by the palette dock and the
+                                       tool strip so the two cannot drift apart
                      LaumaStage.swift  the mascot's poses; lives here, not under Onboarding, because
                                        she is brand and is now used across the app
                      LaumaNotice.swift the one way an empty, failed or refused screen speaks
@@ -252,7 +254,7 @@ ColorSense/
   Features/
     Home/
       RootView.swift         Palette screen — bands + Share/Tools/Extractor/Generate/Account dock
-      ToolsSheet.swift       Tool model and horizontally scrollable persistent ToolStrip
+      ToolsSheet.swift       Tool model and the persistent ToolStrip, built from DockChrome
       ToolWorkspaceView.swift Shared state-preserving container for the five tool panels
     Palette/
       PaletteBandsView.swift Full-bleed bands, tap to copy
@@ -458,23 +460,45 @@ The Account sheet now always presents `AccountView`, which always has content, a
 offers sign-in *from* itself. If the form fails to load, the screen behind it still works. **Do not
 re-inline `AuthView` as a top-level sheet**, however few things the account screen has on it.
 
-## The dock and the tool strip are one design
+## The dock and the tool strip are one design, and the dock is the original (settled 2026-09-05)
 
-The dock was icon-only, which was defensible while it was the only bar in the app. The tool
-workspace put a labelled strip in the same position at the bottom of every tool, and two bars in the
-same place that look like different species is worse than either alone. The dock now uses the
-strip's arrangement: icon over an 11pt medium label, same spacing.
+Two bars in the same position on consecutive screens have to be one design; that much was already
+true. What was wrong was the direction. The dock briefly took the strip's arrangement, growing an
+11pt caption under every glyph and a **Photo** label under the **+**. Chris's correction: the palette
+dock is the approved bar and the house standard, so the strip is what changes.
 
-The centre **+** keeps its coral circle and is still the only coral item in the row, per the original
-"exactly one focal point" reasoning, but it carries a label like its neighbours and is called
-**Photo**, which says what it does rather than what shape it is.
+Both are now built from `DesignSystem/DockChrome.swift`, which is the point of that file: one
+`dockCapsule` modifier, one `DockIcon`, one `DockButton`, one `DockButtonStyle`. They are the same
+object rather than two things that resemble each other, so the next change to either lands on both.
+
+- **Icon-only, both of them.** 21pt glyphs, no captions, 46pt coral **+** circle. The strip has no
+  captions either, and the tool's name is the navigation title directly above it, which is the only
+  reason icon-only survives on a row of five abstractions where it would not survive alone.
+- **Ink is the one thing that legitimately differs**, because what is behind the glass differs. The
+  dock floats on the palette and measures black or white against the last swatch through
+  `dockForeground`. Nothing in the workspace sits on a swatch, so the strip uses `.primary`. Do not
+  "unify" this: measuring against a swatch the bar is not on is not consistency.
+- **Selection is ink weight, not a coral fill.** The current tool takes full `.primary` and the rest
+  drop to 55%. The strip used a filled coral capsule, which cannot survive the merge: coral means
+  *the one primary action* on the dock, and the same colour in the same capsule cannot also mean
+  "you are here". The centre **+** stays the only coral thing anywhere in either bar.
+- **The strip fills, then scrolls.** `ViewThatFits` lays five tools out equal-width exactly as the
+  dock lays out its five, and falls through to a scrolling row the moment they no longer fit. That
+  keeps the reason the strip beat a tab bar in the first place — Website, Schemes and Brand Kit are
+  still on the port list, and a fixed capsule would quietly reacquire the ceiling at six or seven.
+- **The workspace reserves the strip's space rather than overlaying it**, via `safeAreaInset`, the
+  same way the dock never covers the last swatch's label. Content still passes behind the glass as
+  it scrolls, which is what makes it read as floating.
+
+Verified in the simulator: palette, Contrast, Library, and the Visualizer in dark mode. 108 tests
+pass.
 
 ## One workspace, and the tab-bar decision reversed (2026-09-04)
 
 Adapted from a Canva screen Chris supplied. **This reverses "don't reintroduce a tab bar"**, and
 the reversal is sound rather than convenient: that decision was made because a tab bar tolerates
-three or four items and the tool list was expected to grow. A horizontally scrolling strip has no
-such ceiling, so the reason no longer applies, and the growth it was worried about is exactly what
+three or four items and the tool list was expected to grow. A strip that scrolls once its items
+stop fitting has no such ceiling, so the reason no longer applies, and the growth it was worried about is exactly what
 made the old route tiresome. Back, Tools, tap was three actions to change lens on one palette.
 
 **The tools are panels, not screens.** `ToolWorkspaceView` keeps every panel mounted and shows one,

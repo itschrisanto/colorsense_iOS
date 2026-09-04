@@ -39,6 +39,9 @@ struct ToolWorkspaceView: View {
             .navigationTitle(selection.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { BackToPalette { dismiss() } }
+            // Reserved, not overlaid: the strip is a floating capsule like the palette dock, and
+            // an inset is what keeps the last row of a panel from sitting permanently underneath
+            // it. Content still passes behind the glass while it scrolls, which is the point.
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 ToolStrip(selection: $selection)
             }

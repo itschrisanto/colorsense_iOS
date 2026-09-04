@@ -164,13 +164,6 @@ struct RootView: View {
     // MARK: - Chrome
 
 
-    /// A single floating glass dock holding every action, so the palette owns the whole screen
-    /// and there is no top bar at all. Adding a photo sits in the centre and is the only coral
-    /// item: it is the app's entry point, and an icon-only row needs one clear focal point or it
-    /// reads as five equal-weight mystery glyphs.
-    ///
-    /// Generate deliberately does *not* also take an accent — two competing highlights in a
-    /// five-item row leaves neither reading as primary.
     /// Black or white against the swatch the dock floats on, by the same WCAG rule the band labels
     /// use — `ContrastCalculator`, via `PaletteColor.legibleForeground`.
     ///
@@ -183,6 +176,17 @@ struct RootView: View {
         store.palette.colors.last?.legibleForeground ?? .primary
     }
 
+    /// A single floating glass dock holding every action, so the palette owns the whole screen
+    /// and there is no top bar at all. Adding a photo sits in the centre and is the only coral
+    /// item: it is the app's entry point, and an icon-only row needs one clear focal point or it
+    /// reads as five equal-weight mystery glyphs.
+    ///
+    /// Generate deliberately does *not* also take an accent — two competing highlights in a
+    /// five-item row leaves neither reading as primary.
+    ///
+    /// It carries no captions. Labelling it was tried, to make it match the tool strip, and the
+    /// match was made in the wrong direction: this is the app's settled bar and the strip is what
+    /// should look like it. `dockCapsule` is where the two now share a definition.
     private var dock: some View {
         HStack(spacing: 0) {
             exportMenu
@@ -195,20 +199,12 @@ struct RootView: View {
                 plusTaps += 1
                 sourceChoiceIsPresented = true
             } label: {
-                VStack(spacing: 4) {
-                    DockIcon("plus", size: 19)
-                        .foregroundStyle(.white)
-                        .rotationEffect(.degrees(Double(plusTaps) * 90))
-                        .animation(ControlMotion.spin(reduceMotion: reduceMotion), value: plusTaps)
-                        .frame(width: 38, height: 38)
-                        .background(BrandColor.coral, in: Circle())
-                    // Labelled like its neighbours, but still the only coral thing in the row:
-                    // an icon-only row needs exactly one focal point and this is it.
-                    Text("Photo")
-                        .font(BrandFont.ui(11, weight: .medium))
-                        .foregroundStyle(dockForeground)
-                        .lineLimit(1)
-                }
+                DockIcon("plus", size: 21)
+                    .foregroundStyle(.white)
+                    .rotationEffect(.degrees(Double(plusTaps) * 90))
+                    .animation(ControlMotion.spin(reduceMotion: reduceMotion), value: plusTaps)
+                    .frame(width: 46, height: 46)
+                    .background(BrandColor.coral, in: Circle())
             }
             .buttonStyle(PlusButtonStyle())
             .frame(maxWidth: .infinity)
@@ -225,24 +221,20 @@ struct RootView: View {
             // Shows the user's own picture once signed in — a generic glyph gives no sense of
             // whose account is attached.
             Button { accountIsPresented = true } label: {
-                VStack(spacing: 4) {
-                    Group {
-                        if let user = clerk.user, user.hasImage, let url = URL(string: user.imageUrl) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                DockIcon("person.circle").foregroundStyle(dockForeground)
-                            }
-                            .frame(width: 24, height: 24)
-                            .clipShape(Circle())
-                            .overlay { Circle().strokeBorder(dockForeground.opacity(0.18), lineWidth: 1) }
-                        } else {
+                Group {
+                    if let user = clerk.user, user.hasImage, let url = URL(string: user.imageUrl) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
                             DockIcon("person.circle").foregroundStyle(dockForeground)
                         }
+                        .frame(width: 26, height: 26)
+                        .clipShape(Circle())
+                        .overlay { Circle().strokeBorder(dockForeground.opacity(0.18), lineWidth: 1) }
+                        .frame(height: 46)
+                    } else {
+                        DockIcon("person.circle").foregroundStyle(dockForeground)
                     }
-                    Text("Account")
-                        .font(BrandFont.ui(11, weight: .medium))
-                        .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
@@ -250,14 +242,7 @@ struct RootView: View {
             .buttonStyle(DockButtonStyle(foreground: dockForeground))
             .accessibilityLabel("Account")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay { Capsule().strokeBorder(dockForeground.opacity(0.14), lineWidth: 0.5) }
-        .shadow(color: .black.opacity(0.2), radius: 14, y: 5)
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .frame(maxWidth: .infinity)
+        .dockCapsule(foreground: dockForeground)
         // Continue the last swatch behind the dock instead of letting a slab of system chrome
         // show through. The palette reads as running to the bottom edge, but the dock still
         // reserves its own space so it never covers that swatch's label.
@@ -277,15 +262,10 @@ struct RootView: View {
             // ink centre sitting 1pt below theirs at the same point size. Measured, not guessed:
             // crop the dock from a screenshot, threshold the dark pixels inside the capsule, and
             // compare each glyph's bounding-box centre.
-            VStack(spacing: 4) {
-                DockIcon("square.and.arrow.up", opticalOffset: -1)
-                Text("Share")
-                    .font(BrandFont.ui(11, weight: .medium))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(dockForeground)
-            .frame(maxWidth: .infinity)
-            .contentShape(.rect)
+            DockIcon("square.and.arrow.up", opticalOffset: -1)
+                .foregroundStyle(dockForeground)
+                .frame(maxWidth: .infinity)
+                .contentShape(.rect)
         }
         .buttonStyle(DockButtonStyle(foreground: dockForeground))
         .accessibilityLabel("Share and export")
@@ -432,101 +412,6 @@ private struct AddColorDestination: Identifiable {
     let index: Int
     let suggestedSwatch: PaletteColor
     var id: Int { index }
-}
-
-/// Dock glyphs normalised into one box.
-///
-/// SF Symbols have different bounding boxes — `square.and.arrow.up` is taller than the others
-/// because of its rising arrow — so setting them at a common font size still leaves them
-/// optically misaligned (measured: 2.7pt apart). Scaling each symbol to fit the same square makes
-/// the centering structural instead of a per-symbol fudge factor.
-///
-/// A view rather than a method on `RootView` so it can be built inside a `Button` label
-/// label closures, which are not main-actor isolated.
-private struct DockIcon: View {
-    let systemName: String
-    var size: CGFloat = 19
-    /// Residual correction for symbols whose *ink* sits off-centre inside their own layout box,
-    /// which scaling cannot fix. Measure it from a screenshot rather than eyeballing: crop the
-    /// dock, threshold the dark pixels, and compare each glyph's bounding-box centre.
-    var opticalOffset: CGFloat = 0
-
-    nonisolated init(_ systemName: String, size: CGFloat = 21, opticalOffset: CGFloat = 0) {
-        self.systemName = systemName
-        self.size = size
-        self.opticalOffset = opticalOffset
-    }
-
-    var body: some View {
-        // Point size, not a normalised box: SF Symbols are drawn to look balanced against each
-        // other at a common point size, and scaling each to fit an identical square undoes that
-        // — it renders tall glyphs like the share icon visibly narrower than the rest.
-        Image(systemName: systemName)
-            .font(.system(size: size, weight: .regular))
-            .offset(y: opticalOffset)
-            .frame(height: 46)
-    }
-}
-
-/// One neutral action in the dock. `.plain` keeps the button's tint from repainting the glyph
-/// system-blue over the glass.
-private struct DockButton: View {
-    let systemName: String
-    let label: String
-    let foreground: Color
-    let action: () -> Void
-
-    init(_ systemName: String, label: String, foreground: Color, action: @escaping () -> Void) {
-        self.systemName = systemName
-        self.label = label
-        self.foreground = foreground
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            // Icon over label, matching `ToolStrip`.
-            //
-            // The dock was icon-only, which was defensible when there were five glyphs and no
-            // other bar to compare it with. Now the tool workspace has a labelled strip along the
-            // bottom of every tool, and two bars in the same position that look like different
-            // species is worse than either alone. Same sizes, same weights, same arrangement.
-            VStack(spacing: 4) {
-                DockIcon(systemName)
-                Text(label)
-                    .font(BrandFont.ui(11, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(.rect)
-        }
-        .buttonStyle(DockButtonStyle(foreground: foreground))
-        .accessibilityLabel(label)
-    }
-}
-
-/// Lights a glass capsule behind whichever dock item is being pressed. iOS has no hover on
-/// touch, so the press state is the only moment there is to acknowledge — without it, an
-/// icon-only dock gives no feedback that a tap landed.
-///
-/// Also stands in for `.plain`: the default style tints its label system-blue, which would
-/// leave the dock glyphs the wrong colour.
-struct DockButtonStyle: ButtonStyle {
-    let foreground: Color
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(foreground)
-            .background {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .overlay { Capsule().strokeBorder(foreground.opacity(0.14), lineWidth: 0.5) }
-                    .opacity(configuration.isPressed ? 1 : 0)
-            }
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: configuration.isPressed)
-    }
 }
 
 #Preview("Extracted") {
