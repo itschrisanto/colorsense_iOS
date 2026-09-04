@@ -156,6 +156,12 @@ struct PhotoSourcePicker: View {
                     }
                 }
             }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                    .onEnded { value in
+                        diagLog("finger down at \(value.startLocation), up at \(value.location)")
+                    }
+            )
         }
     }
 
@@ -184,6 +190,13 @@ struct PhotoSourcePicker: View {
             }
             .frame(width: side, height: side)
             .clipped()
+            .background(
+                GeometryReader { geo in
+                    Color.clear.onAppear {
+                        diagLog("camera cell frame in global space = \(geo.frame(in: .global))")
+                    }
+                }
+            )
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Take a photo")
