@@ -181,7 +181,10 @@ struct PhotoSourcePicker: View {
                 // triggers that prompt, and the picker should not ask before the user shows any
                 // interest in the camera.
                 if cameraAuthorized {
+                    // A UIView has isUserInteractionEnabled on by default, so a representable
+                    // inside a Button's label can take the touch that belongs to the button.
                     CameraPreviewTile(session: preview.session)
+                        .allowsHitTesting(false)
                 }
                 Image(systemName: "camera.fill")
                     .font(.system(size: 24, weight: .medium))
@@ -190,6 +193,9 @@ struct PhotoSourcePicker: View {
             }
             .frame(width: side, height: side)
             .clipped()
+            // `.clipped()` clips drawing, not hit testing. Without an explicit shape the cell's
+            // tappable area is whatever its contents happen to claim.
+            .contentShape(.rect)
             .background(
                 GeometryReader { geo in
                     Color.clear.onAppear {
@@ -339,6 +345,11 @@ private struct AssetThumbnail: View {
         }
         .frame(width: side, height: side)
         .clipped()
+        // `.clipped()` clips drawing, not hit testing, and `scaledToFill` deliberately overflows:
+        // a portrait photo in a square cell is far taller than the cell. Without an explicit
+        // shape that overflow stays tappable, so a thumbnail steals touches from its neighbours —
+        // including the camera cell above it, which is later in the grid and therefore underneath.
+        .contentShape(.rect)
         .onAppear(perform: load)
     }
 
