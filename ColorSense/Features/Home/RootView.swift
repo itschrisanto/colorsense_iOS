@@ -30,7 +30,7 @@ struct RootView: View {
     @State private var shareIsPresented = false
     /// Presents `PhotoSourcePicker`, which is the only way into extraction. Extractor remains the
     /// dock's central action rather than a panel because it replaces the palette and returns.
-    @State private var sourceChoiceIsPresented = false
+    @State private var sourceChoiceIsPresented = ProcessInfo.processInfo.arguments.contains("-photo-source")
     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
     /// also fire on extraction, which resets it to zero — a change, but not a tap.
     @State private var generateTaps = 0
@@ -89,6 +89,12 @@ struct RootView: View {
         // Extraction is an action that replaces the palette, not a panel in the tool workspace.
         .sheet(isPresented: $sourceChoiceIsPresented) {
             PhotoSourcePicker { extract($0) }
+        }
+        .onChange(of: sourceChoiceIsPresented) { was, now in
+            diagLog("sheet binding \(was) -> \(now)")
+        }
+        .onChange(of: isExtracting) { _, now in
+            diagLog("isExtracting -> \(now)")
         }
         .fullScreenCover(isPresented: $toolWorkspaceIsPresented) {
             ToolWorkspaceView(isPro: isPro)
@@ -355,13 +361,17 @@ struct RootView: View {
     /// picker owns loading and reports its own read failures — so there is nothing left to fail
     /// here and no palette-unchanged case to explain.
     private func extract(_ image: UIImage) {
+        diagLog("extract() called")
         Task {
             isExtracting = true
             defer { isExtracting = false }
+            diagLog("extraction starting")
             let extracted = await PhotoExtractor.palette(from: image)
+            diagLog("extraction done, \(extracted.colors.count) colors")
             withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
                 store.replace(with: extracted)
             }
+            diagLog("palette replaced")
         }
     }
 

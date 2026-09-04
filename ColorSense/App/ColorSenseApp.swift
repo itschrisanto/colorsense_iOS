@@ -8,6 +8,7 @@ struct ColorSenseApp: App {
     @State private var paletteStore = PaletteStore()
 
     init() {
+        diagLog("=== launch ===")
         AnalyticsService.start()
 
         // Clerk.shared traps if configure() was never called, so this always runs even with

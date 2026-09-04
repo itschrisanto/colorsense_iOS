@@ -1,6 +1,37 @@
 import SwiftUI
 import UIKit
 
+/// Diagnostic only. Appends to a file in the app container so a reproduction does not depend on a
+/// console session staying attached — backgrounding the app ends the console, which was swallowing
+/// every trace. Pulled afterwards with `devicectl device copy from --domain-type appDataContainer`.
+func diagLog(_ message: String) {
+    let line = "\(Date().formatted(date: .omitted, time: .standard))  \(message)  mem=\(diagFootprintMB())MB\n"
+    FileHandle.standardError.write(line.data(using: .utf8)!)
+    guard let dir = try? FileManager.default.url(
+        for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ) else { return }
+    let url = dir.appending(path: "diag.log")
+    if let handle = try? FileHandle(forWritingTo: url) {
+        handle.seekToEndOfFile()
+        handle.write(line.data(using: .utf8)!)
+        try? handle.close()
+    } else {
+        try? line.data(using: .utf8)!.write(to: url)
+    }
+}
+
+func diagFootprintMB() -> Int {
+    var info = task_vm_info_data_t()
+    var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+    let result = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+            task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+        }
+    }
+    guard result == KERN_SUCCESS else { return -1 }
+    return Int(info.phys_footprint / (1024 * 1024))
+}
+
 /// Camera capture for the Extractor.
 ///
 /// SwiftUI has no camera picker of its own — `PhotosPicker` only reaches the library — so this
@@ -22,6 +53,7 @@ struct CameraPicker: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
+        diagLog("CameraPicker.makeUIViewController")
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.delegate = context.coordinator

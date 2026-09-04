@@ -80,16 +80,38 @@ struct PhotoSourcePicker: View {
             }
         }
         .task { await requestAccess() }
-        .onAppear { preview.start() }
-        .onDisappear { preview.stop() }
+        .task {
+            diagLog("picker task, args=\(ProcessInfo.processInfo.arguments)")
+            guard ProcessInfo.processInfo.arguments.contains("-auto-camera") else { return }
+            try? await Task.sleep(for: .seconds(8))
+            diagLog("auto firing camera tap, status=\(status.rawValue) authorized=\(cameraAuthorized)")
+            preview.stop {
+                diagLog("auto stop completed")
+                cameraIsPresented = true
+                diagLog("auto cameraIsPresented set")
+            }
+        }
+        .onAppear {
+            diagLog("picker onAppear")
+            preview.start()
+        }
+        .onDisappear {
+            diagLog("picker onDisappear")
+            preview.stop()
+        }
         .onChange(of: fallbackItem) { _, item in
             guard let item else { return }
             Task { await loadFallback(item) }
         }
-        .fullScreenCover(isPresented: $cameraIsPresented, onDismiss: { preview.start() }) {
+        .fullScreenCover(isPresented: $cameraIsPresented, onDismiss: {
+            diagLog("camera cover dismissed")
+            preview.start()
+        }) {
             CameraPicker { image in
                 AnalyticsService.capture(.paletteExtracted, ["source": "camera"])
+                diagLog("image delivered \(Int(image.size.width))x\(Int(image.size.height)), calling onImage")
                 onImage(image)
+                diagLog("onImage returned, dismissing picker")
                 dismiss()
             }
             .ignoresSafeArea()
@@ -121,7 +143,13 @@ struct PhotoSourcePicker: View {
     private func cameraCell(side: CGFloat) -> some View {
         // Stops the preview and waits for the camera to actually be released before opening the
         // capture screen. Presenting first would leave two things reaching for one camera.
-        Button { preview.stop { cameraIsPresented = true } } label: {
+        Button {
+            diagLog("camera cell TAPPED")
+            preview.stop {
+                diagLog("stop done, presenting camera")
+                cameraIsPresented = true
+            }
+        } label: {
             ZStack {
                 Color.black
                 // Live only when the camera is already permitted — starting a session is what
@@ -196,6 +224,7 @@ struct PhotoSourcePicker: View {
     }
 
     private func choose(_ asset: PHAsset) {
+        diagLog("photo chosen, requesting image")
         isLoadingSelection = true
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = true   // the asset may live in iCloud, not on the device
