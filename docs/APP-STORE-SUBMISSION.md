@@ -232,6 +232,55 @@ attribution or tracking SDKs of any kind.
 One claim needs qualifying rather than fixing: crash reports carry the exception's own message,
 which we do not control, so "crash reports never contain user content" must not be said.
 
+## 8c. Deferred until Apple Developer access (agreed with Replit, 2026-09-05)
+
+**Do not act on any of this now.** The privacy work below is deliberately parked until the app is
+otherwise ready to submit and the developer account exists. `docs/PRIVACY-AUDIT.md` is the
+**baseline**, not the final word: it audited a development build, and the audit is to be re-run
+against the final archived Release build and its dependency lockfile.
+
+**1. Fix account deletion (blocker).** Add a *verified* Clerk `user.deleted` webhook to the
+backend: match the Clerk user to the local Postgres user, delete that row, and confirm the existing
+`saved_palettes.user_id` cascade removes the palettes. Webhook retries must be idempotent, and
+unsigned or invalid requests must be rejected. Test deletion from **both** the iOS app and the
+website, and confirm the Clerk identity, the local profile, the saved palettes and every other
+account-linked row are actually gone. **Preserve the `/api/saved-palettes` and `/api/me` response
+contracts.** Publish no deletion claim until this is proved end to end.
+
+**2. Sign in with Apple, if it ships.** Provision the capability, confirm the production bundle id,
+entitlements, certificate and profile, configure the Clerk integration and callback, then test new
+sign-in, returning sign-in, cancellation, relay email and deletion — **in an archived Release build,
+not a development one**. If it will not ship, say "supported third-party sign-in providers"
+everywhere and name Apple nowhere.
+
+**3. Re-run the audit against the final build.** Reconfirm each finding rather than trusting this
+one: photos and camera images stay on device, extraction and WCAG stay local, no image data,
+metadata, thumbnail or filename is uploaded, PostHog stays pseudonymous and unlinked from Clerk, the
+opt-out still disables the SDK before initialisation and persists, autocapture / screen tracking /
+session replay / lifecycle / surveys / push all remain off, the event allowlist and properties have
+not expanded, crash diagnostics still follow the opt-out, no advertising, attribution, IDFA, ATT or
+new tracking SDK has appeared, and deletion now really removes server-side data. Flag anything that
+cannot be proved from the final implementation.
+
+**4. Finalise disclosures, in this order.** Only after the audit passes: update the policy with the
+iOS wording, add the deletion paragraph **only** once deletion is verified end to end, name Sign in
+with Apple only if it is live in the submitted build, make the website and in-app deletion copy
+describe the same verified behaviour, complete the App Store Connect questionnaire from the final
+build's actual collection, and confirm the privacy manifest and permission strings match.
+
+**5. Production readiness.** Confirm the latest backend is published; confirm the production
+database carries the composite saved-palettes index on `(user_id, created_at DESC)`; verify account
+creation, palette sync, single-palette deletion, full account deletion, analytics opt-out and
+authentication against production. **No test may modify real customer data without explicit
+approval.**
+
+**Final report to produce at that point:** files changed, the implemented deletion lifecycle,
+evidence server-side data is removed, Sign in with Apple status, final PostHog configuration and
+event list, final privacy-label recommendations, copy-ready policy wording, unresolved risks, and a
+clear "safe to submit" or "not safe to submit". Do not weaken an existing privacy promise silently:
+if one cannot be implemented or verified, stop and report the discrepancy before changing the
+public wording.
+
 ## 9. Outside this repo
 
 - [ ] **Add a Clerk `user.deleted` webhook to the api-server** so deleting an account actually
@@ -243,5 +292,13 @@ which we do not control, so "crash reports never contain user content" must not 
       Parked until the Replit side is being touched anyway.
 - [ ] **Add "Leave a review" to the About screen** the day the App Store record exists, with the
       real App ID. It is deliberately absent because it would currently go nowhere.
+- [ ] **Reconcile the vault with what iOS actually is** (parked 2026-09-05, not started). It has
+      not caught up with: seven tools shipping, Website Color Analyzer deferred, Brand Kit Creator
+      waiting on demand rather than on a slot in the port order, and the Schemes tool landing. This
+      matters beyond tidiness — the onboarding Pro pitch promised brand kits and AI harmonies
+      because it was written from the web's feature list, and the vault is the source those lists
+      come from.
+- [ ] **Capture the App Store screenshots** at 6.9" (1320 x 2868), per section 7. Can be done
+      without the developer account, from a simulator.
 - [ ] **Reconcile the trial with the vault.** Section 3 lists Pro Monthly, Pro Annual and the Pro
       Pass with no trial of any length, and the app shows one.
