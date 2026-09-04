@@ -473,7 +473,13 @@ object rather than two things that resemble each other, so the next change to ei
 
 - **Icon-only, both of them.** 21pt glyphs, no captions, 46pt coral **+** circle. The strip has no
   captions either, and the tool's name is the navigation title directly above it, which is the only
-  reason icon-only survives on a row of five abstractions where it would not survive alone.
+  reason icon-only survives on a row of five abstractions where it would not survive alone. It does
+  raise the bar on the glyphs: SVG Recolor moved from `wand.and.stars` to `paintbrush.pointed`,
+  because with no caption the first said "AI magic" rather than "recolor", and the Visualizer's
+  Improve button inside the same workspace already uses it.
+- **The glyphs do not scale with Dynamic Type, deliberately.** A bar keeps its height; iOS's own
+  tab bars do the same. This is the opposite of the rule for anything inside a panel, which must
+  scale — see the Explore search field under the accessibility sweep.
 - **Ink is the one thing that legitimately differs**, because what is behind the glass differs. The
   dock floats on the palette and measures black or white against the last swatch through
   `dockForeground`. Nothing in the workspace sits on a swatch, so the strip uses `.primary`. Do not
@@ -645,6 +651,12 @@ Results of the sweep, all confirmed on a physical iPhone 17 Pro Max:
 - **Checked and found fine, so do not "fix" them:** the Conversion and Harmonies grids in
   `ColorDetailView`, and the saved-colors grid in `AddColorView`. They keep fixed column counts on
   purpose — `AdaptiveColumns` is not needed there.
+- Added 2026-09-05: **the Explore search field scales.** It was built with a fixed 44pt height and
+  fixed-size 15pt glyphs while its text used `BrandFont.ui`, which scales — so at accessibility
+  sizes the placeholder clipped against the box and a 15pt magnifying glass sat beside 30pt type.
+  It is `@ScaledMetric` for both now, with 44 kept as a *minimum* because it is also a tap target.
+  The general rule: `BrandFont.ui` and `BrandFont.display` scale on their own, so any fixed
+  `.frame(height:)` or `.font(.system(size:))` sitting next to them will fall behind.
 - Added 2026-09-03: **`Move up` / `Move down` accessibility actions on each band.** Drag-to-reorder
   had no VoiceOver equivalent at all, so the palette's order was simply not editable with the
   screen reader on — the same gap the delete action had already been given a fix for. Onboarding

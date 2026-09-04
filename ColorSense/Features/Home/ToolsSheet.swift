@@ -31,7 +31,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .extractor: return "eyedropper"
         case .contrast: return "circle.lefthalf.filled"
         case .health: return "heart.text.square"
-        case .svg: return "wand.and.stars"
+        // Not `wand.and.stars`: with no caption under it that glyph says "AI magic" rather than
+        // "recolor", and the Visualizer's Improve button inside this same workspace already uses it.
+        case .svg: return "paintbrush.pointed"
         case .visualizer: return "rectangle.3.group"
         case .library: return "books.vertical"
         }

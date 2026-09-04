@@ -56,6 +56,11 @@ private struct ExploreContent: View {
     @State private var isLoading = false
     @State private var loadError: SavedPaletteService.SaveError?
     @State private var query = ""
+    /// The field's box and its glyphs have to grow with the text inside them. A fixed 44pt height
+    /// clipped the placeholder at accessibility sizes, and fixed-size symbols left a 15pt
+    /// magnifying glass beside 30pt type. 44 stays the *minimum*, because it is also a tap target.
+    @ScaledMetric(relativeTo: .body) private var searchHeight: CGFloat = 44
+    @ScaledMetric(relativeTo: .body) private var searchGlyph: CGFloat = 15
 
     var body: some View {
         List {
@@ -125,7 +130,7 @@ private struct ExploreContent: View {
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 15))
+                .font(.system(size: searchGlyph))
                 .foregroundStyle(.secondary)
 
             TextField("Search palettes", text: $query)
@@ -141,9 +146,9 @@ private struct ExploreContent: View {
                     Task { await load(nextPage: false) }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 15))
+                        .font(.system(size: searchGlyph))
                         .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
+                        .frame(minWidth: 44, minHeight: 44)
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
@@ -152,10 +157,13 @@ private struct ExploreContent: View {
         }
         .padding(.leading, 12)
         .padding(.trailing, query.isEmpty ? 12 : 0)
-        .frame(height: 44)
+        .padding(.vertical, 8)
+        .frame(minHeight: searchHeight)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 20)
         .padding(.bottom, 10)
+        // The bands must bleed; a control near an edge must not. See CLAUDE.md on
+        // `.background()` defaulting its safe-area edges to `.all`.
         .background(Color(.systemBackground), ignoresSafeAreaEdges: [])
     }
 
