@@ -9,11 +9,12 @@ enum Tool: String, CaseIterable, Identifiable {
     case health
     case svg
     case visualizer
+    case schemes
     case library
 
     var id: String { rawValue }
 
-    static let panels: [Tool] = [.contrast, .health, .svg, .visualizer, .library]
+    static let panels: [Tool] = [.contrast, .health, .svg, .visualizer, .schemes, .library]
 
     var title: String {
         switch self {
@@ -22,6 +23,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .health: return "Health"
         case .svg: return "SVG Recolor"
         case .visualizer: return "Visualizer"
+        case .schemes: return "Schemes"
         case .library: return "Library"
         }
     }
@@ -35,6 +37,7 @@ enum Tool: String, CaseIterable, Identifiable {
         // "recolor", and the Visualizer's Improve button inside this same workspace already uses it.
         case .svg: return "paintbrush.pointed"
         case .visualizer: return "rectangle.3.group"
+        case .schemes: return "circle.hexagongrid"
         case .library: return "books.vertical"
         }
     }
@@ -46,6 +49,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .health: return "Score the palette and get a report"
         case .svg: return "Recolor an SVG with this palette"
         case .visualizer: return "See the palette in real designs"
+        case .schemes: return "Build a palette from color theory"
         case .library: return "Your saved palettes and the curated library"
         }
     }

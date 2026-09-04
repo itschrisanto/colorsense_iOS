@@ -275,6 +275,8 @@ ColorSense/
       LaumaClip.swift           Her animated clips, cut from video; first run only
       LaumaBlink.swift          The splash blink, ten frames driven by the clock
       OnboardingMood.swift      The four starting palettes offered in beat three
+    Schemes/
+      SchemeView.swift  The colour wheel, the six harmonies, and Use as my palette
     SvgRecolor/
       SvgRecolorView.swift  Open an SVG, map its colours onto the palette, export it
       SvgPreview.swift      WKWebView, JavaScript off, no network: iOS cannot draw SVG natively
@@ -316,12 +318,39 @@ Constraints worth knowing before promising anything:
 - Sign-in and account-saved palettes *do* work on device — the real production
   `CLERK_PUBLISHABLE_KEY` is in `Config/Secrets.xcconfig` and was verified end to end.
 
+## Schemes, and the second harmony port (added 2026-09-05)
+
+`Services/ColorScheme.swift` ports `getHarmonyColors()` from the web's `SchemePanel.tsx`. It is
+**free**, matching the web, where only `website` and `svgrecolor` carry `pro: true`.
+
+**It is not `ColorHarmony`, and the two must never be merged.** The web has both and they answer
+differently on purpose. `ColorHarmony` ports `harmoniesFor()` in `labColor.ts`, which is what the
+swatch detail screen shows: it guards near-greys (saturation under 0.05 becomes s 0.6, l 0.55) and
+clamps rotated lightness to 0.12...0.88. The scheme generator does neither, hands the base back
+untouched rather than recomputing it, adds a `tetradic` the other has not, and builds
+`monochromatic` from five lightness steps rather than a hue rotation. `ColorSchemeTests` pins both
+behaviours, including a test asserting the two ports *disagree* on grey, so a future tidy-up that
+merges them fails rather than silently changing the web's answers.
+
+The expected values in those tests were produced by transcribing the panel's own `hexToHsl`,
+`hslToHex` and `getHarmonyColors` and running them, not by reading them off the Swift.
+
+**The wheel carries the idea, not just the colour.** Partners are marked where they fall, so
+complementary reads as opposite and triadic as evenly spaced. Picking always commits at lightness
+0.5 because the wheel has no axis for it, which is exactly what the web does and why the hex button
+sits beside it. That hex goes through `CustomColorEditor` rather than a second field, per the rule
+that the app has exactly one.
+
+Note this took the tool strip to six items and it still lays out flat, which is the `ViewThatFits`
+arrangement doing its job rather than luck.
+
 ## Submission scope, decided 2026-09-05
 
 `docs/APP-STORE-SUBMISSION.md` is the checklist and the drafted App Store Connect metadata. It is
 the file to work from at submission; this section records only the decisions behind it.
 
-- **Six tools ship**: Extractor, Contrast, Health, SVG Recolor, Visualizer, Library.
+- **Seven tools ship**: Extractor, Contrast, Health, SVG Recolor, Visualizer, Schemes, Library.
+  Schemes was asked for directly on 2026-09-05 and landed the same day.
 - **Website Color Analyzer is deferred**, and **Brand Kit Creator waits for demand** rather than for
   a slot in the port order. Both amend the 2026-09-04 order, and the vault should say so.
 - **The onboarding plan beat stays in the flow**, and hiding it was declined. It offers a trial and
@@ -1433,6 +1462,7 @@ disagreeing about the same hex.
 | `ContrastCalculator.suggestFix` | `suggestFix()` in `lib/wcagContrast.ts` | 0.01 lightness steps, hue and saturation held, direction away from the anchor, 8-bit quantised before each measurement |
 | `Services/ColorBlindness.swift` | `lib/colorBlind.ts` | Machado 2009 matrices at severity 1.0, applied in linear sRGB; ΔE < 14 confusable threshold |
 | `Services/VisualizerScenes.swift` | `VisualizerPanel.tsx` | All eleven scenes' geometry, the `readableOn` luminance rule, `toFive` padding, and which scenes are Pro |
+| `Services/ColorScheme.swift` | `getHarmonyColors()` in `components/lab/panels/SchemePanel.tsx` | The six schemes and their exact offsets, the five monochromatic lightness steps and their clamps, the base being returned untouched, and the Randomize ranges |
 | `Services/SvgRecolor.swift` | `SvgRecolorPanel.tsx` | `normalizeColor`, `extractColorsFromSvg`, `colorVariants`, `recolorSvg`: which properties are read, the four skipped non-colours, shorthand expansion, and the `found[i] -> palette[i % n]` mapping |
 | `Services/SavedPaletteService.swift` | `routes/saved-palettes.ts`, `lib/savedPalettes.ts` | `POST /api/saved-palettes`, `{name, colors}`, uppercase `#RRGGBB`, Bearer token, ≤20 colors |
 

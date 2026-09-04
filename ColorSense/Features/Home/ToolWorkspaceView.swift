@@ -82,6 +82,8 @@ struct ToolWorkspaceView: View {
             SvgRecolorView(palette: store.palette, isPro: isPro, isActive: selection == .svg)
         case .visualizer:
             VisualizerView(isPro: isPro, isActive: selection == .visualizer)
+        case .schemes:
+            SchemeView(palette: store.palette)
         case .library:
             LibraryView()
         case .extractor:
