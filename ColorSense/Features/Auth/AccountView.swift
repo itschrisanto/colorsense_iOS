@@ -13,6 +13,7 @@ struct AccountView: View {
     @State private var analyticsEnabled = !AnalyticsService.isOptedOut
 
     @State private var route: Route?
+    @State private var authIsPresented = false
 
     private enum Route: String, Identifiable {
         case savedPalettes, savedColors, profile, subscription, affiliate, about, deleteAccount
@@ -25,6 +26,8 @@ struct AccountView: View {
                 VStack(spacing: 20) {
                     if let user = clerk.user {
                         profileHeader(user)
+                    } else {
+                        signedOutHeader
                     }
 
                     // Everything below needs a user: there is nothing to show and no token to
@@ -88,6 +91,12 @@ struct AccountView: View {
             .onChange(of: clerk.user?.id) { _, id in
                 if id == nil { route = nil }
             }
+            .sheet(isPresented: $authIsPresented) {
+                AuthView()
+                    // Same local mark: Clerk's dashboard logo is a light-only bitmap on an opaque
+                    // white canvas, which looks wrong in dark mode.
+                    .clerkAppIconView { ColorSenseAuthLogo() }
+            }
             .sheet(item: $route) { destination in
                 switch destination {
                 case .savedPalettes: SavedPalettesView()
@@ -100,6 +109,30 @@ struct AccountView: View {
                 }
             }
         }
+    }
+
+    /// What a signed-out reader sees where the profile would be.
+    ///
+    /// Sign-in is reached from *here* rather than by opening Clerk's `AuthView` in place of this
+    /// screen. If that form fails to load, this screen is still behind it, still has content, and
+    /// still dismisses, so a failed sign-in can never leave somebody with nothing to press.
+    private var signedOutHeader: some View {
+        VStack(spacing: 12) {
+            ColorSenseAuthLogo()
+            Text("Sign in to keep your palettes")
+                .font(BrandFont.ui(17, weight: .bold))
+                .multilineTextAlignment(.center)
+            Text("Saved palettes and colors sync with colorsense.online. The Extractor and the WCAG checker never need an account.")
+                .font(BrandFont.ui(13))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Sign in or create an account") { authIsPresented = true }
+                .buttonStyle(.primaryAction)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
     }
 
     /// Avatar, name and email. Replaces Clerk's `UserButton`, whose avatar is toolbar-sized —

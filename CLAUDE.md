@@ -443,6 +443,32 @@ behind it stopped responding to taps** — reported as the dock not working afte
 Clearing `route` on `clerk.user?.id` becoming nil is what dismisses it, because the binding is what
 holds it open.
 
+## Never present `AuthView` as a screen of its own (fixed 2026-09-04)
+
+Tapping Account while signed out used to present Clerk's `AuthView` directly, to save the tap
+through a screen that had little else on it. **That saving is what broke it.** `AuthView` derives
+every field from `clerk.environment?.enabledFirstFactorAttributes`, so a nil environment renders an
+empty sheet with no error, nothing to press, and the dock behind it unreachable. This file already
+warned about that symptom under "Auth"; the fix had simply been undone by an optimisation.
+
+A nil environment is not hypothetical here. The whole proxy exists because `clerk.colorsense.online`
+does not complete a TLS handshake, so any hiccup in loading the environment produces exactly this.
+
+The Account sheet now always presents `AccountView`, which always has content, always dismisses, and
+offers sign-in *from* itself. If the form fails to load, the screen behind it still works. **Do not
+re-inline `AuthView` as a top-level sheet**, however few things the account screen has on it.
+
+## The dock and the tool strip are one design
+
+The dock was icon-only, which was defensible while it was the only bar in the app. The tool
+workspace put a labelled strip in the same position at the bottom of every tool, and two bars in the
+same place that look like different species is worse than either alone. The dock now uses the
+strip's arrangement: icon over an 11pt medium label, same spacing.
+
+The centre **+** keeps its coral circle and is still the only coral item in the row, per the original
+"exactly one focal point" reasoning, but it carries a label like its neighbours and is called
+**Photo**, which says what it does rather than what shape it is.
+
 ## One workspace, and the tab-bar decision reversed (2026-09-04)
 
 Adapted from a Canva screen Chris supplied. **This reverses "don't reintroduce a tab bar"**, and

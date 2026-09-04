@@ -93,17 +93,18 @@ struct RootView: View {
         .fullScreenCover(isPresented: $toolWorkspaceIsPresented) {
             ToolWorkspaceView(isPro: isPro)
         }
+        // Always `AccountView`, never `AuthView` directly.
+        //
+        // Signed out this used to present Clerk's `AuthView` straight away, to save a tap. That
+        // saving is what broke it: `AuthView` derives every field from
+        // `clerk.environment?.enabledFirstFactorAttributes`, so a nil environment renders an empty
+        // screen with no error and nothing to press, and the dock behind it is unreachable. The
+        // Clerk environment failing to load is not hypothetical here; the whole proxy exists
+        // because that host does not complete a TLS handshake.
+        //
+        // `AccountView` always has content, offers sign-in itself, and can always be dismissed.
         .sheet(isPresented: $accountIsPresented) {
-            // Signed out, the account screen had nothing on it but a button that opened this —
-            // so open it directly and save the extra tap.
-            if clerk.user == nil {
-                AuthView()
-                    // Same local mark AccountView used: Clerk's dashboard logo is a light-only
-                    // bitmap on an opaque white canvas, which looks wrong in dark mode.
-                    .clerkAppIconView { ColorSenseAuthLogo() }
-            } else {
-                AccountView()
-            }
+            AccountView()
         }
         .sheet(item: $detailSwatch) { swatch in
             ColorDetailView(isPro: isPro, swatch: swatch)
@@ -194,12 +195,20 @@ struct RootView: View {
                 plusTaps += 1
                 sourceChoiceIsPresented = true
             } label: {
-                DockIcon("plus", size: 21)
-                    .foregroundStyle(.white)
-                    .rotationEffect(.degrees(Double(plusTaps) * 90))
-                    .animation(ControlMotion.spin(reduceMotion: reduceMotion), value: plusTaps)
-                    .frame(width: 46, height: 46)
-                    .background(BrandColor.coral, in: Circle())
+                VStack(spacing: 4) {
+                    DockIcon("plus", size: 19)
+                        .foregroundStyle(.white)
+                        .rotationEffect(.degrees(Double(plusTaps) * 90))
+                        .animation(ControlMotion.spin(reduceMotion: reduceMotion), value: plusTaps)
+                        .frame(width: 38, height: 38)
+                        .background(BrandColor.coral, in: Circle())
+                    // Labelled like its neighbours, but still the only coral thing in the row:
+                    // an icon-only row needs exactly one focal point and this is it.
+                    Text("Photo")
+                        .font(BrandFont.ui(11, weight: .medium))
+                        .foregroundStyle(dockForeground)
+                        .lineLimit(1)
+                }
             }
             .buttonStyle(PlusButtonStyle())
             .frame(maxWidth: .infinity)
@@ -216,20 +225,24 @@ struct RootView: View {
             // Shows the user's own picture once signed in — a generic glyph gives no sense of
             // whose account is attached.
             Button { accountIsPresented = true } label: {
-                Group {
-                    if let user = clerk.user, user.hasImage, let url = URL(string: user.imageUrl) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
+                VStack(spacing: 4) {
+                    Group {
+                        if let user = clerk.user, user.hasImage, let url = URL(string: user.imageUrl) {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                DockIcon("person.circle").foregroundStyle(dockForeground)
+                            }
+                            .frame(width: 24, height: 24)
+                            .clipShape(Circle())
+                            .overlay { Circle().strokeBorder(dockForeground.opacity(0.18), lineWidth: 1) }
+                        } else {
                             DockIcon("person.circle").foregroundStyle(dockForeground)
                         }
-                        .frame(width: 26, height: 26)
-                        .clipShape(Circle())
-                        .overlay { Circle().strokeBorder(dockForeground.opacity(0.18), lineWidth: 1) }
-                        .frame(height: 46)
-                    } else {
-                        DockIcon("person.circle").foregroundStyle(dockForeground)
                     }
+                    Text("Account")
+                        .font(BrandFont.ui(11, weight: .medium))
+                        .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity)
                 .contentShape(.rect)
@@ -264,10 +277,15 @@ struct RootView: View {
             // ink centre sitting 1pt below theirs at the same point size. Measured, not guessed:
             // crop the dock from a screenshot, threshold the dark pixels inside the capsule, and
             // compare each glyph's bounding-box centre.
-            DockIcon("square.and.arrow.up", opticalOffset: -1)
-                .foregroundStyle(dockForeground)
-                .frame(maxWidth: .infinity)
-                .contentShape(.rect)
+            VStack(spacing: 4) {
+                DockIcon("square.and.arrow.up", opticalOffset: -1)
+                Text("Share")
+                    .font(BrandFont.ui(11, weight: .medium))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(dockForeground)
+            .frame(maxWidth: .infinity)
+            .contentShape(.rect)
         }
         .buttonStyle(DockButtonStyle(foreground: dockForeground))
         .accessibilityLabel("Share and export")
@@ -467,9 +485,21 @@ private struct DockButton: View {
 
     var body: some View {
         Button(action: action) {
-            DockIcon(systemName)
-                .frame(maxWidth: .infinity)
-                .contentShape(.rect)
+            // Icon over label, matching `ToolStrip`.
+            //
+            // The dock was icon-only, which was defensible when there were five glyphs and no
+            // other bar to compare it with. Now the tool workspace has a labelled strip along the
+            // bottom of every tool, and two bars in the same position that look like different
+            // species is worse than either alone. Same sizes, same weights, same arrangement.
+            VStack(spacing: 4) {
+                DockIcon(systemName)
+                Text(label)
+                    .font(BrandFont.ui(11, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(.rect)
         }
         .buttonStyle(DockButtonStyle(foreground: foreground))
         .accessibilityLabel(label)
