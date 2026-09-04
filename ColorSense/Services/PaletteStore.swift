@@ -12,6 +12,12 @@ import Observation
 @Observable
 final class PaletteStore {
     static let maximumColorCount = 8
+
+    /// How many swatches a free palette holds. Five is what the Extractor produces and what every
+    /// ported tool assumes, so nothing below this line is gated: the sixth through eighth are the
+    /// Pro part. The cap itself stays 8 for everyone, because a Pro reader who drops to free should
+    /// keep the palette they already built rather than have it silently truncated.
+    static let freeColorCount = 5
     static let minimumColorCount = 1
 
     struct Removal {

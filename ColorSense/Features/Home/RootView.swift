@@ -128,7 +128,7 @@ struct RootView: View {
             }
         }
         .sheet(item: $detailSwatch) { swatch in
-            ColorDetailView(swatch: swatch)
+            ColorDetailView(isPro: isPro, swatch: swatch)
         }
         .fullScreenCover(isPresented: $libraryIsPresented) {
             LibraryView()
@@ -171,14 +171,15 @@ struct RootView: View {
             )
         }
         .sheet(isPresented: $savePaletteIsPresented) {
-            SavePaletteView(palette: store.palette) { name in
+            SavePaletteView(palette: store.palette, isPro: isPro) { name in
                 showToast("Saved “\(name)” to your account")
             }
         }
         .sheet(item: $addColorDestination) { destination in
             AddColorView(
                 insertionIndex: destination.index,
-                initialSwatch: destination.suggestedSwatch
+                initialSwatch: destination.suggestedSwatch,
+                isPro: isPro
             )
         }
         // A soft tap on Generate: the whole screen recolours at once, and a light physical

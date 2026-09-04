@@ -5,6 +5,7 @@ import SwiftUI
 /// to tell apart. Mirrors `SaveColorView` so naming a palette and naming a color feel the same.
 struct SavePaletteView: View {
     let palette: ExtractedPalette
+    var isPro = false
     let onSaved: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -12,9 +13,18 @@ struct SavePaletteView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @FocusState private var nameIsFocused: Bool
+    /// How full the account is, read once when the screen opens. Nil means not known yet or the
+    /// lookup failed, and an unknown count never blocks a save: refusing to save somebody's work
+    /// because a *count* would not load is a worse failure than letting the server decide.
+    @State private var savedCount: Int?
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isAtLimit: Bool {
+        guard !isPro, let savedCount else { return false }
+        return savedCount >= SavedPaletteService.Allowance.palettes
     }
 
     var body: some View {
@@ -30,6 +40,14 @@ struct SavePaletteView: View {
                     .frame(height: 50)
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
                     .onSubmit { save() }
+
+                if isAtLimit {
+                    LaumaNotice(
+                        pose: .unsure,
+                        title: "Your library is full",
+                        message: "A free account holds \(SavedPaletteService.Allowance.palettes) saved palettes. Delete one to make room, or Pro removes the limit."
+                    )
+                }
 
                 if let errorMessage {
                     Text(errorMessage)
@@ -50,7 +68,7 @@ struct SavePaletteView: View {
                     }
                 }
                 .buttonStyle(.primaryAction)
-                .disabled(isSaving || trimmedName.isEmpty)
+                .disabled(isSaving || trimmedName.isEmpty || isAtLimit)
                 .opacity(trimmedName.isEmpty ? 0.55 : 1)
 
                 Spacer(minLength: 0)
@@ -63,7 +81,12 @@ struct SavePaletteView: View {
                     Button("Cancel") { dismiss() }
                 }
             }
-            .task { nameIsFocused = true }
+            .task {
+                nameIsFocused = true
+                // Only a free account can be full, so a Pro reader is never made to wait on a
+                // count that cannot stop them.
+                if !isPro { savedCount = await SavedPaletteService.savedPaletteCount() }
+            }
         }
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
@@ -89,6 +112,7 @@ struct SavePaletteView: View {
     }
 
     private func save() {
+        guard !isAtLimit else { return }
         guard !trimmedName.isEmpty, !isSaving else { return }
         isSaving = true
         errorMessage = nil

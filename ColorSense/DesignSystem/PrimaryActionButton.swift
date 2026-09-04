@@ -25,3 +25,25 @@ struct PrimaryActionButtonStyle: ButtonStyle {
 extension ButtonStyle where Self == PrimaryActionButtonStyle {
     static var primaryAction: PrimaryActionButtonStyle { PrimaryActionButtonStyle() }
 }
+
+/// The secondary action: same shape and target as the primary, drawn as an outline.
+///
+/// Exists because Visualizer's Shuffle and Improve were toolbar-sized text buttons in a header row,
+/// which is a small target for a thumb and read as chrome rather than as the two things you are
+/// most likely to press. They are full-width buttons under the swatches now, and this is what makes
+/// them look like buttons without competing with a primary action they sit beside.
+struct SecondaryActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(BrandFont.ui(15, weight: .medium))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .foregroundStyle(Color.primary)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 13))
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
+extension ButtonStyle where Self == SecondaryActionButtonStyle {
+    static var secondaryAction: SecondaryActionButtonStyle { SecondaryActionButtonStyle() }
+}

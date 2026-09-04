@@ -32,17 +32,31 @@ struct AddColorView: View {
         GridItem(.flexible(), spacing: 12),
     ]
 
-    init(insertionIndex: Int, initialSwatch: PaletteColor) {
+    /// Whether the reader can go past the free five. Checked here rather than in `PaletteStore`,
+    /// because the store has no idea what anyone is paying and should not learn.
+    var isPro = false
+
+    init(insertionIndex: Int, initialSwatch: PaletteColor, isPro: Bool = false) {
         self.insertionIndex = insertionIndex
+        self.isPro = isPro
         _customColor = State(initialValue: initialSwatch.color)
+    }
+
+    /// A free palette stops at five. The sixth through eighth are Pro.
+    private var isAtFreeLimit: Bool {
+        !isPro && store.palette.colors.count >= PaletteStore.freeColorCount
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    customColorSection
-                    savedColorSection
+                    if isAtFreeLimit {
+                        limitNotice
+                    } else {
+                        customColorSection
+                        savedColorSection
+                    }
                 }
                 .padding(20)
             }
@@ -188,7 +202,18 @@ struct AddColorView: View {
             .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
     }
 
+    /// Named, priced and inert. No route to buy, because there is no in-app purchase yet and
+    /// guideline 3.1.1 forbids pointing at an outside one, the same as every other Pro wall here.
+    private var limitNotice: some View {
+        LaumaNotice(
+            pose: .unsure,
+            title: "Five colors on the free plan",
+            message: "A palette can hold up to eight. The sixth, seventh and eighth come with Pro. Remove a color to add a different one."
+        )
+    }
+
     private func add(_ swatch: PaletteColor) {
+        guard !isAtFreeLimit else { return }
         // The editor reports this, and also shows the reason inline, so there is nothing to
         // re-validate here: refusing quietly is enough.
         guard hexIsValid else { return }

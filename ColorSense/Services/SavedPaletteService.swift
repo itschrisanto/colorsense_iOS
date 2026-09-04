@@ -214,6 +214,28 @@ enum SavedPaletteService {
 
     /// The signed-in user's effective plan from `GET /api/me`. The server recomputes this per
     /// request so trial and voucher Pro grants lapse without a cron job — don't cache it.
+    /// How many palettes and colors the account already holds.
+    ///
+    /// Used to enforce the free tier's limits before a save rather than after, so somebody is told
+    /// they are full while they can still do something about it. Counted from the same endpoints
+    /// the Library screens read, because a separate count endpoint would be a second source of
+    /// truth about the same rows.
+    enum Allowance {
+        /// A signed-in free account. Pro is unlimited and never reaches these numbers.
+        static let palettes = 20
+        static let colors = 50
+    }
+
+    static func savedPaletteCount() async -> Int? {
+        if case .success(let palettes) = await list() { return palettes.count }
+        return nil
+    }
+
+    static func savedColorCount() async -> Int? {
+        if case .success(let colors) = await listColors() { return colors.count }
+        return nil
+    }
+
     static func currentPlan() async -> Result<String?, SaveError> {
         await authorizedRequest(path: "me", method: "GET") { data in
             (try? JSONDecoder().decode(MeResponse.self, from: data))?.user.plan

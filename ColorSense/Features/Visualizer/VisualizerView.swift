@@ -165,23 +165,20 @@ struct VisualizerView: View {
     /// Tapping a swatch changes that colour; the lock keeps it through Shuffle. Both write to
     /// `PaletteStore`, so this is the same palette the bands behind the sheet are showing, not a
     /// working copy that would have to be committed or discarded.
+    /// The palette, editable in place, with its two actions underneath.
+    ///
+    /// Improve and Shuffle were text buttons in the header row, which is a toolbar-sized target for
+    /// a thumb and read as chrome rather than as the two things you are most likely to press. They
+    /// are full-width buttons below the swatches now, which is also where the eye ends up after
+    /// looking at the colours.
+    ///
+    /// They are deliberately two buttons. Shuffle is chance; Improve searches for a palette that
+    /// actually scores higher. One control that sometimes tries harder would hide the difference.
     private var paletteStrip: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Palette")
-                    .font(BrandFont.ui(13, weight: .bold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button {
-                    withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
-                        store.generate()
-                    }
-                } label: {
-                    Label("Shuffle", systemImage: "arrow.triangle.2.circlepath")
-                        .font(BrandFont.ui(13, weight: .medium))
-                }
-                .accessibilityHint("Regenerates the unlocked colors")
-            }
+            Text("Palette")
+                .font(BrandFont.ui(13, weight: .bold))
+                .foregroundStyle(.secondary)
 
             HStack(spacing: 8) {
                 ForEach(Array(palette.colors.enumerated()), id: \.element.id) { index, swatch in
@@ -206,11 +203,9 @@ struct VisualizerView: View {
                             Image(systemName: swatch.isLocked ? "lock.fill" : "lock.open")
                                 .font(.system(size: 13))
                                 .foregroundStyle(swatch.isLocked ? BrandColor.coral : .secondary)
-                                // The glyph is 13pt; the *target* is 44, which is the minimum a
-                                // finger can reliably hit. Without this the tappable area is the
-                                // size of the icon, and a lock that needs two attempts is worse
-                                // than no lock. `contentShape` is what makes the padding tappable
-                                // rather than just empty space around the picture.
+                                // The glyph is 13pt; the *target* is 44, the minimum a finger can
+                                // reliably hit. `contentShape` is what makes that padding tappable
+                                // rather than empty space around the picture.
                                 .frame(minWidth: 44, minHeight: 44)
                                 .contentShape(.rect)
                         }
@@ -221,6 +216,31 @@ struct VisualizerView: View {
                     }
                 }
             }
+
+            HStack(spacing: 10) {
+                Button {
+                    if let found = PaletteImprover.improve(store.palette) {
+                        suggestion = found
+                    } else {
+                        noSuggestion = true
+                    }
+                } label: {
+                    Label("Improve", systemImage: "wand.and.stars")
+                }
+                .buttonStyle(.secondaryAction)
+                .accessibilityHint("Suggests a higher scoring palette that keeps your locked colors")
+
+                Button {
+                    withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
+                        store.generate()
+                    }
+                } label: {
+                    Label("Shuffle", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(.secondaryAction)
+                .accessibilityHint("Regenerates the unlocked colors")
+            }
+            .padding(.top, 2)
         }
     }
 

@@ -412,6 +412,32 @@ it is Chris's call and not a silent fix. Note the onboarding beats already *do* 
 measured ink, so the app is currently inconsistent with itself on this point. If the answer is ever
 "make it pass", the change is one line in `PrimaryActionButtonStyle`.
 
+## The free tier's limits, and where they are enforced
+
+Three limits, all checked on the client so somebody is told before they lose work rather than after:
+
+- **Five colors in a palette.** `PaletteStore.freeColorCount` is 5, the sixth through eighth are
+  Pro, and `maximumColorCount` stays 8 for everyone: a Pro reader who lapses keeps the palette they
+  built rather than having it silently truncated. Gated in `AddColorView`, which is the single
+  screen both the seam `+` and the dock `+` open, and **not** in `PaletteStore`, which has no idea
+  what anyone is paying and should not learn.
+- **20 saved palettes and 50 saved colors** on a signed-in free account, in
+  `SavedPaletteService.Allowance`. Counted from the same endpoints the Library screens read, rather
+  than a separate count endpoint that would be a second source of truth about the same rows.
+
+**An unknown count never blocks a save.** The count is nil while loading and when the lookup fails,
+and both mean "carry on". Refusing to save somebody's work because a *count* would not load is a
+worse failure than letting the server decide, and the same reasoning as `refreshPlan` no longer
+revoking Pro over a dropped connection.
+
+## Signing out used to strand a sheet
+
+Sign-out happens inside Clerk's own profile view, which `AccountView` presents through its `route`
+binding. When the user went away that sheet was left showing a profile for nobody, and **the screen
+behind it stopped responding to taps** — reported as the dock not working after signing out.
+Clearing `route` on `clerk.user?.id` becoming nil is what dismisses it, because the binding is what
+holds it open.
+
 ## Leaving a tool: Back, and not losing work on the way out
 
 `DesignSystem/SheetChrome.swift` holds both halves.

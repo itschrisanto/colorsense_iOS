@@ -81,6 +81,13 @@ struct AccountView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            // Signing out happens inside Clerk's own profile view, which is presented *by* this
+            // route. When the user goes, that sheet is left showing a profile for nobody, and the
+            // screen behind it stops responding to taps. Clearing the route is what actually
+            // dismisses it, since the binding is what holds it open.
+            .onChange(of: clerk.user?.id) { _, id in
+                if id == nil { route = nil }
+            }
             .sheet(item: $route) { destination in
                 switch destination {
                 case .savedPalettes: SavedPalettesView()
