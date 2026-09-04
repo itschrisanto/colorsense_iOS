@@ -164,6 +164,52 @@ final class PaletteStore {
         persist()
     }
 
+    /// Rearranges the palette without changing a single colour.
+    ///
+    /// The Visualizer's Shuffle used to call `generate()`, which is the web's `relatedPalette()`
+    /// and therefore derives *new* colours. In a tool whose whole point is seeing your own palette
+    /// in real work, that answered a question nobody asked: the extracted palette is the thing
+    /// under test there, and only its arrangement should be up for grabs. Asking for different
+    /// colours is what the dock's Generate is for, and it stays exactly as it was.
+    ///
+    /// Locked swatches hold their slot, which is the natural reading of a lock in a reorder and
+    /// keeps the control meaningful in both places. Whole swatches move, ids and all, so the bands
+    /// slide the way drag-to-reorder makes them slide rather than cross-fading in place. Anchors
+    /// are permuted with them and `generation` is deliberately not reset, both for the reasons
+    /// `move(from:to:)` records.
+    ///
+    /// Returns false when there is nothing it could have changed, so a caller can disable rather
+    /// than offer a button that quietly does nothing.
+    @discardableResult
+    func shuffleOrder() -> Bool {
+        let movable = palette.colors.indices.filter { !palette.colors[$0].isLocked }
+        guard movable.count > 1 else { return false }
+
+        // Draw until the arrangement actually differs. A shuffle that happens to return the same
+        // order is indistinguishable from a button that did not work, and with two movable slots
+        // that is half of all draws.
+        var permuted = movable
+        var attempts = 0
+        repeat {
+            permuted.shuffle()
+            attempts += 1
+        } while permuted == movable && attempts < 12
+        guard permuted != movable else { return false }
+
+        let colors = palette.colors
+        let anchors = palette.anchors
+        for (slot, source) in zip(movable, permuted) {
+            palette.colors[slot] = colors[source]
+            if palette.anchors.indices.contains(slot), anchors.indices.contains(source) {
+                palette.anchors[slot] = anchors[source]
+            }
+        }
+
+        isShowingDefault = false
+        persist()
+        return true
+    }
+
     @discardableResult
     func remove(swatchID: PaletteColor.ID) -> Removal? {
         guard palette.colors.count > Self.minimumColorCount,

@@ -326,6 +326,86 @@ struct PaletteReorderTests {
         store.move(from: 0, to: 3)
         #expect(store.palette.generation == generation)
     }
+
+    // MARK: - Shuffling the order
+
+    /// The contract that separates the Visualizer's Shuffle from the dock's Generate: the set of
+    /// colors is exactly what it was, only their arrangement moved. Run repeatedly because the
+    /// permutation is random.
+    @Test func shufflingChangesTheOrderAndNeverAColor() {
+        for _ in 0 ..< 40 {
+            let (store, url) = store(colors: 5)
+            defer { try? FileManager.default.removeItem(at: url) }
+
+            let before = store.palette.colors.map(\.hex)
+            #expect(store.shuffleOrder())
+
+            let after = store.palette.colors.map(\.hex)
+            #expect(after.sorted() == before.sorted())
+            #expect(after != before)
+        }
+    }
+
+    /// A lock means "hold this slot" in a reorder, which is what keeps the control meaningful in
+    /// both places it appears.
+    @Test func shufflingLeavesLockedSwatchesWhereTheyAre() {
+        for _ in 0 ..< 40 {
+            let (store, url) = store(colors: 5)
+            defer { try? FileManager.default.removeItem(at: url) }
+
+            store.toggleLock(for: store.palette.colors[1].id)
+            store.toggleLock(for: store.palette.colors[3].id)
+            let pinned = [1: store.palette.colors[1].hex, 3: store.palette.colors[3].hex]
+
+            #expect(store.shuffleOrder())
+            for (slot, hex) in pinned {
+                #expect(store.palette.colors[slot].hex == hex)
+            }
+        }
+    }
+
+    /// Fewer than two movable slots cannot produce a different arrangement, so it reports that it
+    /// did nothing rather than leaving the caller to offer an inert button.
+    @Test func shufflingReportsWhenThereIsNothingItCouldMove() {
+        let (store, url) = store(colors: 3)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        store.toggleLock(for: store.palette.colors[0].id)
+        store.toggleLock(for: store.palette.colors[1].id)
+
+        let before = store.palette.colors.map(\.hex)
+        #expect(store.shuffleOrder() == false)
+        #expect(store.palette.colors.map(\.hex) == before)
+    }
+
+    /// Anchors are what Generate derives from, so they have to travel with the swatch they belong
+    /// to — the same reason `move(from:to:)` carries them.
+    @Test func shufflingCarriesAnchorsWithTheirSwatches() {
+        let (store, url) = store(colors: 5)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let before = Dictionary(
+            uniqueKeysWithValues: zip(store.palette.colors.map(\.hex), store.palette.anchors.map(\.hex))
+        )
+        #expect(store.shuffleOrder())
+
+        for (swatch, anchor) in zip(store.palette.colors, store.palette.anchors) {
+            #expect(before[swatch.hex] == anchor.hex)
+        }
+    }
+
+    /// Rearranging is not a new palette to iterate from, exactly as a drag-to-reorder is not.
+    @Test func shufflingKeepsTheGenerationCount() {
+        let (store, url) = store(colors: 5)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        store.generate()
+        store.generate()
+        let generation = store.palette.generation
+
+        #expect(store.shuffleOrder())
+        #expect(store.palette.generation == generation)
+    }
 }
 
 @Suite("Replacing a swatch")

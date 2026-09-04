@@ -97,8 +97,7 @@ private struct ExploreContent: View {
             }
         }
         .listStyle(.plain)
-        .searchable(text: $query, prompt: "Search palettes")
-        .onSubmit(of: .search) { Task { await load(nextPage: false) } }
+        .safeAreaInset(edge: .top, spacing: 0) { searchField }
         .overlay {
             if palettes.isEmpty && isLoading { ProgressView() }
             if palettes.isEmpty && !isLoading && loadError == nil && !query.isEmpty {
@@ -110,6 +109,54 @@ private struct ExploreContent: View {
             }
         }
         .task { if palettes.isEmpty { await load(nextPage: false) } }
+    }
+
+    /// Search lives in the content, not in the navigation bar.
+    ///
+    /// `.searchable` installs its field into the nearest enclosing navigation container, which here
+    /// is the *workspace's* one `NavigationStack` rather than anything belonging to Library. Two
+    /// things went wrong because of that. The field appeared under the workspace's own title, which
+    /// is shared chrome and not Explore's; and since every panel stays mounted in the workspace's
+    /// `ZStack`, the modifier was still applied when Library was hidden, so the search field
+    /// followed the reader onto Contrast, Health and every other tool and could not be dismissed.
+    ///
+    /// The same reasoning already moved Library's section picker out of the toolbar. Anything that
+    /// belongs to one panel has to live inside that panel, because the bar does not.
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+
+            TextField("Search palettes", text: $query)
+                .font(BrandFont.ui(15))
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .onSubmit { Task { await load(nextPage: false) } }
+
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                    Task { await load(nextPage: false) }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, query.isEmpty ? 12 : 0)
+        .frame(height: 44)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 20)
+        .padding(.bottom, 10)
+        .background(Color(.systemBackground), ignoresSafeAreaEdges: [])
     }
 
     private func row(_ palette: SavedPaletteService.ExplorePalette) -> some View {

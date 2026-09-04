@@ -48,6 +48,12 @@ struct VisualizerView: View {
 
     private var locked: Bool { scene.isPro && !isPro }
 
+    /// Two unlocked slots is the least that can produce a different arrangement. Below that the
+    /// button is disabled rather than tappable and inert, which would read as broken.
+    private var canShuffle: Bool {
+        store.palette.colors.filter { !$0.isLocked }.count > 1
+    }
+
     var body: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -170,8 +176,15 @@ struct VisualizerView: View {
     /// are full-width buttons below the swatches now, which is also where the eye ends up after
     /// looking at the colours.
     ///
-    /// They are deliberately two buttons. Shuffle is chance; Improve searches for a palette that
-    /// actually scores higher. One control that sometimes tries harder would hide the difference.
+    /// They are deliberately two buttons, and they act on different things. Shuffle rearranges the
+    /// colours you already have and never invents one; Improve searches for a palette that actually
+    /// scores higher, and applying it is Pro. One control that sometimes tries harder would hide
+    /// that difference.
+    ///
+    /// Shuffle called `store.generate()` at first, which is the dock's Generate and derives new
+    /// colours. That was wrong here: somebody who extracted a palette from a photo and came to see
+    /// it on a business card does not expect the card to show different colours. Asking for
+    /// different colours is still one tap away on the dock.
     private var paletteStrip: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Palette")
@@ -229,14 +242,15 @@ struct VisualizerView: View {
                 .accessibilityHint("Suggests a higher scoring palette that keeps your locked colors")
 
                 Button {
-                    withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
-                        store.generate()
+                    withAnimation(PaletteMotion.structural(reduceMotion: reduceMotion)) {
+                        _ = store.shuffleOrder()
                     }
                 } label: {
-                    Label("Shuffle", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Shuffle", systemImage: "shuffle")
                 }
                 .buttonStyle(.secondaryAction)
-                .accessibilityHint("Regenerates the unlocked colors")
+                .disabled(!canShuffle)
+                .accessibilityHint("Rearranges your colors without changing them")
             }
             .padding(.top, 2)
         }

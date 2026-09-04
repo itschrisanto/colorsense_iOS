@@ -38,6 +38,15 @@ struct ToolWorkspaceView: View {
             }
             .navigationTitle(selection.title)
             .navigationBarTitleDisplayMode(.inline)
+            // Glass, and always visible rather than only once something scrolls under it.
+            //
+            // The strip at the bottom is a glass capsule and panel content passes behind it. A top
+            // bar that is transparent until scrolled leaves the same screen with one glass edge and
+            // one bare one, and the title changing as you move along the strip is exactly when that
+            // shows. Matching the material makes the workspace read as one surface with the tool
+            // swapped inside it.
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar { BackToPalette { dismiss() } }
             // Reserved, not overlaid: the strip is a floating capsule like the palette dock, and
             // an inset is what keeps the last row of a panel from sitting permanently underneath

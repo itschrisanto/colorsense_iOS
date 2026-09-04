@@ -512,11 +512,23 @@ Three consequences worth knowing:
   its own Back; inside one workspace that is five nested stacks and a bar belonging to whichever
   panel happens to be visible. One stack here gives one title that follows the strip and one Back,
   which is also the only way out.
+- **That bar carries glass, always visible**, not only once content scrolls under it
+  (`toolbarBackground(.ultraThinMaterial)` plus `.visible`). The strip at the bottom is a glass
+  capsule with content passing behind it, and a transparent top bar left the same screen with one
+  glass edge and one bare one — most visible at the moment the title changes as you move along the
+  strip. Matching the material makes the workspace read as one surface with the tool swapped inside.
 - **Two toolbar actions moved into content.** Contrast's Swap now sits beside the pair it acts on,
   and SVG's "Open another" beside the color list. Both read better there: an action on two colours
   looks like a navigation control when it is up in the bar next to Back.
 - **Only the visible panel renders its web view.** `isActive` on the SVG and Visualizer panels, so
   two `WKWebView`s are not drawing behind an invisible panel.
+- **Nothing that belongs to one panel may attach itself to the bar.** Explore used `.searchable`,
+  which installs its field into the nearest enclosing navigation container — the workspace's single
+  `NavigationStack`, not Library. It rendered under the workspace's shared title, and because every
+  panel stays mounted the modifier stayed applied while Library was hidden, so the search field
+  followed the reader onto every other tool with no way to dismiss it. Explore's search is a plain
+  field inside the panel now, for the same reason Library's section picker already left the toolbar.
+  Any future `.searchable`, `.toolbar` or `.navigationTitle` inside a panel has this problem.
 
 **The Tools sheet is gone.** Once the strip is always present, a separate picker is a second route
 to the same place. The **Extractor stays out of the strip** and keeps its dock `+`: it returns a
@@ -1356,10 +1368,21 @@ look again, and closing the sheet to do that breaks the loop the tool exists for
 
 The strip writes straight through to `PaletteStore` rather than holding a copy. Change a colour and
 the bands behind the sheet, every other tool and the saved palette all change with it, so there is
-nothing to commit or discard and no second palette to reconcile. Shuffle calls the same
-`store.generate()` the dock's Generate does, and the per-swatch locks are the same locks, so this is
-one behaviour reached from two places rather than two behaviours. Editing a colour uses the shared
-`CustomColorEditor`, so entering a colour behaves the same here as everywhere else.
+nothing to commit or discard and no second palette to reconcile. The per-swatch locks are the same
+locks the dock uses. Editing a colour uses the shared `CustomColorEditor`, so entering a colour
+behaves the same here as everywhere else.
+
+**Shuffle rearranges the palette. It does not regenerate it** (corrected 2026-09-05, reversing the
+line that had it call `store.generate()` so Shuffle and Generate were "one behaviour reached from
+two places"). Sharing the implementation was tidy and wrong: `generate()` is the web's
+`relatedPalette()` and derives *new* colours, so somebody who extracted a palette from a photo and
+came here to see it on a business card was shown a card in colours they had never chosen. The
+palette is the thing under test in this tool; only its arrangement is up for grabs.
+`PaletteStore.shuffleOrder()` permutes the existing swatches and invents nothing, locked swatches
+hold their slot, anchors travel with the swatch they belong to, and `generation` is untouched, all
+exactly as `move(from:to:)` behaves for a drag. It reports false when fewer than two slots are
+movable, and the button is disabled rather than inert. Asking for different colours is still one tap
+away on the dock, which is where that has always lived.
 
 One deliberate divergence from the web panel remains:
 
