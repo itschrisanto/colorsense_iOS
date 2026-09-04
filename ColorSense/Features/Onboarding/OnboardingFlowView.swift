@@ -403,7 +403,12 @@ struct OnboardingFlowView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Brand kits, AI harmonies and logo-free exports. Everything you have used so far stays free.")
+                // Names what iOS Pro actually unlocks. It used to promise "Brand kits, AI harmonies
+                // and logo-free exports", and two of those three do not exist in this app: Brand
+                // Kit Creator is unbuilt and waiting on demand, and the web's AI harmonies button
+                // is deliberately absent here. Selling a feature the reader cannot then find is a
+                // refund conversation at best and a rejection at worst.
+                Text("SVG Recolor, contrast fixes, palette remaps and logo-free exports. Everything you have used so far stays free.")
                     .font(BrandFont.ui(15))
                     .opacity(0.82)
                     .multilineTextAlignment(.center)

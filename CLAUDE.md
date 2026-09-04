@@ -1008,6 +1008,14 @@ deliberately, so it is an amendment rather than drift, and the vault should say 
   At accessibility sizes the row was too wide and the title truncated to "7 days f...", which is
   the one string on the card that has to survive.
 
+**The Pro pitch names what iOS Pro actually unlocks** (corrected 2026-09-05). It read "Brand kits,
+AI harmonies and logo-free exports", and two of those three do not exist in this app: Brand Kit
+Creator is unbuilt and now waits on demand, and the web's "Generate Harmonies · AI · Pro" button is
+deliberately absent here, as the port table records. It now names SVG Recolor, the contrast fix, the
+health remap and logo-free exports, which are the four things `isPro` actually gates. Selling a
+feature the reader cannot then find is a refund conversation at best and a rejection at worst, and
+it is worth re-checking this line every time the Pro surface changes.
+
 Everything in "The plan screen is design only" below still applies unchanged: **none of this is
 wired to StoreKit**, and a purchase screen that does not purchase is its own guideline 3.1.1
 rejection. Adding a third plan and a discount badge raises the stakes on that, it does not lower
