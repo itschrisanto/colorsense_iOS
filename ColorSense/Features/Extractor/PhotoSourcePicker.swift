@@ -108,7 +108,7 @@ struct PhotoSourcePicker: View {
             }
         }
         .onAppear {
-            diagLog("picker onAppear")
+            diagLog("picker onAppear: cameraCellRendered=\(CameraPicker.isAvailable) authorized=\(cameraAuthorized) assets=\(assets.count) status=\(status.rawValue)")
             preview.start()
         }
         .onDisappear {
@@ -144,8 +144,11 @@ struct PhotoSourcePicker: View {
                     if CameraPicker.isAvailable {
                         cameraCell(side: side)
                     }
-                    ForEach(assets, id: \.localIdentifier) { asset in
-                        Button { choose(asset) } label: {
+                    ForEach(Array(assets.enumerated()), id: \.element.localIdentifier) { position, asset in
+                        Button {
+                            diagLog("photo button at grid position \(position) activated")
+                            choose(asset)
+                        } label: {
                             AssetThumbnail(asset: asset, side: side)
                         }
                         .buttonStyle(.plain)
