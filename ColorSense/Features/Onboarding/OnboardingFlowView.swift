@@ -327,7 +327,12 @@ struct OnboardingFlowView: View {
     /// The controls survive because they live in their own band, outside this scroll.
     @ViewBuilder
     private var hero: some View {
-        if isAccessibilitySize {
+        // The splash is exempt. Every other beat scrolls at accessibility sizes because its copy
+        // grows past the band, but nothing on the splash scales: the mascot is a fixed height and
+        // the wordmark is deliberately `uiFixed`. Inside a `ScrollView` its centring spacers have
+        // no height to distribute, so it packed against the top of the screen with her ears cut
+        // off by the status bar and two thirds of the display empty underneath.
+        if isAccessibilitySize && beat != .splash {
             ScrollView {
                 heroContent
             }
@@ -533,7 +538,7 @@ struct OnboardingFlowView: View {
     /// The launch screen, continued. Same pose, same coral, no words and no controls, so the
     /// handover from the system launch image is invisible.
     private var splash: some View {
-        VStack {
+        VStack(spacing: 0) {
             Spacer(minLength: 0)
             // The launch screen's colour, her head at the launch screen's size, and one blink.
             // The blink frames are the only place a real closed-eye drawing exists.
@@ -541,6 +546,11 @@ struct OnboardingFlowView: View {
             // five-second hold, so the animation cannot be missed the way one blink in 1.5s was.
             LaumaBlink(height: 190, gap: 0.5...1.1)
             Spacer(minLength: 0)
+            // She keeps the middle of the space *above* the wordmark rather than the middle of the
+            // screen, which is the same centring problem the `hello` beat solved by collapsing its
+            // strips: anything added below her pushes her off centre unless it is given its own room.
+            SplashWordmark(ink: foreground(onBandAt: 0))
+                .padding(.bottom, 36)
         }
         .frame(maxWidth: .infinity)
     }

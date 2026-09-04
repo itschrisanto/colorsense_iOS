@@ -15,13 +15,28 @@ enum BrandFont {
     }
 
     static func ui(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        let name: String
+        .custom(faceName(for: weight), size: size)
+    }
+
+    /// The UI face at a size Dynamic Type does not touch.
+    ///
+    /// `Font.custom(_:size:)` scales on its own, which is right for every piece of copy and wrong
+    /// for the few things that are pictures rather than words. The splash wordmark is the case
+    /// that forced this: scaled, at accessibility-extra-extra-extra-large it ran off both edges of
+    /// the screen and pushed the mascot off the top. A logo carries no information a reader needs
+    /// to enlarge, and it has an accessibility label that VoiceOver reads at any size.
+    ///
+    /// **Use this only for marks and glyph-like text.** Anything somebody has to read takes `ui`.
+    static func uiFixed(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .custom(faceName(for: weight), fixedSize: size)
+    }
+
+    private static func faceName(for weight: Font.Weight) -> String {
         switch weight {
-        case .bold, .heavy, .black: name = "DMSans-Bold"
-        case .medium, .semibold: name = "DMSans-Medium"
-        default: name = "DMSans-Regular"
+        case .bold, .heavy, .black: return "DMSans-Bold"
+        case .medium, .semibold: return "DMSans-Medium"
+        default: return "DMSans-Regular"
         }
-        return .custom(name, size: size)
     }
 }
 
