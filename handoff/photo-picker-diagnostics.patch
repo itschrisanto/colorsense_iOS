@@ -1,0 +1,175 @@
+diff --git a/ColorSense/App/ColorSenseApp.swift b/ColorSense/App/ColorSenseApp.swift
+index 9960153..cf23ab2 100644
+--- a/ColorSense/App/ColorSenseApp.swift
++++ b/ColorSense/App/ColorSenseApp.swift
+@@ -8,6 +8,7 @@ struct ColorSenseApp: App {
+     @State private var paletteStore = PaletteStore()
+ 
+     init() {
++        diagLog("=== launch ===")
+         AnalyticsService.start()
+ 
+         // Clerk.shared traps if configure() was never called, so this always runs even with
+diff --git a/ColorSense/Features/Extractor/CameraPicker.swift b/ColorSense/Features/Extractor/CameraPicker.swift
+index 6d63469..2de3280 100644
+--- a/ColorSense/Features/Extractor/CameraPicker.swift
++++ b/ColorSense/Features/Extractor/CameraPicker.swift
+@@ -1,6 +1,37 @@
+ import SwiftUI
+ import UIKit
+ 
++/// Diagnostic only. Appends to a file in the app container so a reproduction does not depend on a
++/// console session staying attached — backgrounding the app ends the console, which was swallowing
++/// every trace. Pulled afterwards with `devicectl device copy from --domain-type appDataContainer`.
++func diagLog(_ message: String) {
++    let line = "\(Date().formatted(date: .omitted, time: .standard))  \(message)  mem=\(diagFootprintMB())MB\n"
++    FileHandle.standardError.write(line.data(using: .utf8)!)
++    guard let dir = try? FileManager.default.url(
++        for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
++    ) else { return }
++    let url = dir.appending(path: "diag.log")
++    if let handle = try? FileHandle(forWritingTo: url) {
++        handle.seekToEndOfFile()
++        handle.write(line.data(using: .utf8)!)
++        try? handle.close()
++    } else {
++        try? line.data(using: .utf8)!.write(to: url)
++    }
++}
++
++func diagFootprintMB() -> Int {
++    var info = task_vm_info_data_t()
++    var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
++    let result = withUnsafeMutablePointer(to: &info) {
++        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
++            task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
++        }
++    }
++    guard result == KERN_SUCCESS else { return -1 }
++    return Int(info.phys_footprint / (1024 * 1024))
++}
++
+ /// Camera capture for the Extractor.
+ ///
+ /// SwiftUI has no camera picker of its own — `PhotosPicker` only reaches the library — so this
+@@ -22,6 +53,7 @@ struct CameraPicker: UIViewControllerRepresentable {
+     }
+ 
+     func makeUIViewController(context: Context) -> UIImagePickerController {
++        diagLog("CameraPicker.makeUIViewController")
+         let picker = UIImagePickerController()
+         picker.sourceType = .camera
+         picker.delegate = context.coordinator
+diff --git a/ColorSense/Features/Extractor/PhotoSourcePicker.swift b/ColorSense/Features/Extractor/PhotoSourcePicker.swift
+index b6d9f0d..61d459e 100644
+--- a/ColorSense/Features/Extractor/PhotoSourcePicker.swift
++++ b/ColorSense/Features/Extractor/PhotoSourcePicker.swift
+@@ -80,16 +80,38 @@ struct PhotoSourcePicker: View {
+             }
+         }
+         .task { await requestAccess() }
+-        .onAppear { preview.start() }
+-        .onDisappear { preview.stop() }
++        .task {
++            diagLog("picker task, args=\(ProcessInfo.processInfo.arguments)")
++            guard ProcessInfo.processInfo.arguments.contains("-auto-camera") else { return }
++            try? await Task.sleep(for: .seconds(8))
++            diagLog("auto firing camera tap, status=\(status.rawValue) authorized=\(cameraAuthorized)")
++            preview.stop {
++                diagLog("auto stop completed")
++                cameraIsPresented = true
++                diagLog("auto cameraIsPresented set")
++            }
++        }
++        .onAppear {
++            diagLog("picker onAppear")
++            preview.start()
++        }
++        .onDisappear {
++            diagLog("picker onDisappear")
++            preview.stop()
++        }
+         .onChange(of: fallbackItem) { _, item in
+             guard let item else { return }
+             Task { await loadFallback(item) }
+         }
+-        .fullScreenCover(isPresented: $cameraIsPresented, onDismiss: { preview.start() }) {
++        .fullScreenCover(isPresented: $cameraIsPresented, onDismiss: {
++            diagLog("camera cover dismissed")
++            preview.start()
++        }) {
+             CameraPicker { image in
+                 AnalyticsService.capture(.paletteExtracted, ["source": "camera"])
++                diagLog("image delivered \(Int(image.size.width))x\(Int(image.size.height)), calling onImage")
+                 onImage(image)
++                diagLog("onImage returned, dismissing picker")
+                 dismiss()
+             }
+             .ignoresSafeArea()
+@@ -121,7 +143,13 @@ struct PhotoSourcePicker: View {
+     private func cameraCell(side: CGFloat) -> some View {
+         // Stops the preview and waits for the camera to actually be released before opening the
+         // capture screen. Presenting first would leave two things reaching for one camera.
+-        Button { preview.stop { cameraIsPresented = true } } label: {
++        Button {
++            diagLog("camera cell TAPPED")
++            preview.stop {
++                diagLog("stop done, presenting camera")
++                cameraIsPresented = true
++            }
++        } label: {
+             ZStack {
+                 Color.black
+                 // Live only when the camera is already permitted — starting a session is what
+@@ -196,6 +224,7 @@ struct PhotoSourcePicker: View {
+     }
+ 
+     private func choose(_ asset: PHAsset) {
++        diagLog("photo chosen, requesting image")
+         isLoadingSelection = true
+         let options = PHImageRequestOptions()
+         options.isNetworkAccessAllowed = true   // the asset may live in iCloud, not on the device
+diff --git a/ColorSense/Features/Home/RootView.swift b/ColorSense/Features/Home/RootView.swift
+index ed05772..5851b23 100644
+--- a/ColorSense/Features/Home/RootView.swift
++++ b/ColorSense/Features/Home/RootView.swift
+@@ -30,7 +30,7 @@ struct RootView: View {
+     @State private var shareIsPresented = false
+     /// Presents `PhotoSourcePicker`, which is the only way into extraction. Extractor remains the
+     /// dock's central action rather than a panel because it replaces the palette and returns.
+-    @State private var sourceChoiceIsPresented = false
++    @State private var sourceChoiceIsPresented = ProcessInfo.processInfo.arguments.contains("-photo-source")
+     /// Counts Generate taps purely to drive haptics. Watching `palette.generation` instead would
+     /// also fire on extraction, which resets it to zero — a change, but not a tap.
+     @State private var generateTaps = 0
+@@ -90,6 +90,12 @@ struct RootView: View {
+         .sheet(isPresented: $sourceChoiceIsPresented) {
+             PhotoSourcePicker { extract($0) }
+         }
++        .onChange(of: sourceChoiceIsPresented) { was, now in
++            diagLog("sheet binding \(was) -> \(now)")
++        }
++        .onChange(of: isExtracting) { _, now in
++            diagLog("isExtracting -> \(now)")
++        }
+         .fullScreenCover(isPresented: $toolWorkspaceIsPresented) {
+             ToolWorkspaceView(isPro: isPro)
+         }
+@@ -355,13 +361,17 @@ struct RootView: View {
+     /// picker owns loading and reports its own read failures — so there is nothing left to fail
+     /// here and no palette-unchanged case to explain.
+     private func extract(_ image: UIImage) {
++        diagLog("extract() called")
+         Task {
+             isExtracting = true
+             defer { isExtracting = false }
++            diagLog("extraction starting")
+             let extracted = await PhotoExtractor.palette(from: image)
++            diagLog("extraction done, \(extracted.colors.count) colors")
+             withAnimation(PaletteMotion.replace(reduceMotion: reduceMotion)) {
+                 store.replace(with: extracted)
+             }
++            diagLog("palette replaced")
+         }
+     }
+ 

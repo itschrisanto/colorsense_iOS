@@ -4,8 +4,20 @@ import UIKit
 /// Diagnostic only. Appends to a file in the app container so a reproduction does not depend on a
 /// console session staying attached — backgrounding the app ends the console, which was swallowing
 /// every trace. Pulled afterwards with `devicectl device copy from --domain-type appDataContainer`.
+private let Self_diagFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "HH:mm:ss"
+    return f
+}()
+
 func diagLog(_ message: String) {
-    let line = "\(Date().formatted(date: .omitted, time: .standard))  \(message)  mem=\(diagFootprintMB())MB\n"
+    // Millisecond resolution matters here: the question is whether a + activation lands within a
+    // few hundred milliseconds of a dismissal, which is a touch passing through, or a second or
+    // more later, which is a person deciding to tap. Second-resolution stamps cannot tell those apart.
+    let now = Date()
+    let stamp = Self_diagFormatter.string(from: now)
+    let millis = Int(now.timeIntervalSince1970 * 1000) % 1000
+    let line = "\(stamp).\(String(format: "%03d", millis))  \(message)  mem=\(diagFootprintMB())MB\n"
     FileHandle.standardError.write(line.data(using: .utf8)!)
     guard let dir = try? FileManager.default.url(
         for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true

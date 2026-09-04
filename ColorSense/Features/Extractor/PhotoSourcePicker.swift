@@ -80,6 +80,22 @@ struct PhotoSourcePicker: View {
             }
         }
         .task { await requestAccess() }
+        // Drives the exact tail of a successful selection without a finger: onImage then
+        // dismiss, which is what choose(_:), loadFallback(_:) and the camera callback all do.
+        // osascript has no assistive access here, so this is the only way to reproduce the
+        // re-present headlessly and, more importantly, to test a fix for it.
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("-auto-pick") else { return }
+            try? await Task.sleep(for: .seconds(6))
+            guard let image = UIImage(named: "LaumaWelcome") else {
+                diagLog("auto-pick: no image asset, aborting")
+                return
+            }
+            diagLog("auto-pick: calling onImage then dismiss")
+            onImage(image)
+            dismiss()
+            diagLog("auto-pick: dismiss returned")
+        }
         .task {
             diagLog("picker task, args=\(ProcessInfo.processInfo.arguments)")
             guard ProcessInfo.processInfo.arguments.contains("-auto-camera") else { return }

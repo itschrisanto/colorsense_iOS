@@ -1,0 +1,311 @@
+1:56:22 AM  === launch ===  mem=3MB
+2:02:15 AM  === launch ===  mem=3MB
+2:02:16 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=25MB
+2:02:16 AM  picker onAppear  mem=25MB
+2:02:18 AM  picker onDisappear  mem=56MB
+2:02:19 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=47MB
+2:02:19 AM  picker onAppear  mem=47MB
+2:02:20 AM  picker onDisappear  mem=46MB
+2:02:41 AM  === launch ===  mem=3MB
+2:02:43 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=25MB
+2:02:43 AM  picker onAppear  mem=25MB
+2:02:44 AM  picker onDisappear  mem=64MB
+2:11:19 AM  === launch ===  mem=3MB
+2:11:25 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=22MB
+2:11:25 AM  picker onAppear  mem=22MB
+2:11:28 AM  picker onDisappear  mem=47MB
+2:11:28 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=41MB
+2:11:28 AM  picker onAppear  mem=41MB
+2:11:33 AM  camera cell TAPPED  mem=35MB
+2:11:33 AM  stop done, presenting camera  mem=35MB
+2:11:33 AM  CameraPicker.makeUIViewController  mem=35MB
+2:11:41 AM  camera cover dismissed  mem=113MB
+2:11:41 AM  picker onDisappear  mem=89MB
+2:11:42 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=36MB
+2:11:42 AM  picker onAppear  mem=36MB
+2:11:47 AM  picker onDisappear  mem=45MB
+2:11:48 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=39MB
+2:11:48 AM  picker onAppear  mem=39MB
+2:11:50 AM  picker onDisappear  mem=48MB
+2:11:50 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=47MB
+2:11:50 AM  picker onAppear  mem=47MB
+2:11:52 AM  picker onDisappear  mem=43MB
+2:11:53 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=42MB
+2:11:53 AM  picker onAppear  mem=42MB
+2:11:54 AM  picker onDisappear  mem=43MB
+2:11:55 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=39MB
+2:11:55 AM  picker onAppear  mem=39MB
+2:11:56 AM  picker onDisappear  mem=43MB
+2:11:56 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=38MB
+2:11:56 AM  picker onAppear  mem=38MB
+2:12:04 AM  picker onDisappear  mem=39MB
+2:12:04 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=38MB
+2:12:04 AM  picker onAppear  mem=38MB
+2:12:06 AM  picker onDisappear  mem=47MB
+2:12:06 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=44MB
+2:12:06 AM  picker onAppear  mem=44MB
+2:12:08 AM  picker onDisappear  mem=43MB
+2:12:08 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=42MB
+2:12:08 AM  picker onAppear  mem=42MB
+2:12:11 AM  picker onDisappear  mem=48MB
+2:12:11 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=45MB
+2:12:11 AM  picker onAppear  mem=45MB
+2:12:13 AM  picker onDisappear  mem=49MB
+2:12:14 AM  picker task, args=["/var/containers/Bundle/Application/4F67173A-98CD-4FC0-98D9-FE1052A50E65/ColorSense.app/ColorSense"]  mem=44MB
+2:12:14 AM  picker onAppear  mem=44MB
+2:12:15 AM  picker onDisappear  mem=53MB
+2:16:27 AM  === launch ===  mem=3MB
+2:16:29 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=25MB
+2:16:29 AM  picker onAppear  mem=25MB
+2:16:30 AM  photo chosen, requesting image  mem=47MB
+2:16:30 AM  extract() called  mem=47MB
+2:16:30 AM  extraction starting  mem=47MB
+2:16:31 AM  extraction done, 5 colors  mem=49MB
+2:16:31 AM  palette replaced  mem=49MB
+2:16:31 AM  picker onDisappear  mem=50MB
+2:16:32 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=41MB
+2:16:32 AM  picker onAppear  mem=41MB
+2:16:33 AM  photo chosen, requesting image  mem=45MB
+2:16:33 AM  extract() called  mem=45MB
+2:16:33 AM  extraction starting  mem=45MB
+2:16:33 AM  extraction done, 5 colors  mem=46MB
+2:16:33 AM  palette replaced  mem=46MB
+2:16:33 AM  picker onDisappear  mem=42MB
+2:16:34 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=36MB
+2:16:34 AM  picker onAppear  mem=36MB
+2:16:35 AM  photo chosen, requesting image  mem=47MB
+2:16:36 AM  extract() called  mem=46MB
+2:16:36 AM  extraction starting  mem=46MB
+2:16:36 AM  extraction done, 5 colors  mem=48MB
+2:16:36 AM  palette replaced  mem=48MB
+2:16:36 AM  picker onDisappear  mem=47MB
+2:16:37 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=42MB
+2:16:37 AM  picker onAppear  mem=42MB
+2:16:38 AM  photo chosen, requesting image  mem=50MB
+2:16:38 AM  extract() called  mem=50MB
+2:16:38 AM  extraction starting  mem=50MB
+2:16:38 AM  extraction done, 5 colors  mem=53MB
+2:16:38 AM  palette replaced  mem=53MB
+2:16:39 AM  picker onDisappear  mem=44MB
+2:16:40 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=42MB
+2:16:40 AM  picker onAppear  mem=42MB
+2:16:42 AM  photo chosen, requesting image  mem=58MB
+2:16:42 AM  extract() called  mem=58MB
+2:16:42 AM  extraction starting  mem=58MB
+2:16:42 AM  extraction done, 5 colors  mem=60MB
+2:16:42 AM  palette replaced  mem=60MB
+2:16:43 AM  picker onDisappear  mem=55MB
+2:16:43 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=42MB
+2:16:43 AM  picker onAppear  mem=42MB
+2:16:47 AM  photo chosen, requesting image  mem=51MB
+2:16:47 AM  extract() called  mem=52MB
+2:16:47 AM  extraction starting  mem=52MB
+2:16:47 AM  extraction done, 5 colors  mem=53MB
+2:16:47 AM  palette replaced  mem=53MB
+2:16:48 AM  picker onDisappear  mem=48MB
+2:16:48 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=43MB
+2:16:48 AM  picker onAppear  mem=43MB
+2:16:52 AM  photo chosen, requesting image  mem=73MB
+2:16:52 AM  extract() called  mem=73MB
+2:16:52 AM  extraction starting  mem=73MB
+2:16:52 AM  extraction done, 5 colors  mem=76MB
+2:16:52 AM  palette replaced  mem=76MB
+2:16:52 AM  picker onDisappear  mem=68MB
+2:16:53 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=53MB
+2:16:53 AM  picker onAppear  mem=53MB
+2:16:54 AM  picker onDisappear  mem=45MB
+2:16:55 AM  picker task, args=["/var/containers/Bundle/Application/74F2C384-7979-4A79-B704-2DF8FEAF3887/ColorSense.app/ColorSense"]  mem=41MB
+2:16:55 AM  picker onAppear  mem=41MB
+2:16:56 AM  photo chosen, requesting image  mem=48MB
+2:16:56 AM  extract() called  mem=49MB
+2:16:56 AM  extraction starting  mem=49MB
+2:16:56 AM  extraction done, 5 colors  mem=50MB
+2:16:56 AM  palette replaced  mem=50MB
+2:16:57 AM  picker onDisappear  mem=42MB
+2:20:43 AM  === launch ===  mem=3MB
+2:21:52 AM  === launch ===  mem=3MB
+2:21:53 AM  sheet binding false -> true  mem=22MB
+2:21:53 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=25MB
+2:21:53 AM  picker onAppear  mem=25MB
+2:22:00 AM  photo chosen, requesting image  mem=59MB
+2:22:00 AM  extract() called  mem=51MB
+2:22:00 AM  extraction starting  mem=51MB
+2:22:00 AM  sheet binding true -> false  mem=52MB
+2:22:00 AM  isExtracting -> true  mem=52MB
+2:22:00 AM  extraction done, 5 colors  mem=52MB
+2:22:00 AM  palette replaced  mem=52MB
+2:22:00 AM  isExtracting -> false  mem=53MB
+2:22:01 AM  picker onDisappear  mem=53MB
+2:22:01 AM  sheet binding false -> true  mem=38MB
+2:22:01 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=38MB
+2:22:01 AM  picker onAppear  mem=38MB
+2:22:02 AM  sheet binding true -> false  mem=51MB
+2:22:02 AM  picker onDisappear  mem=48MB
+2:22:03 AM  sheet binding false -> true  mem=47MB
+2:22:03 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=47MB
+2:22:03 AM  picker onAppear  mem=47MB
+2:22:04 AM  photo chosen, requesting image  mem=45MB
+2:22:04 AM  extract() called  mem=45MB
+2:22:04 AM  extraction starting  mem=45MB
+2:22:04 AM  sheet binding true -> false  mem=46MB
+2:22:04 AM  isExtracting -> true  mem=46MB
+2:22:04 AM  extraction done, 5 colors  mem=46MB
+2:22:04 AM  palette replaced  mem=46MB
+2:22:04 AM  isExtracting -> false  mem=46MB
+2:22:04 AM  picker onDisappear  mem=45MB
+2:22:05 AM  sheet binding false -> true  mem=39MB
+2:22:05 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=39MB
+2:22:05 AM  picker onAppear  mem=39MB
+2:22:12 AM  photo chosen, requesting image  mem=41MB
+2:22:12 AM  extract() called  mem=39MB
+2:22:12 AM  extraction starting  mem=39MB
+2:22:12 AM  sheet binding true -> false  mem=40MB
+2:22:12 AM  isExtracting -> true  mem=40MB
+2:22:12 AM  extraction done, 5 colors  mem=40MB
+2:22:12 AM  palette replaced  mem=40MB
+2:22:12 AM  isExtracting -> false  mem=39MB
+2:22:12 AM  picker onDisappear  mem=39MB
+2:22:13 AM  sheet binding false -> true  mem=38MB
+2:22:13 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=38MB
+2:22:13 AM  picker onAppear  mem=38MB
+2:22:14 AM  photo chosen, requesting image  mem=47MB
+2:22:14 AM  extract() called  mem=47MB
+2:22:14 AM  extraction starting  mem=47MB
+2:22:14 AM  sheet binding true -> false  mem=48MB
+2:22:14 AM  isExtracting -> true  mem=48MB
+2:22:14 AM  extraction done, 5 colors  mem=48MB
+2:22:14 AM  palette replaced  mem=48MB
+2:22:14 AM  isExtracting -> false  mem=47MB
+2:22:15 AM  picker onDisappear  mem=47MB
+2:22:15 AM  sheet binding false -> true  mem=46MB
+2:22:15 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=38MB
+2:22:15 AM  picker onAppear  mem=38MB
+2:22:16 AM  photo chosen, requesting image  mem=48MB
+2:22:16 AM  extract() called  mem=48MB
+2:22:16 AM  extraction starting  mem=48MB
+2:22:16 AM  sheet binding true -> false  mem=49MB
+2:22:16 AM  isExtracting -> true  mem=49MB
+2:22:16 AM  extraction done, 5 colors  mem=49MB
+2:22:16 AM  palette replaced  mem=49MB
+2:22:16 AM  isExtracting -> false  mem=48MB
+2:22:16 AM  picker onDisappear  mem=44MB
+2:22:55 AM  sheet binding false -> true  mem=35MB
+2:22:55 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=36MB
+2:22:55 AM  picker onAppear  mem=36MB
+2:23:07 AM  photo chosen, requesting image  mem=48MB
+2:23:07 AM  extract() called  mem=43MB
+2:23:07 AM  extraction starting  mem=43MB
+2:23:07 AM  sheet binding true -> false  mem=44MB
+2:23:07 AM  isExtracting -> true  mem=44MB
+2:23:07 AM  extraction done, 5 colors  mem=44MB
+2:23:07 AM  palette replaced  mem=44MB
+2:23:07 AM  isExtracting -> false  mem=43MB
+2:23:08 AM  picker onDisappear  mem=43MB
+2:23:14 AM  sheet binding false -> true  mem=35MB
+2:23:14 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=35MB
+2:23:14 AM  picker onAppear  mem=35MB
+2:23:15 AM  photo chosen, requesting image  mem=50MB
+2:23:15 AM  extract() called  mem=50MB
+2:23:15 AM  extraction starting  mem=50MB
+2:23:15 AM  sheet binding true -> false  mem=51MB
+2:23:15 AM  isExtracting -> true  mem=51MB
+2:23:15 AM  extraction done, 5 colors  mem=49MB
+2:23:15 AM  palette replaced  mem=49MB
+2:23:15 AM  isExtracting -> false  mem=48MB
+2:23:15 AM  picker onDisappear  mem=48MB
+2:23:16 AM  sheet binding false -> true  mem=42MB
+2:23:16 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=42MB
+2:23:16 AM  picker onAppear  mem=42MB
+2:23:17 AM  photo chosen, requesting image  mem=49MB
+2:23:17 AM  extract() called  mem=49MB
+2:23:17 AM  extraction starting  mem=49MB
+2:23:17 AM  sheet binding true -> false  mem=50MB
+2:23:17 AM  isExtracting -> true  mem=50MB
+2:23:17 AM  extraction done, 5 colors  mem=50MB
+2:23:17 AM  palette replaced  mem=50MB
+2:23:17 AM  isExtracting -> false  mem=49MB
+2:23:18 AM  picker onDisappear  mem=49MB
+2:23:18 AM  sheet binding false -> true  mem=48MB
+2:23:18 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=48MB
+2:23:18 AM  picker onAppear  mem=48MB
+2:23:19 AM  photo chosen, requesting image  mem=45MB
+2:23:19 AM  extract() called  mem=45MB
+2:23:19 AM  extraction starting  mem=45MB
+2:23:19 AM  sheet binding true -> false  mem=48MB
+2:23:19 AM  isExtracting -> true  mem=48MB
+2:23:19 AM  extraction done, 5 colors  mem=48MB
+2:23:19 AM  palette replaced  mem=48MB
+2:23:19 AM  isExtracting -> false  mem=45MB
+2:23:20 AM  picker onDisappear  mem=43MB
+2:23:20 AM  sheet binding false -> true  mem=40MB
+2:23:20 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=40MB
+2:23:20 AM  picker onAppear  mem=40MB
+2:23:22 AM  photo chosen, requesting image  mem=52MB
+2:23:23 AM  extract() called  mem=49MB
+2:23:23 AM  extraction starting  mem=49MB
+2:23:23 AM  sheet binding true -> false  mem=51MB
+2:23:23 AM  isExtracting -> true  mem=51MB
+2:23:23 AM  extraction done, 5 colors  mem=52MB
+2:23:23 AM  palette replaced  mem=52MB
+2:23:23 AM  isExtracting -> false  mem=50MB
+2:23:23 AM  picker onDisappear  mem=44MB
+2:23:24 AM  sheet binding false -> true  mem=39MB
+2:23:24 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=39MB
+2:23:24 AM  picker onAppear  mem=39MB
+2:23:25 AM  photo chosen, requesting image  mem=48MB
+2:23:25 AM  extract() called  mem=48MB
+2:23:25 AM  extraction starting  mem=48MB
+2:23:25 AM  sheet binding true -> false  mem=50MB
+2:23:25 AM  isExtracting -> true  mem=50MB
+2:23:25 AM  extraction done, 5 colors  mem=50MB
+2:23:25 AM  palette replaced  mem=50MB
+2:23:25 AM  isExtracting -> false  mem=47MB
+2:23:26 AM  picker onDisappear  mem=47MB
+2:23:26 AM  sheet binding false -> true  mem=44MB
+2:23:26 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=44MB
+2:23:26 AM  picker onAppear  mem=44MB
+2:23:27 AM  photo chosen, requesting image  mem=49MB
+2:23:27 AM  extract() called  mem=46MB
+2:23:27 AM  extraction starting  mem=46MB
+2:23:27 AM  sheet binding true -> false  mem=48MB
+2:23:27 AM  isExtracting -> true  mem=48MB
+2:23:28 AM  extraction done, 5 colors  mem=48MB
+2:23:28 AM  palette replaced  mem=48MB
+2:23:28 AM  isExtracting -> false  mem=46MB
+2:23:28 AM  picker onDisappear  mem=46MB
+2:23:28 AM  sheet binding false -> true  mem=43MB
+2:23:28 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=43MB
+2:23:28 AM  picker onAppear  mem=43MB
+2:23:29 AM  photo chosen, requesting image  mem=48MB
+2:23:29 AM  extract() called  mem=42MB
+2:23:29 AM  extraction starting  mem=42MB
+2:23:29 AM  sheet binding true -> false  mem=43MB
+2:23:29 AM  isExtracting -> true  mem=43MB
+2:23:29 AM  extraction done, 5 colors  mem=44MB
+2:23:29 AM  palette replaced  mem=44MB
+2:23:29 AM  isExtracting -> false  mem=43MB
+2:23:30 AM  picker onDisappear  mem=42MB
+2:23:31 AM  sheet binding false -> true  mem=41MB
+2:23:31 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=41MB
+2:23:31 AM  picker onAppear  mem=41MB
+2:23:37 AM  photo chosen, requesting image  mem=88MB
+2:23:37 AM  extract() called  mem=89MB
+2:23:37 AM  sheet binding true -> false  mem=89MB
+2:23:37 AM  extraction starting  mem=89MB
+2:23:37 AM  isExtracting -> true  mem=90MB
+2:23:37 AM  extraction done, 5 colors  mem=90MB
+2:23:37 AM  palette replaced  mem=90MB
+2:23:37 AM  isExtracting -> false  mem=89MB
+2:23:37 AM  picker onDisappear  mem=69MB
+2:23:39 AM  sheet binding false -> true  mem=64MB
+2:23:39 AM  picker task, args=["/var/containers/Bundle/Application/5370F9CF-11B5-4C25-812A-E9E618E8E8C8/ColorSense.app/ColorSense"]  mem=64MB
+2:23:39 AM  picker onAppear  mem=64MB
+2:23:40 AM  photo chosen, requesting image  mem=49MB
+2:23:40 AM  extract() called  mem=49MB
+2:23:40 AM  extraction starting  mem=49MB
+2:23:40 AM  sheet binding true -> false  mem=50MB
+2:23:40 AM  isExtracting -> true  mem=50MB
+2:23:40 AM  extraction done, 5 colors  mem=50MB
+2:23:40 AM  palette replaced  mem=50MB
+2:23:40 AM  isExtracting -> false  mem=49MB
+2:23:40 AM  picker onDisappear  mem=48MB
