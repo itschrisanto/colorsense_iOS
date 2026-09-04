@@ -212,8 +212,32 @@ showing a scene; SVG Recolor.
 
 ---
 
+## 8b. Privacy audit (2026-09-05)
+
+`docs/PRIVACY-AUDIT.md` is the evidence-backed audit of what the shipping build actually does,
+claim by claim, with the App Store privacy labels and copy-ready policy wording derived from it.
+
+**It found one blocker.** Account deletion calls Clerk's `user.delete()` and nothing else. The
+`saved_palettes.user_id` foreign key cascades on delete, but nothing ever deletes the ColorSense
+`users` row: there is no Clerk webhook route in the api-server and no `db.delete(usersTable)`
+anywhere. So a deleted account leaves its database row and every saved palette in place, while
+`DeleteAccountView` tells the user their palettes are removed. That claim must not be published,
+and the app should not be submitted, until the backend cleanup exists.
+
+Everything else audited came back accurate: photos never leave the device, the colour tools are
+entirely local, analytics are pseudonymous with `identify` never called, the opt-out is set before
+the SDK is configured so an opted-out install sends nothing at all, and there are no advertising,
+attribution or tracking SDKs of any kind.
+
+One claim needs qualifying rather than fixing: crash reports carry the exception's own message,
+which we do not control, so "crash reports never contain user content" must not be said.
+
 ## 9. Outside this repo
 
+- [ ] **Add a Clerk `user.deleted` webhook to the api-server** so deleting an account actually
+      deletes the ColorSense user row and, through the existing cascade, its saved palettes. Blocks
+      submission. Do not change the `/api/saved-palettes` or `/api/me` response contracts; the app
+      depends on both.
 - [ ] **The web privacy policy never mentions mobile or iOS.** It is substantively accurate — same
       Clerk instance, same API, same data — but a reviewer checks that the policy covers the app.
       Parked until the Replit side is being touched anyway.
