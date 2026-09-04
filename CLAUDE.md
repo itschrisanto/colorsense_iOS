@@ -316,6 +316,22 @@ Constraints worth knowing before promising anything:
 - Sign-in and account-saved palettes *do* work on device — the real production
   `CLERK_PUBLISHABLE_KEY` is in `Config/Secrets.xcconfig` and was verified end to end.
 
+## Submission scope, decided 2026-09-05
+
+`docs/APP-STORE-SUBMISSION.md` is the checklist and the drafted App Store Connect metadata. It is
+the file to work from at submission; this section records only the decisions behind it.
+
+- **Six tools ship**: Extractor, Contrast, Health, SVG Recolor, Visualizer, Library.
+- **Website Color Analyzer is deferred**, and **Brand Kit Creator waits for demand** rather than for
+  a slot in the port order. Both amend the 2026-09-04 order, and the vault should say so.
+- **The onboarding plan beat stays in the flow**, and hiding it was declined. It offers a trial and
+  a subscription and cannot purchase anything, which guideline 3.1.1 makes a rejection by itself, so
+  **StoreKit is now a submission prerequisite rather than a parked item.** `advanceFromAccountAsk()`
+  still routes past the beat, so hiding it remains close to a one-line change if that is reversed.
+- **Pro is sold through Lemon Squeezy on the web**, per the vault. On iOS the same tiers must go
+  through In-App Purchase, and no screen may link to a Lemon Squeezy checkout or name where to buy.
+  Same rule that removed "Pro is available at colorsense.online".
+
 ## Distributing to testers — what is ready and what is not (2026-09-03)
 
 Nothing can reach a tester remotely yet. TestFlight requires the paid **Apple Developer Program
