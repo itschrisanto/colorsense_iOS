@@ -9,6 +9,8 @@ xcuserdata/
 
 # Secrets
 Config/Secrets.xcconfig
+# posthog-cli's personal API token, used by the Release dSYM upload build phase.
+Config/PostHogCLI.env
 
 # macOS
 .DS_Store

@@ -54,6 +54,13 @@ the canonical account-side checklist. When enrolment completes, work that list, 
    submission, and remember **App Store Connect rejects a reused build number**, so the build must
    increment on every upload including re-uploads of the same marketing version. Nothing in the repo
    bumps these today; they are hand-edited in `project.yml`.
+   **There is now a second, sharper reason to bump** (added 2026-09-05). PostHog binds every
+   uploaded dSYM to the release the build creates, and that release is identified by these numbers.
+   Two Release builds at the same version produce different binary UUIDs under one release, which
+   the uploader treats as a symbol-set conflict and **fails the build on** by default. Do not reach
+   for `POSTHOG_SKIP_ON_CONFLICT` to quiet that: it leaves the release carrying the first build's
+   symbols, so crash addresses resolve to the wrong lines, which is worse than a failed build
+   because nothing tells you it happened.
 
 6. **The designed paywall.** Chris supplied Coolors' Pro screen as a reference and it is worth
    borrowing from, chiefly its **App Benefits / Website Benefits split**, which answers "am I buying
@@ -374,11 +381,23 @@ the app. The PostHog project also has exception autocapture enabled. These relea
    Data for analytics, plus Crash Data and Other Diagnostic Data for crash diagnosis. PostHog uses
    only its random installation ID here; these four categories are not used for tracking and are
    not linked to the Clerk account. Keep the existing linked Clerk/user-content declarations too.
-2. **Add and verify PostHog's Release dSYM upload build phase.** Use the SPM script at
-   `"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/posthog-ios/build-tools/upload-symbols.sh"`,
-   keep Release set to `DWARF with dSYM File`, authenticate `posthog-cli`, and do not enable
-   `POSTHOG_INCLUDE_SOURCE`. Without the matching dSYM, native crash addresses will not become
-   useful symbolicated ColorSense stack frames.
+2. **Authenticate PostHog's Release dSYM upload.** Everything except the credential is done and
+   verified: `project.yml` adds the SPM upload script as the final build phase, Release resolves to
+   `dwarf-with-dsym` with `ENABLE_USER_SCRIPT_SANDBOXING: NO`, `POSTHOG_INCLUDE_SOURCE` stays off,
+   and the phase points `POSTHOG_CLI_DOTENV_FILE` at `Config/PostHogCLI.env`. The chain was proved
+   end to end on 2026-09-05 with `POSTHOG_CLI_DRY_RUN=1` and `CODE_SIGNING_ALLOWED=NO`: the dSYM is
+   produced, the phase runs, the CLI is found, and it reaches the dSYM step before skipping it.
+   What remains is filling in `Config/PostHogCLI.env` from `.example` with a personal API key, then
+   verifying a real archive uploads its matching dSYM. Without it, native crash addresses never
+   become useful symbolicated ColorSense stack frames.
+   **A Release build cannot be produced at all on a Personal Team** — measured, not assumed: it
+   fails signing because the profile has no Sign in with Apple capability, which is the same
+   entitlement this file already records as Release-only for that reason. So this item is blocked
+   behind enrolment, and the `CODE_SIGNING_ALLOWED=NO` route above is the only way to exercise the
+   phase before then.
+   **Once Release does build, an unauthenticated CLI fails the build** rather than shipping a
+   release with no symbols. That is deliberate on PostHog's side, so put the credential in before
+   the first archive or the failure looks like a signing problem.
 3. **Smoke-test the actual archived build before inviting beta testers.** Confirm the Release
    archive contains the production PostHog project token and host, launch it with analytics enabled,
    and verify `app_opened` reaches the dashboard. Then trigger one controlled crash in an internal
@@ -1582,6 +1601,21 @@ install Homebrew, `brew install xcodegen`, copy the secrets file, `xcodegen gene
 `Config/Secrets.xcconfig` (gitignored) now carries three values: `CLERK_PUBLISHABLE_KEY`
 (production, `pk_live_…`, the same key colorsense.online serves), `DEVELOPMENT_TEAM` for device
 signing, and optionally `API_BASE_URL` / `CLERK_PROXY_URL` to point at a local api-server.
+
+`Config/PostHogCLI.env` (gitignored, `.example` beside it) is a **second** secrets file, and the
+split is deliberate. `POSTHOG_API_KEY` in `Secrets.xcconfig` is the project API key the app ships
+with, a client identifier by design. `POSTHOG_CLI_API_KEY` here is a *personal* token that can
+write to the project, used only by the Release dSYM upload. Mixing them would put a real secret in
+a file whose whole point is that it holds shippable values.
+
+**`posthog-cli` is installed at `~/.posthog/posthog-cli`, not globally** (added 2026-09-05). It is
+a symlink into `~/.posthog-npm`, created with `npm install -g @posthog/cli@latest --prefix
+"$HOME/.posthog-npm"`. A plain `npm install -g` fails on this machine: the npm prefix is
+`/usr/local` and needs elevation. That path is not a workaround — it is the *first* location the
+SDK's `upload-symbols.sh` checks, ahead of the npm prefix and `PATH`, precisely because Xcode build
+phases do not load shell profiles. Note npm's allow-scripts policy skipped the package's
+postinstall; the CLI answers `--version` regardless, so this only matters if a future version
+fetches its platform binary lazily.
 
 ## Fonts (done 2026-09-02)
 
