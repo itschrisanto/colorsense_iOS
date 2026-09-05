@@ -344,6 +344,11 @@ that the app has exactly one.
 Note this took the tool strip to six items and it still lays out flat, which is the `ViewThatFits`
 arrangement doing its job rather than luck.
 
+**Picking this project up?** `docs/HANDOFF.md` is the orientation: repo state, what is built and
+signed off and must not be touched, what to do once the Apple Developer Program is live, the open
+work that needs no account, the ground rules for new feature requests, and the traps that have cost
+real time.
+
 ## Submission scope, decided 2026-09-05
 
 `docs/APP-STORE-SUBMISSION.md` is the checklist and the drafted App Store Connect metadata. It is
