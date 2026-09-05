@@ -88,9 +88,15 @@ colorsense.online" and that keeps the About screen's Support row out.
       marketing version. Two independent reasons: App Store Connect rejects a reused build number,
       and PostHog binds each uploaded dSYM to the release these numbers identify, so two builds at
       one version collide and either fail the build or silently attach the wrong symbols.
-- [ ] **Authenticate `posthog-cli`.** Copy `Config/PostHogCLI.env.example` to
-      `Config/PostHogCLI.env` and fill in a personal API key and project ID. Once Release builds, an
-      unauthenticated CLI **fails the build** rather than shipping a release with no symbols.
+- [x] **`posthog-cli` is authenticated, and the upload is proved end to end (2026-09-05).**
+      `Config/PostHogCLI.env` holds a personal API key and the project ID; it is gitignored and
+      untracked, verified both ways. A real Release build with `CODE_SIGNING_ALLOWED=NO` created the
+      release `online.colorsense.ios@0.1.0+1` in PostHog and uploaded the dSYM
+      (UUID `6BE7EC1E-6480-355E-ADF8-432064FC5B42`, 17.8MB, 1 chunk, 0 skipped). This was the last
+      unproven link in the chain — everything before it had only been dry-run.
+      **That release name makes the version problem concrete rather than theoretical.** A symbol set
+      now exists against `0.1.0+1`, so the next Release build at the same numbers with a different
+      binary collides. See the version item above; that is its second reason.
 - [x] **Checked the layout on an iPhone SE (2026-09-05), and it was broken.** Measured: the
       onboarding band stack laid out at **906.5pt on a 667pt screen** in the account ask's
       signed-out shape, and the overflow was clipped, taking "Maybe later" with it. That control is
