@@ -60,6 +60,12 @@ section 2.
       review screenshots and server reconciliation remain.
 - [x] Produce a signed Release archive and App Store Connect export. The preflight archive and IPA
       were created on 2026-09-06 with automatic signing; nothing was uploaded.
+- [x] Upload and verify the matching PostHog dSYM for TestFlight build `1.0+1` (2026-09-08).
+      PostHog reports one uploaded symbol set for UUID
+      `D63B0BF1-D556-3B38-AE4A-E6F485B5B34F`, with no failure reason, attached to release
+      `online.colorsense.ios@1.0+1`. The UUID matches both the app binary and the dSYM retained in
+      `.build/testflight/ColorSense-1.0-1.xcarchive`. A download-back check also produced the same
+      SHA-256 hash as the archived DWARF file.
 
 Verification on 2026-09-06: a paid-team Debug build installed and launched on the paired iPhone;
 the Release archive succeeded; and `xcodebuild -exportArchive` produced an App Store Connect IPA.
@@ -305,7 +311,8 @@ showing a scene; SVG Recolor.
 
 - [ ] Confirm the archive carries the production PostHog token and host, launch it, and verify
       `app_opened` reaches the dashboard.
-- [ ] Verify the dSYM appears in PostHog Symbol sets.
+- [x] Verify the dSYM appears in PostHog Symbol sets. Confirmed 2026-09-08 for
+      `online.colorsense.ios@1.0+1`; PostHog reports the archive UUID as uploaded with no failure.
 - [ ] Trigger one controlled crash in an internal build, relaunch so the stored report uploads, and
       verify `$exception` arrives symbolicated, both reliability tiles move, and the Discord
       issue-created alert fires. **Remove the crash trigger before external distribution.**

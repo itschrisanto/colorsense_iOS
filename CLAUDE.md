@@ -450,18 +450,15 @@ the app. The PostHog project also has exception autocapture enabled. These relea
    Data for analytics, plus Crash Data and Other Diagnostic Data for crash diagnosis. PostHog uses
    only its random installation ID here; these four categories are not used for tracking and are
    not linked to the Clerk account. Keep the existing linked Clerk/user-content declarations too.
-2. **Verify the next numbered archive uploads its matching dSYM.** The credential and pipeline are
-   configured: `project.yml` adds the SPM upload script as the final build phase, Release resolves to
-   `dwarf-with-dsym` with `ENABLE_USER_SCRIPT_SANDBOXING: NO`, `POSTHOG_INCLUDE_SOURCE` stays off,
-   and the phase points `POSTHOG_CLI_DOTENV_FILE` at `Config/PostHogCLI.env`. The chain was proved
-   end to end on 2026-09-05 with `POSTHOG_CLI_DRY_RUN=1` and `CODE_SIGNING_ALLOWED=NO`: the dSYM is
-   produced, the phase runs, the CLI is found, and it reaches the dSYM step before skipping it.
-   A real upload was already verified. The 2026-09-06 signing preflight used
-   `POSTHOG_CLI_DRY_RUN=1` because `0.1.0+1` already has a symbol set; the next live verification must
-   follow a build-number bump so native crash addresses map to the matching binary.
-   That Personal Team signing block is resolved. On 2026-09-06 a paid-team signed archive and App
-   Store Connect export succeeded with Sign in with Apple and a dSYM. PostHog remained in dry-run
-   mode for this preflight to avoid colliding with the existing `0.1.0+1` symbol set.
+2. **The numbered TestFlight archive has its matching dSYM in PostHog (verified 2026-09-08).** The
+   credential and pipeline are configured: `project.yml` adds the SPM upload script as the final
+   build phase, Release resolves to `dwarf-with-dsym` with `ENABLE_USER_SCRIPT_SANDBOXING: NO`,
+   `POSTHOG_INCLUDE_SOURCE` stays off, and the phase points `POSTHOG_CLI_DOTENV_FILE` at
+   `Config/PostHogCLI.env`. PostHog reports one uploaded symbol set for TestFlight release
+   `online.colorsense.ios@1.0+1`, UUID `D63B0BF1-D556-3B38-AE4A-E6F485B5B34F`, with the uploaded
+   file present and no failure reason. That UUID matches both the app binary and the archived dSYM.
+   A download-back check matched the archived DWARF file byte for byte by SHA-256.
+   `posthog-cli` was updated locally to 0.18.1 before the successful retry.
    **Once Release does build, an unauthenticated CLI fails the build** rather than shipping a
    release with no symbols. That is deliberate on PostHog's side, so put the credential in before
    the first archive or the failure looks like a signing problem.

@@ -240,9 +240,11 @@ Take them, but know the ground rules before you agree to anything.
 
 `Config/Secrets.xcconfig` and `Config/PostHogCLI.env` are gitignored and hold live values. Only the
 `.example` files are tracked. `posthog-cli` is installed at `~/.posthog/posthog-cli` (a `--prefix`
-install; a plain `npm -g` fails on the `/usr/local` prefix) and is authenticated — a real dSYM
-upload has been verified end to end. The signed preflight export used dry-run mode because build
-`0.1.0+1` already has symbols and a second binary under those numbers would collide.
+install; a plain `npm -g` fails on the `/usr/local` prefix) and is authenticated. It was updated to
+0.18.1 on 2026-09-08. The TestFlight `1.0+1` archive dSYM was uploaded and verified in PostHog:
+UUID `D63B0BF1-D556-3B38-AE4A-E6F485B5B34F`, one matching symbol set, uploaded file present, no
+failure reason, and release binding `online.colorsense.ios@1.0+1`. Downloading the symbol set back
+from PostHog produced a DWARF file with the same UUID and SHA-256 hash as the archive.
 
 End commits with:
 
@@ -263,3 +265,6 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 - No `QA_BEAT`, `QA_TOOL`, sample SVG injection, or Pro presentation override remains in app source.
 - Paid-team Debug built, installed and launched on the paired iPhone. A signed Release archive and
   App Store Connect IPA export succeeded with Sign in with Apple; no upload was performed.
+- The physical-device smoke test passed for Appearance switching, camera extraction, StoreKit Pro
+  restore and persistence, PNG export to Photos, and the contrast smart fix. The signed `1.0+1`
+  archive's matching dSYM is present in PostHog and bound to the correct release.
