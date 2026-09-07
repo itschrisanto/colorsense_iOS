@@ -117,7 +117,8 @@ were all confirmed Active on 2026-09-07.
 The six approved product-page screenshots were uploaded to App Store Connect on 2026-09-07. They
 are 1290 x 2796 RGB PNGs without transparency and appear in order as palette, contrast, health,
 visualizer, SVG and schemes. App Store Connect shows 6 of 10 in the 6.9" slot and derives the 6.5"
-set from it. No build has been uploaded and the app has not been added for review.
+set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08 and is processing in App Store
+Connect. The app has not been added for review.
 
 1. **Finish end-to-end Sign in with Apple testing.** Paid-team profiles and signed products carry
    the entitlement. Apple credentials and the iOS bundle were saved in the existing Replit-managed
@@ -186,11 +187,12 @@ set from it. No build has been uploaded and the app has not been added for revie
 - **Paid-team signing preflight:** Xcode automatically provisioned `online.colorsense.ios`, built
   and launched Debug on the paired iPhone, archived Release, and exported an App Store Connect IPA.
   Both signed apps carry Sign in with Apple; the export also carries `beta-reports-active` and has
-  `get-task-allow` disabled. Nothing was uploaded, and PostHog stayed in dry-run mode.
+  `get-task-allow` disabled. Build `1.0 (1)` was accepted by App Store Connect on 2026-09-08, and
+  its exact archived dSYM is verified in PostHog.
 
 Remaining local follow-up: physical-device verification of accessibility scrolling and exit taps.
-App Store Connect still needs the build, review information and final privacy questionnaire. The
-completed local changes are captured in the 2026-09-07 checkpoint commit.
+App Store Connect must finish processing the uploaded build, then needs export-compliance handling,
+internal TestFlight assignment, review information and the final privacy questionnaire.
 
 ## Chris has feedback and new features to discuss
 
@@ -264,7 +266,8 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 - Screenshot dimensions verified from each PNG header: six images, all 1320 × 2868.
 - No `QA_BEAT`, `QA_TOOL`, sample SVG injection, or Pro presentation override remains in app source.
 - Paid-team Debug built, installed and launched on the paired iPhone. A signed Release archive and
-  App Store Connect IPA export succeeded with Sign in with Apple; no upload was performed.
+  App Store Connect IPA export succeeded with Sign in with Apple. Apple accepted build `1.0 (1)`
+  for processing on 2026-09-08.
 - The physical-device smoke test passed for Appearance switching, camera extraction, StoreKit Pro
   restore and persistence, PNG export to Photos, and the contrast smart fix. The signed `1.0+1`
   archive's matching dSYM is present in PostHog and bound to the correct release.

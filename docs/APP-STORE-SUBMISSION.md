@@ -1,7 +1,7 @@
 # ColorSense iOS — App Store submission
 
 The reference for getting this app into review, and the record of why each decision was made.
-Written 2026-09-05 and updated 2026-09-07 after the App Store Connect record was created.
+Written 2026-09-05 and updated 2026-09-08 after the first TestFlight upload.
 
 **Facts here that belong to the brand — pricing, positioning, handles, contact — are owned by the
 vault** (`Claude Skill.md`), not by this file. Where copy is drafted below it is drafted *from* the
@@ -24,8 +24,8 @@ Schemes and Library, plus onboarding, the palette workspace, Account, About and 
 
 **Apple Developer Program enrollment is active.** Automatic provisioning now produces signed Debug
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
-uploaded; the build, review information, privacy questionnaire and release blockers remain. See
-section 2.
+uploaded. Build `1.0 (1)` is processing in App Store Connect; internal TestFlight assignment,
+review information, the privacy questionnaire and release blockers remain. See section 2.
 
 ---
 
@@ -66,13 +66,14 @@ section 2.
       `online.colorsense.ios@1.0+1`. The UUID matches both the app binary and the dSYM retained in
       `.build/testflight/ColorSense-1.0-1.xcarchive`. A download-back check also produced the same
       SHA-256 hash as the archived DWARF file.
+- [x] Upload build `1.0 (1)` to App Store Connect (2026-09-08). Apple's upload validation passed
+      and App Store Connect accepted the package for processing. The uploaded app uses the App
+      Store provisioning profile, includes Sign in with Apple and `beta-reports-active`, and has
+      `get-task-allow = false`.
 
-Verification on 2026-09-06: a paid-team Debug build installed and launched on the paired iPhone;
-the Release archive succeeded; and `xcodebuild -exportArchive` produced an App Store Connect IPA.
-The exported app has `com.apple.developer.applesignin`, `beta-reports-active = true`, and
-`get-task-allow = false`. The archive contains `ColorSense.app.dSYM`. PostHog ran in dry-run mode to
-avoid attaching a second symbol set to the historical `0.1.0+1` release. The project now targets
-`1.0+1`; a fresh archive is required before upload.
+Verification on 2026-09-08: the physical-device smoke test passed, the signed `1.0+1` Release
+archive and App Store Connect IPA passed local validation, its matching dSYM was verified in
+PostHog, and Apple accepted the package for processing.
 
 ---
 
