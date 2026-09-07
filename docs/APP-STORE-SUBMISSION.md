@@ -24,8 +24,9 @@ Schemes and Library, plus onboarding, the palette workspace, Account, About and 
 
 **Apple Developer Program enrollment is active.** Automatic provisioning now produces signed Debug
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
-uploaded. Build `1.0 (1)` is processing in App Store Connect; internal TestFlight assignment,
-review information, the privacy questionnaire and release blockers remain. See section 2.
+uploaded. Build `1.0 (1)` finished processing successfully and is **Ready to Submit** in TestFlight;
+internal TestFlight assignment, review information, the privacy questionnaire and release blockers
+remain. See section 2.
 
 ---
 
@@ -67,13 +68,18 @@ review information, the privacy questionnaire and release blockers remain. See s
       `.build/testflight/ColorSense-1.0-1.xcarchive`. A download-back check also produced the same
       SHA-256 hash as the archived DWARF file.
 - [x] Upload build `1.0 (1)` to App Store Connect (2026-09-08). Apple's upload validation passed
-      and App Store Connect accepted the package for processing. The uploaded app uses the App
-      Store provisioning profile, includes Sign in with Apple and `beta-reports-active`, and has
+      and processing completed successfully. The Build Uploads row is **Complete**, and TestFlight
+      version 1.0 build 1 is **Ready to Submit**. The uploaded app uses the App Store provisioning
+      profile, includes Sign in with Apple and `beta-reports-active`, and has
       `get-task-allow = false`.
+- [ ] Create the internal TestFlight group **ColorSense Internal**, add Chris's App Store Connect
+      Apple ID as the first internal tester, assign build `1.0 (1)`, and install it from TestFlight.
+      Do not use either Sandbox Apple Account here; those accounts are only for StoreKit testing.
 
 Verification on 2026-09-08: the physical-device smoke test passed, the signed `1.0+1` Release
 archive and App Store Connect IPA passed local validation, its matching dSYM was verified in
-PostHog, and Apple accepted the package for processing.
+PostHog, and Apple completed package processing without an upload error. The build is parked at
+**Ready to Submit**, before creation of the first internal testing group.
 
 ---
 
