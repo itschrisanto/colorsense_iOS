@@ -1,3 +1,6 @@
+> Superseded on 2026-09-07 by `docs/replit-website-legal-handoff.md`, which covers both the Privacy
+> Policy and Terms of Service and includes the current App Store purchase and deletion dependencies.
+
 Update the ColorSense privacy policy so it covers the iOS app.
 
 File: `artifacts/color-palette/src/pages/PrivacyPolicy.tsx`

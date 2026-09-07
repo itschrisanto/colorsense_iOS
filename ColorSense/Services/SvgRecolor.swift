@@ -79,25 +79,31 @@ enum SvgRecolor {
     /// hex that appears in an id, a comment or a piece of unrelated text is left alone.
     static func recolor(_ svg: String, mapping: [String: String]) -> String {
         var out = svg
-        // Sorted so a given input always produces byte-identical output, which is what makes the
-        // result testable and diffable. Dictionary order is not guaranteed.
-        for from in mapping.keys.sorted() {
-            guard let to = mapping[from], !to.isEmpty, from != to else { continue }
-            for variant in variants(of: from) {
-                let v = NSRegularExpression.escapedPattern(for: variant)
-                out = replace(
-                    in: out,
-                    pattern: #"((?:fill|stroke|stop-color)\s*=\s*["'])\#(v)(["'])"#,
-                    template: "$1\(to)$2"
-                )
-                out = replace(
-                    in: out,
-                    pattern: #"((?:fill|stroke|stop-color)\s*:\s*)\#(v)(\s*[;}"'])"#,
-                    template: "$1\(to)$2"
-                )
+        // Read each original token once. Sequential A -> B, B -> A replacement collapses swaps.
+        for pattern in [
+            #"(?:fill|stroke|stop-color)\s*=\s*["']([^"']+)["']"#,
+            #"(?:fill|stroke|stop-color)\s*:\s*([^;}"']+)"#
+        ] {
+            guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { continue }
+            let matches = re.matches(in: out, range: NSRange(out.startIndex..., in: out))
+            for match in matches.reversed() {
+                guard let range = Range(match.range(at: 1), in: out),
+                      let replacement = mapping[normalize(String(out[range]))],
+                      !replacement.isEmpty else { continue }
+                out.replaceSubrange(range, with: replacement)
             }
         }
         return out
+    }
+
+    /// Permute the currently mapped colors, including custom choices. Never invent a new color
+    /// or alter the shared palette. A fallback rotation prevents an apparently inert tap.
+    static func shuffledMapping(found: [String], mapping: [String: String]) -> [String: String] {
+        let values = found.map { mapping[$0] ?? $0 }
+        guard Set(values).count > 1 else { return mapping }
+        var shuffled = values.shuffled()
+        if shuffled == values { shuffled = Array(values.dropFirst()) + [values[0]] }
+        return Dictionary(uniqueKeysWithValues: zip(found, shuffled))
     }
 
     private static func replace(in text: String, pattern: String, template: String) -> String {

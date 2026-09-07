@@ -1,19 +1,17 @@
 import SwiftUI
 import ClerkKit
 
-/// Current plan, read from `GET /api/me` — the same endpoint the web app's `usePlan` uses, which
-/// computes the effective plan at read time so trial and voucher grants expire on their own.
-///
-/// Deliberately read-only: there is **no** upgrade or checkout link, and no mention of where one
-/// lives. App Store guideline 3.1.1 requires digital-goods purchases to go through In-App
-/// Purchase, and it covers prose as well as buttons — "Pro is available at colorsense.online"
-/// was still a call to action pointing at an external purchase mechanism, so it is gone. Selling
-/// Pro from inside the app means StoreKit, which is a separate piece of work — until then this
-/// reports status and nothing more.
+/// The effective plan comes from `GET /api/me`, while StoreKit supplies products and localized
+/// prices. The backend verifies every transaction before this screen reports success.
 struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var plan: String?
     @State private var state: LoadState = .loading
+    @State private var productInfo: [ProProduct: ProProductInfo] = [:]
+    @State private var selectedProduct: ProProduct = .annual
+    @State private var activePurchase: ProProduct?
+    @State private var isRestoring = false
+    @State private var message: String?
 
     private enum LoadState: Equatable {
         case loading, loaded, failed(SavedPaletteService.SaveError)
@@ -28,151 +26,282 @@ struct SubscriptionView: View {
     }
 
     private var isPaid: Bool { plan == "pro" || plan == "business" }
+    private var isBusy: Bool { activePurchase != nil || isRestoring }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                Group {
                     switch state {
                     case .loading:
-                        ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
+                        ProgressView("Loading your plans…")
+                            .font(BrandFont.ui(14))
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 80)
                     case .failed(let error):
-                        // Every other loading screen offers a retry; this one left closing and
-                        // reopening the sheet as the only way to try again. Gated the same way
-                        // they are — see SaveError.isRetryable.
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(error.message)
-                                .font(BrandFont.ui(15))
-                                .foregroundStyle(.secondary)
-                            if error.isRetryable {
-                                Button("Try again") {
-                                    state = .loading
-                                    Task { await load() }
-                                }
-                                .font(BrandFont.ui(15, weight: .medium))
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        failureView(error)
                     case .loaded:
-                        planCard
-                        // Neither branch names the web checkout. A paid user still needs to
-                        // learn that cancelling does not happen here, so that is stated without
-                        // pointing at where it does; a free user gets the tier described rather
-                        // than a route to buy it. See the 3.1.1 note above.
-                        Text(isPaid
-                             ? "Your plan is managed outside the app."
-                             : "Pro unlocks the developer and design export formats.")
-                            .font(BrandFont.ui(13))
-                            .foregroundStyle(.secondary)
-
-                        plans
+                        if isPaid { paidContent } else { offerContent }
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 28)
             }
+            .scrollBounceBehavior(.basedOnSize)
+            .background(Color(.systemBackground))
             .navigationTitle("Subscription")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
             }
             .task { await load() }
+            .alert("ColorSense Pro", isPresented: Binding(
+                get: { message != nil },
+                set: { if !$0 { message = nil } }
+            )) {
+                Button("OK", role: .cancel) { message = nil }
+            } message: {
+                Text(message ?? "")
+            }
         }
     }
 
-    /// Every plan ColorSense sells, listed so the shapes exist before In-App Purchase does.
-    ///
-    /// **Descriptive, not a shop.** Nothing here is tappable and nothing says where to buy: with no
-    /// StoreKit yet, a button would either do nothing or point outside the app, and guideline 3.1.1
-    /// forbids the second in prose as much as in buttons. When `ProStore` goes live these rows are
-    /// where the buy actions attach, which is the point of listing them now.
-    ///
-    /// Prices come from `ProProduct`, which reads them off the vault, so this screen cannot drift
-    /// from the onboarding plan beat or from the web.
-    private var plans: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("What ColorSense offers")
-                .font(BrandFont.ui(13, weight: .bold))
-                .foregroundStyle(.secondary)
-                .padding(.top, 8)
-
-            planRow(
-                title: "Free",
-                price: "$0",
-                detail: "The Extractor and the WCAG checker, unlimited and never paywalled.",
-                isCurrent: !isPaid
+    private var offerContent: some View {
+        VStack(spacing: 22) {
+            SubscriptionHero(
+                title: productInfo[.monthly]?.isEligibleForIntroOffer == true
+                    ? "Meet your colors' full potential."
+                    : "Make every color count.",
+                detail: "Create, refine and export with every ColorSense Pro tool.",
+                pose: .guiding
             )
 
-            ForEach(ProProduct.allCases, id: \.self) { product in
-                planRow(
-                    title: product.title,
-                    price: product.price,
-                    detail: product.detail,
-                    // The server reports one effective plan, not which product bought it, so a
-                    // paid reader cannot be told *which* of these three they are on. Saying
-                    // nothing is better than guessing wrong at somebody's own subscription.
-                    isCurrent: false
-                )
-            }
+            benefits
 
-            Text("In-app purchase is not available yet, so these are listed rather than offered.")
-                .font(BrandFont.ui(12))
-                .foregroundStyle(.tertiary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 2)
-        }
-    }
-
-    private func planRow(title: String, price: String, detail: String, isCurrent: Bool) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(title).font(BrandFont.ui(15, weight: .bold))
-                    if isCurrent {
-                        Text("CURRENT")
-                            .font(BrandFont.ui(10, weight: .bold))
-                            .foregroundStyle(PaletteColor(color: BrandColor.teal).legibleForeground)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(BrandColor.teal, in: Capsule())
-                    }
+            VStack(spacing: 10) {
+                ForEach(ProProduct.allCases, id: \.self) { product in
+                    planChoice(product)
                 }
-                Text(detail)
-                    .font(BrandFont.ui(13))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 8)
-            Text(price).font(BrandFont.ui(16, weight: .bold))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Choose a Pro plan")
+
+            Button { purchase(selectedProduct) } label: {
+                HStack(spacing: 9) {
+                    if activePurchase == selectedProduct { ProgressView().tint(.white) }
+                    Text(primaryActionTitle)
+                }
+            }
+            .buttonStyle(.primaryAction)
+            .disabled(productInfo[selectedProduct] == nil || isBusy)
+            .opacity(productInfo[selectedProduct] == nil || isBusy ? 0.58 : 1)
+
+            Text(selectedProduct == .pass
+                 ? "One month of Pro. This purchase does not renew."
+                 : "Subscription renews automatically until canceled.")
+                .font(BrandFont.ui(12))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            footer
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
-        .accessibilityElement(children: .combine)
     }
 
-    private var planCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Current plan", systemImage: "sparkles")
-                .font(BrandFont.ui(11, weight: .bold))
-                .foregroundStyle(.secondary)
-            HStack(spacing: 8) {
-                Text(planLabel)
-                    .font(BrandFont.display(34))
-                if isPaid {
+    private var paidContent: some View {
+        VStack(spacing: 22) {
+            SubscriptionHero(
+                title: "Your colors are ready to play.",
+                detail: "Every Pro tool and export is active on this ColorSense account.",
+                pose: .celebrating
+            )
+
+            VStack(spacing: 8) {
+                Label("Current plan", systemImage: "sparkles")
+                    .font(BrandFont.ui(12, weight: .bold))
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 9) {
+                    Text(planLabel.uppercased()).font(BrandFont.display(46))
                     Text("ACTIVE")
                         .font(BrandFont.ui(10, weight: .bold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(BrandColor.yellow.opacity(0.25))
-                        .foregroundStyle(.primary)
-                        .clipShape(Capsule())
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(BrandColor.yellow.opacity(0.35), in: Capsule())
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 22)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20))
+
+            benefits
+
+            Button { restore() } label: {
+                HStack(spacing: 9) {
+                    if isRestoring { ProgressView() }
+                    Label("Restore Purchases", systemImage: "arrow.clockwise")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.secondaryAction)
+            .disabled(isBusy)
+
+            footer
+        }
+    }
+
+    private var benefits: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            BenefitRow(
+                title: "Export polished palettes and artwork",
+                symbol: "square.and.arrow.up",
+                color: BrandColor.coral
+            )
+            BenefitRow(
+                title: "Use SVG Recolor, Visualizer and smart fixes",
+                symbol: "wand.and.stars",
+                color: BrandColor.purple
+            )
+            BenefitRow(
+                title: "Keep the Extractor and WCAG checker free",
+                symbol: "heart.fill",
+                color: BrandColor.teal
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 4)
+    }
+
+    private func planChoice(_ product: ProProduct) -> some View {
+        let selected = selectedProduct == product
+        let accent = product.accent
+
+        return Button { selectedProduct = product } label: {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(accent)
+                    .frame(width: 7)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 7) {
+                        Text(product.title).font(BrandFont.ui(16, weight: .bold))
+                        if product == .annual {
+                            Text("POPULAR")
+                                .font(BrandFont.ui(9, weight: .bold))
+                                .foregroundStyle(PaletteColor(color: BrandColor.yellow).legibleForeground)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(BrandColor.yellow, in: Capsule())
+                        }
+                    }
+
+                    Text(planDetail(for: product))
+                        .font(BrandFont.ui(12))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 6)
+
+                VStack(alignment: .trailing, spacing: 7) {
+                    Text(productInfo[product]?.displayPrice ?? "…")
+                        .font(BrandFont.ui(17, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(selected ? accent : Color.secondary.opacity(0.45))
+                }
+            }
+            .padding(.vertical, 13)
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                selected ? accent.opacity(0.11) : Color(.secondarySystemBackground),
+                in: RoundedRectangle(cornerRadius: 17)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 17)
+                    .stroke(selected ? accent : Color.clear, lineWidth: 2)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .disabled(productInfo[product] == nil || isBusy)
+        .opacity(productInfo[product] == nil ? 0.6 : 1)
+        .accessibilityLabel(planAccessibilityLabel(for: product, selected: selected))
+    }
+
+    private var primaryActionTitle: String {
+        switch selectedProduct {
+        case .monthly:
+            return productInfo[.monthly]?.isEligibleForIntroOffer == true
+                ? "Start 7-Day Free Trial"
+                : "Choose Monthly"
+        case .annual: return "Choose Annual"
+        case .pass: return "Get Pro Pass"
+        }
+    }
+
+    private func planDetail(for product: ProProduct) -> String {
+        switch product {
+        case .monthly:
+            return productInfo[product]?.isEligibleForIntroOffer == true
+                ? "7 days free, then renews monthly"
+                : "Renews monthly until canceled"
+        case .annual: return "A full year of Pro, billed yearly"
+        case .pass: return "One month of Pro, no renewal"
+        }
+    }
+
+    private func planAccessibilityLabel(for product: ProProduct, selected: Bool) -> String {
+        let price = productInfo[product]?.displayPrice ?? "Price unavailable"
+        return [product.title, price, planDetail(for: product), selected ? "Selected" : nil]
+            .compactMap { $0 }
+            .joined(separator: ", ")
+    }
+
+    private var footer: some View {
+        VStack(spacing: 13) {
+            if !isPaid {
+                Button { restore() } label: {
+                    HStack(spacing: 7) {
+                        if isRestoring { ProgressView() }
+                        Text("Restore Purchases")
+                    }
+                }
+                .font(BrandFont.ui(14, weight: .medium))
+                .disabled(isBusy)
+            }
+
+            HStack(spacing: 26) {
+                Link("Terms", destination: URL(string: "https://colorsense.online/terms")!)
+                Link("Privacy", destination: URL(string: "https://colorsense.online/privacy-policy")!)
+            }
+            .font(BrandFont.ui(13, weight: .medium))
+        }
+        .tint(.accentColor)
+    }
+
+    private func failureView(_ error: SavedPaletteService.SaveError) -> some View {
+        VStack(spacing: 18) {
+            SubscriptionHero(
+                title: "The colors need a moment.",
+                detail: error.message,
+                pose: .unsure
+            )
+            if error.isRetryable {
+                Button("Try Again") {
+                    state = .loading
+                    Task { await load() }
+                }
+                .buttonStyle(.primaryAction)
+            }
+        }
     }
 
     private func load() async {
@@ -180,8 +309,163 @@ struct SubscriptionView: View {
         case .success(let value):
             plan = value
             state = .loaded
+
+            // A paid account has no product chooser, so waiting for Apple's catalog only delays
+            // the active-plan screen. Free accounts render immediately with price placeholders,
+            // then enable each choice as StoreKit supplies its localized product information.
+            if value != "pro" && value != "business" {
+                productInfo = await ProStoreRegistry.current.productInfo()
+            }
         case .failure(let error):
             state = .failed(error)
+        }
+    }
+
+    private func purchase(_ product: ProProduct) {
+        activePurchase = product
+        Task {
+            let outcome = await ProStoreRegistry.current.purchase(product)
+            activePurchase = nil
+            switch outcome {
+            case .purchased:
+                message = "Your purchase is active."
+                await load()
+            case .cancelled: break
+            case .pending:
+                message = "The purchase is waiting for approval. Pro will activate after the App Store completes it."
+            case .notConfigured:
+                message = "In-app purchases are not available yet."
+            case .failed(let error):
+                message = error
+            }
+        }
+    }
+
+    private func restore() {
+        isRestoring = true
+        Task {
+            let outcome = await ProStoreRegistry.current.restore()
+            isRestoring = false
+            switch outcome {
+            case .purchased:
+                message = "Your purchase was restored."
+                await load()
+            case .cancelled: break
+            case .pending:
+                message = "The purchase is still pending."
+            case .notConfigured:
+                message = "Restore Purchases is not available yet."
+            case .failed(let error):
+                message = error
+            }
+        }
+    }
+}
+
+private struct SubscriptionHero: View {
+    let title: String
+    let detail: String
+    let pose: LaumaPose
+
+    @ScaledMetric(relativeTo: .largeTitle) private var mascotHeight: CGFloat = 116
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            BrandColor.yellow.opacity(0.62),
+                            BrandColor.teal.opacity(0.42),
+                            BrandColor.purple.opacity(0.30),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            HeroColorConfetti()
+
+            VStack(spacing: 8) {
+                LaumaStage(pose: pose, height: min(mascotHeight, 154))
+                    .accessibilityHidden(true)
+
+                Text(title)
+                    .font(BrandFont.display(36))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(detail)
+                    .font(BrandFont.ui(14))
+                    .foregroundStyle(.primary.opacity(0.76))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 290)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+        }
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct HeroColorConfetti: View {
+    var body: some View {
+        GeometryReader { proxy in
+            Group {
+                chip(BrandColor.coral, width: 54, height: 22, angle: -14)
+                    .position(x: proxy.size.width * 0.13, y: proxy.size.height * 0.18)
+                chip(BrandColor.purple, width: 42, height: 18, angle: 18)
+                    .position(x: proxy.size.width * 0.86, y: proxy.size.height * 0.22)
+                chip(BrandColor.teal, width: 50, height: 20, angle: 12)
+                    .position(x: proxy.size.width * 0.12, y: proxy.size.height * 0.76)
+                chip(BrandColor.yellow, width: 46, height: 18, angle: -20)
+                    .position(x: proxy.size.width * 0.88, y: proxy.size.height * 0.73)
+            }
+        }
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+
+    private func chip(_ color: Color, width: CGFloat, height: CGFloat, angle: Double) -> some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(color.opacity(0.78))
+            .frame(width: width, height: height)
+            .overlay {
+                RoundedRectangle(cornerRadius: 6).stroke(.white.opacity(0.55), lineWidth: 1)
+            }
+            .rotationEffect(.degrees(angle))
+    }
+}
+
+private struct BenefitRow: View {
+    let title: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(PaletteColor(color: color).legibleForeground)
+                .frame(width: 30, height: 30)
+                .background(color, in: Circle())
+                .accessibilityHidden(true)
+            Text(title)
+                .font(BrandFont.ui(15, weight: .medium))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private extension ProProduct {
+    var accent: Color {
+        switch self {
+        case .monthly: BrandColor.teal
+        case .annual: BrandColor.purple
+        case .pass: BrandColor.coral
         }
     }
 }

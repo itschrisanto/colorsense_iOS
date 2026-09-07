@@ -87,4 +87,18 @@ enum AppConfig {
         }
         return URL(string: "https://colorsense.online/api")!
     }
+
+    /// Purchases stay disabled until the production API can verify and persist Apple's signed
+    /// transactions. Set `STOREKIT_PURCHASES_ENABLED = YES` only after the Replit StoreKit
+    /// handoff is deployed and its authenticated reconciliation route has passed sandbox tests.
+    static var storeKitPurchasesEnabled: Bool {
+        switch Bundle.main.object(forInfoDictionaryKey: "STOREKIT_PURCHASES_ENABLED") {
+        case let value as Bool:
+            return value
+        case let value as String:
+            return ["1", "true", "yes"].contains(value.lowercased())
+        default:
+            return false
+        }
+    }
 }

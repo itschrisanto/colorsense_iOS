@@ -124,6 +124,15 @@ final class PaletteStore {
     /// exactly as Generate does. Anchors follow, or a later Generate would regenerate from the
     /// colour that was just corrected away. `generation` resets, because unlike a reorder this
     /// genuinely is a different palette to iterate from.
+    /// A sheet may outlive the palette arrangement it was opened from. Never apply by stale index.
+    @discardableResult
+    func applyFix(_ swatch: PaletteColor, to id: UUID, expectedHex: String) -> Bool {
+        guard let index = palette.colors.firstIndex(where: { $0.id == id }),
+              palette.colors[index].hex == expectedHex else { return false }
+        replace(at: index, with: swatch)
+        return true
+    }
+
     func replace(at index: Int, with swatch: PaletteColor) {
         guard palette.colors.indices.contains(index) else { return }
 

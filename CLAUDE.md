@@ -29,29 +29,25 @@ The first-run flow is finished, filmed and committed: splash, hello, naming, moo
 was verified on a physical iPhone 17 Pro Max end to end, and swept in the simulator in dark mode, at
 accessibility text sizes and with Reduce Motion on. 85 tests pass.
 
-Four gaps are **parked on purpose** (agreed 2026-09-04), not forgotten. Three of them cannot be
-closed without the paid Apple Developer Program, so they wait for it rather than being worked around.
-Do not treat any of them as a bug to fix in isolation.
+Apple Developer Program enrollment became active on 2026-09-06. The account-side work is now
+unblocked; the canonical checklist remains under "Distributing to testers" below.
 
-**Blocked on developer access.** These join the list under "Distributing to testers" below, which is
-the canonical account-side checklist. When enrolment completes, work that list, not this one.
-
-1. **The plan beat does not purchase anything.** `Services/ProStore.swift` is the seam and carries
-   the step-by-step wiring checklist. Guideline 3.1.1 makes a purchase screen that cannot purchase a
-   rejection risk on its own, so before any build is submitted this must be wired **or** hidden.
-   Hiding it is one line, because `advanceFromAccountAsk()` already routes past the beat.
-2. **Sign in with Apple is still unprovisioned**, and guideline 4.8 requires it wherever a
-   third-party sign-in is offered. The account beat offers Google today, so the account screen is a
-   rejection on its own until Apple is enabled for the App ID and on the production Clerk instance.
+1. **The StoreKit 2 client is implemented behind a release flag.** Monthly, annual and the
+   consumable pass load localized prices from StoreKit; purchases reconcile Apple's signed JWS with
+   the shared backend before finishing, unfinished transactions retry on launch, and Restore
+   Purchases is available. Keep `STOREKIT_PURCHASES_ENABLED = NO` until Replit deploys
+   `docs/replit-storekit-backend-handoff.md` and sandbox reconciliation passes.
+2. **Sign in with Apple still needs end-to-end testing.** Paid-team Debug and distribution profiles
+   carry the entitlement. Apple credentials and the native bundle were configured in the existing
+   Replit-managed production Clerk tenant on 2026-09-07, with Apple and Google both enabled.
+   Guideline 4.8 still blocks submission until the real Apple flow is verified.
 
 **Settle at finalisation, before submitting.**
 
-5. **The version number.** `MARKETING_VERSION` is still `0.1.0` and `CURRENT_PROJECT_VERSION` is
-   `1`. The plumbing is correct and verified: the built binary really declares those, and About
-   reads them from the bundle rather than hardcoding. What is unsettled is the *value*. `0.1.0` has
-   not moved since the project was created, through onboarding, Palette Health, the Pro fixes and
-   SVG Recolor, and it reads as a prototype to anyone who sees it. Decide the real number at
-   submission, and remember **App Store Connect rejects a reused build number**, so the build must
+5. **The version number is settled.** The first App Store listing and `MARKETING_VERSION` are `1.0`;
+   `CURRENT_PROJECT_VERSION` is `1`. The plumbing is correct and verified: the built binary declares
+   those values, and About reads them from the bundle rather than hardcoding. Remember **App Store
+   Connect rejects a reused build number**, so the build must
    increment on every upload including re-uploads of the same marketing version. Nothing in the repo
    bumps these today; they are hand-edited in `project.yml`.
    **There is now a second, sharper reason to bump** (added 2026-09-05). PostHog binds every
@@ -82,6 +78,23 @@ the canonical account-side checklist. When enrolment completes, work that list, 
    mention. Reconciling that is a vault edit, not an Apple one.
 4. **The asset catalog is about 20MB**, nearly all of it the three Lauma clips at roughly 4.5MB each.
    Fine now. Worth a decision before a fourth clip, and the lever is frame height, not frame count.
+
+## Release preparation (2026-09-06)
+
+The SE finishing pass is implemented. `OnboardingFlowView` measures the **outer viewport**, not
+its overflowing content, and uses a compact composition below 740pt. Smaller strips, mascot frames,
+headlines and gaps let every standard-size beat fit while retaining the hero's scroll fallback for
+Dynamic Type. Account strips are 60pt on larger phones so the paragraph has room there too.
+SE captures at standard size and dark accessibility-extra-large show the action controls remain
+visible. Physical-device scroll and exit-tap checks are still required.
+
+The vault's pricing and iOS scope now reflect the agreed seven tools and 7-day monthly introductory
+offer. The StoreKit client is implemented; backend verification and sandbox testing remain.
+Historical notes below about the trial being absent are
+superseded by that reconciliation. Six native 1320 × 2868 App Store screenshots and a local review
+gallery live in `docs/app-store/`. All temporary capture routes were removed after capture.
+The cleaned source passed all 132 tests (0 failed, 0 skipped). The three existing camera
+`resumeOnce()` concurrency warnings remain outside this layout pass.
 
 ## Status (as of 2026-09-02)
 
@@ -114,9 +127,13 @@ Since then (all verified on a physical iPhone 17 Pro Max, iOS 26.6.1): the real 
 shows up on colorsense.online, the brand fonts are in, and the app icon is wired.
 
 Still open:
-- **Sign in with Apple** — the native entitlement is attached to Release in `project.yml`; Apple still needs
-  to be enabled for the `online.colorsense.ios` App ID and on the existing production Clerk
-  instance. ClerkKitUI's `AuthView` will show it automatically once the provider is enabled.
+- **Sign in with Apple** — paid-team provisioning is verified for Debug and distribution. Apple is
+  enabled beside Google in the production Replit/Clerk SSO pane. A physical Release-configuration
+  build reached Apple's native sheet and showed Share My Email and Hide My Email. The Share My Email
+  authorization completed, Account loaded, and a palette saved and appeared in Library through the
+  production API. Returning sign-in also passed: signing out and choosing Continue with Apple
+  reopened the same account with the saved palette still in Library. Cancellation, Hide My Email,
+  relay delivery and deletion remain.
 - **Google sign-in works** — `online.colorsense.ios://callback` is allowlisted on the production
   Clerk instance and was verified end to end on Chris's physical iPhone.
 - **`clerk.colorsense.online` fails TLS** — worked around by the proxy on both platforms, but
@@ -368,12 +385,15 @@ the file to work from at submission; this section records only the decisions beh
 
 ## Distributing to testers — what is ready and what is not (2026-09-03)
 
-Nothing can reach a tester remotely yet. TestFlight requires the paid **Apple Developer Program
-($99/yr)**; a free Personal Team has no App Store Connect access at all, so the only install path
-today is a cable and Xcode, expiring after 7 days. Enrol as an *Individual* for a fast turnaround,
-or as an *Organization* (needs a D-U-N-S number, roughly a week) if the store listing has to say
-"ColorSense" rather than a personal legal name — the type cannot be changed later without
-re-enrolling.
+The paid Apple Developer Program became active on 2026-09-06. Automatic signing now provisions the
+App ID, Sign in with Apple capability, and development/distribution profiles. A paid-team Debug build
+installed and launched on the paired iPhone; a signed Release archive and App Store Connect IPA
+export also succeeded. The App Store Connect record exists as **ColorSense: Palette Studio** (Apple
+ID `6809134374`). The monthly and annual subscriptions and consumable Pro Pass were created on
+2026-09-07 with their agreed exact prices. Six approved 1290 x 2796 screenshots were uploaded in
+order to the 6.9" slot on 2026-09-07 and the 6.5" set inherits them. The build, review information,
+privacy questionnaire, StoreKit backend reconciliation and sandbox purchase testing remain before
+release.
 
 Once enrolled: **internal** testers (≤100) skip Beta App Review and get builds in minutes, but each
 one needs a real App Store Connect role. **External** testers (≤10,000, invited by email or public
@@ -405,16 +425,15 @@ The repo side is done as far as it can go without an account:
   affiliate link in `AffiliateView` is deliberately untouched: applying to a referral programme is
   not a digital-goods purchase.
 
-Still blocked on the paid account, and this is the canonical list: registering the
-`online.colorsense.ios` App ID, provisioning Sign in with Apple, the App Store Connect record and
-its privacy questionnaire, and the archive itself (`xcodebuild archive` needs a distribution
-certificate). Onboarding added two more (see "Onboarding is done" at the top of this file):
+Paid-team signing is now verified. The canonical account-side list is the App Store Connect record,
+its privacy questionnaire and product setup, plus production Clerk configuration. Onboarding adds
+the purchase work below (see "Onboarding is done" at the top of this file):
 
 - **Create the two Pro subscriptions** in one subscription group, with the identifiers in
-  `ProProduct`, attach the trial as an introductory offer on the monthly one, then write
-  `StoreKitProStore` and point `ProStoreRegistry.current` at it. Add a Restore Purchases control at
-  the same time; App Review requires one for auto-renewable subscriptions and there is deliberately
-  no dead button for it today.
+  `ProProduct`, attach the trial as an introductory offer on the monthly one, and create the
+  consumable Pro Pass separately. Add verified Apple transaction and lifecycle reconciliation to
+  the shared backend before wiring `StoreKitProStore`: `/api/me` is the entitlement source, and a
+  consumed Pro Pass cannot be reconstructed from current StoreKit entitlements. Add Restore too.
 - **Enable Apple for sign-up and sign-in** on the production Clerk instance and register the Team ID
   and bundle ID as a Clerk Native Application, so the onboarding account ask satisfies guideline 4.8.
 
@@ -431,20 +450,18 @@ the app. The PostHog project also has exception autocapture enabled. These relea
    Data for analytics, plus Crash Data and Other Diagnostic Data for crash diagnosis. PostHog uses
    only its random installation ID here; these four categories are not used for tracking and are
    not linked to the Clerk account. Keep the existing linked Clerk/user-content declarations too.
-2. **Authenticate PostHog's Release dSYM upload.** Everything except the credential is done and
-   verified: `project.yml` adds the SPM upload script as the final build phase, Release resolves to
+2. **Verify the next numbered archive uploads its matching dSYM.** The credential and pipeline are
+   configured: `project.yml` adds the SPM upload script as the final build phase, Release resolves to
    `dwarf-with-dsym` with `ENABLE_USER_SCRIPT_SANDBOXING: NO`, `POSTHOG_INCLUDE_SOURCE` stays off,
    and the phase points `POSTHOG_CLI_DOTENV_FILE` at `Config/PostHogCLI.env`. The chain was proved
    end to end on 2026-09-05 with `POSTHOG_CLI_DRY_RUN=1` and `CODE_SIGNING_ALLOWED=NO`: the dSYM is
    produced, the phase runs, the CLI is found, and it reaches the dSYM step before skipping it.
-   What remains is filling in `Config/PostHogCLI.env` from `.example` with a personal API key, then
-   verifying a real archive uploads its matching dSYM. Without it, native crash addresses never
-   become useful symbolicated ColorSense stack frames.
-   **A Release build cannot be produced at all on a Personal Team** — measured, not assumed: it
-   fails signing because the profile has no Sign in with Apple capability, which is the same
-   entitlement this file already records as Release-only for that reason. So this item is blocked
-   behind enrolment, and the `CODE_SIGNING_ALLOWED=NO` route above is the only way to exercise the
-   phase before then.
+   A real upload was already verified. The 2026-09-06 signing preflight used
+   `POSTHOG_CLI_DRY_RUN=1` because `0.1.0+1` already has a symbol set; the next live verification must
+   follow a build-number bump so native crash addresses map to the matching binary.
+   That Personal Team signing block is resolved. On 2026-09-06 a paid-team signed archive and App
+   Store Connect export succeeded with Sign in with Apple and a dSYM. PostHog remained in dry-run
+   mode for this preflight to avoid colliding with the existing `0.1.0+1` symbol set.
    **Once Release does build, an unauthenticated CLI fails the build** rather than shipping a
    release with no symbols. That is deliberate on PostHog's side, so put the credential in before
    the first archive or the failure looks like a signing problem.
@@ -993,9 +1010,8 @@ deliberately, so it is an amendment rather than drift, and the vault should say 
 - **Yearly is on the screen at $39**, the vault's Pro Annual price. "SAVE 35%" beside it is
   arithmetic, not a claim: $5 a month is $60 a year against $39. If either price moves in the
   vault, that number moves with it.
-- **The trial is now 7 days, not 14.** Still absent from the vault either way, and still a StoreKit
-  introductory offer that has to be configured in App Store Connect. Shortening it does not make it
-  less of a pricing decision the vault needs.
+- **The trial is now 7 days, not 14.** The vault records that decision as of 2026-09-06. It remains
+  a StoreKit introductory offer that has to be configured in App Store Connect.
 - **Each plan wears its own brand colour** and the chosen card is filled with it, rather than three
   identical outlined boxes that had to be read to be told apart. YELLOW for the trial, TEAL for
   monthly, CORAL for yearly, all from `BrandColor`. Every label on a filled card is measured with
@@ -1021,10 +1037,8 @@ health remap and logo-free exports, which are the four things `isPro` actually g
 feature the reader cannot then find is a refund conversation at best and a rejection at worst, and
 it is worth re-checking this line every time the Pro surface changes.
 
-Everything in "The plan screen is design only" below still applies unchanged: **none of this is
-wired to StoreKit**, and a purchase screen that does not purchase is its own guideline 3.1.1
-rejection. Adding a third plan and a discount badge raises the stakes on that, it does not lower
-them.
+The plan screen is now wired to StoreKit and uses StoreKit's localized prices and introductory-offer
+eligibility. Purchases remain release-gated until server verification is deployed.
 
 ### About, and what was deliberately left out of it (added 2026-09-04)
 
@@ -1102,23 +1116,24 @@ One limitation worth knowing: `GET /api/me` reports one *effective* plan, not wh
 for it, so a paying reader cannot be shown which of the three they are on. The list marks only Free
 as current, because guessing at somebody's own subscription is worse than saying nothing.
 
-## The StoreKit seam, ready to wire (added 2026-09-04)
+## The StoreKit client and remaining backend gate (updated 2026-09-07)
 
-`Services/ProStore.swift` is where In-App Purchase will go. Nothing talks to StoreKit yet, and the
-point is that every screen offering Pro already calls **through** it, so wiring is writing one
-conforming type rather than reworking onboarding. `PlaceholderProStore` answers `.notConfigured`
-and callers behave exactly as before. The file itself carries the step-by-step checklist; the parts
-worth knowing away from the code:
+`Services/ProStore.swift` now implements StoreKit 2. Every purchase submits the verified
+transaction JWS to the authenticated ColorSense API and finishes only after the server returns an
+active plan. `PlaceholderProStore` remains the release gate while
+`STOREKIT_PURCHASES_ENABLED = NO`. A live release still requires backend work because `/api/me`,
+rather than StoreKit, is the app's entitlement source.
 
-- **Two products, not three.** `ProProduct` has `monthly` and `annual`. The trial is an
-  **introductory offer on the monthly product**, which is why `Plan` on the plan beat has three
-  cases and `ProProduct` has two. Both subscriptions must sit in **one subscription group**, or a
-  reader cannot switch between them without double-paying.
-- **A Restore Purchases control has to be added when wiring.** App Review requires a restore path
-  for auto-renewable subscriptions. `restore()` is on the protocol so the call site is obvious, but
-  there is deliberately no dead button for it today.
-- Whatever trial length is configured in App Store Connect has to match the plan beat's copy, and
-  it still needs adding to the vault, which does not mention a trial at all.
+- **Three products, one subscription group.** `ProProduct` has monthly, annual and pass. Monthly
+  and annual sit in one subscription group; the pass is a separate consumable. The trial is an
+  introductory offer on monthly, not another product.
+- **Reconcile with the shared backend before reporting success.** Verified Apple transactions and
+  subscription lifecycle events must update the entitlement returned by `/api/me`. This is required
+  for web/iOS consistency and for the consumable pass, which does not remain in current entitlements.
+- **Restore Purchases is implemented.** It calls `AppStore.sync()` only from the explicit user
+  action, reconciles active subscriptions with the backend, and does not pretend a finished
+  consumable can be recovered from `Transaction.currentEntitlements`.
+- The App Store Connect offer must be the vault's agreed 7 days and match the plan beat's copy.
 
 **Two bugs were fixed in the same pass, both real today and both worse once money is involved:**
 
@@ -1136,23 +1151,14 @@ worth knowing away from the code:
   offers a single Continue, with the supporting copy switched to match. This was hit constantly in
   testing, because `-show-onboarding` on a signed-in device reproduces it every launch.
 
-### The plan screen is design only (added 2026-09-03)
+### The plan screen purchase flow (updated 2026-09-07)
 
-A fifth beat, `plan`, sits after the account ask: a flat BLURPLE field offering a 14-day free trial
-or a monthly subscription, with "Not now". **Nothing on it is wired to StoreKit**, at Chris's
-request, and three things must happen before it can ship in a submitted build:
-
-1. **Guideline 3.1.1.** Digital goods must go through In-App Purchase. These buttons currently just
-   end onboarding, and a purchase screen that does not purchase is itself a rejection risk. Wire it
-   or hide it before submission.
-2. **The 14-day trial is not in the vault.** `Claude Skill.md` section 3 lists Pro Monthly $5,
-   Pro Annual $39 and the $9 Pro Pass, with no trial. A trial is a StoreKit introductory offer
-   configured in App Store Connect, and if it stays it is a pricing decision the vault needs.
-   The $5 monthly figure on screen does come from the vault.
-3. Pro Annual is deliberately not offered here. Two options was the ask; adding a third is a
-   conversion decision, not a layout one.
-
-It keeps a "Not now" exit for the same reason the account ask does.
+The `plan` beat sits after the account ask on a flat BLURPLE field. It offers Monthly and Annual,
+keeps a "Not now" exit, and routes both choices through StoreKit. Monthly displays the seven-day
+offer only when StoreKit says that Apple account is eligible. Prices come from
+`Product.displayPrice`. Successful StoreKit verification is delivered to the authenticated backend
+before the transaction is finished or onboarding ends. Keep the purchase release flag off until
+that backend exists and sandbox testing passes.
 
 ### The launch screen carries the brand moment, not a slide (decided 2026-09-03)
 
@@ -1520,6 +1526,35 @@ color tested so far, but they *can* disagree on mid-tones. Deliberate, not an ov
 
 ## Visualizer (added 2026-09-04)
 
+### Tool apply, SVG shuffle and artwork export fixes (2026-09-06)
+
+Chris reported that Contrast and Palette Health Apply could produce a blank sheet or fail to update
+the palette, asked for an SVG color shuffle, and reported that SVG Recolor and Visualizer did not
+produce an image. All four are fixed and pinned by `ToolFixRegressionTests` and `SvgExportTests`.
+
+**Fix sheets own an immutable session.** They used to derive their content inside
+`.sheet(isPresented:)` from the same values Apply changes. Once a fix crossed the target, the
+conditional content disappeared while the sheet remained presented, which was the black screen.
+`ContrastFixSheet.Session` captures the proposals when opening and drives `.sheet(item:)`, so Apply
+changes the palette without removing the presented view.
+
+**Apply follows swatch identity, not position.** A proposal records its swatch UUID and source hex.
+`PaletteStore.applyFix` finds that identity at apply time and refuses a stale proposal if its color
+changed meanwhile. Contrast now writes through to the shared store when Text is a chosen palette
+swatch, including persistence and anchors; a system-picker color stays local because it names no
+palette slot. Palette Health uses the same path, so reordering while its sheet is open is safe.
+
+**SVG Shuffle permutes only the mapping.** It does not call palette Generate and does not mutate the
+shared palette. SVG replacement reads each original paint token once; sequential replacement was
+incorrect for swaps because A to B followed by B to A collapses both colors to A.
+
+**Artwork export offers both PNG and SVG.** `SvgExportSheet` is shared by SVG Recolor and
+Visualizer, exposes loading/failure/retry rather than swallowing file errors, and creates a
+transparent PNG with a 2048px long edge from WebKit's vector PDF output. It also retains the crisp,
+editable SVG option. JavaScript is disabled, CSP blocks external resources, and the navigation
+delegate uses its actual Swift 6 signature. The test suite renders every Visualizer scene and
+checks the PNG pixels; **132 tests pass**.
+
 Eleven scenes showing the current palette as real work: three interface mockups, four branding
 pieces, a type poster, two patterns and an illustration. `Services/VisualizerScenes.swift` is the
 port, `Features/Visualizer/` the screen, and `VisualizerTests` pins it.
@@ -1851,20 +1886,17 @@ finding palettes saved earlier from the web.
 
 ### Native Sign in with Apple
 
-The Sign in with Apple entitlement lives in `Config/ColorSense.entitlements` and is attached by
-`project.yml`. It is enabled for Release but deliberately omitted from
-Debug while this project uses a Personal Team: Apple refuses to provision this capability for
-Personal Teams, and enabling it for Debug would prevent every physical-device build. Once a paid
-Apple Developer team is selected, enable the entitlement for Debug too so the native flow can be
-tested before release. ClerkKitUI's existing `AuthView` automatically uses
+The Sign in with Apple entitlement lives in `Config/ColorSense.entitlements` and is attached to
+both Debug and Release by `project.yml` now that the paid program is active. ClerkKitUI's existing
+`AuthView` automatically uses
 `clerk.auth.signInWithApple()` and shows the Apple button when Apple appears in the Clerk
 environment's enabled social providers. It does not use the browser OAuth redirect above.
 
-The remaining account-side setup is to enable Sign in with Apple for the
-`online.colorsense.ios` App ID, register the Team ID and bundle ID as a Clerk Native Application,
-and enable Apple for sign-up and sign-in on the production Clerk instance. Do not add a custom
-Apple button to work around missing provider configuration; it would only expose a flow the
-backend is not ready to accept.
+Apple-side provisioning for `online.colorsense.ios` is verified in signed Debug and distribution
+products. The native bundle and Apple credentials were saved in the existing Replit-managed
+production Clerk tenant on 2026-09-07, and its SSO pane showed Apple enabled beside Google. Do not
+add a custom Apple button; the remaining work is to test ClerkKitUI's native flow end to end on a
+physical device, including relay email and backend account behavior.
 
 There is no public API to hide a single social provider from `AuthView`; providers come straight
 from the environment. Hiding the Google button would mean replacing `AuthView` with a custom

@@ -51,6 +51,7 @@ struct SvgPreview: UIViewRepresentable {
     private func document(for svg: String) -> String {
         """
         <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">
         <style>
           html,body{margin:0;height:100%;background:transparent}
           body{display:flex;align-items:center;justify-content:center}
@@ -60,17 +61,17 @@ struct SvgPreview: UIViewRepresentable {
         """
     }
 
+    @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate {
         var lastRendered: String?
 
         func webView(
             _ webView: WKWebView,
-            decidePolicyFor navigationAction: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
-        ) {
+            decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
             // Only the `loadHTMLString` call itself is allowed. Every other navigation, including
             // anything the document initiates, is refused.
-            decisionHandler(navigationAction.request.url?.scheme == "about" ? .allow : .cancel)
+            return navigationAction.request.url?.scheme == "about" ? .allow : .cancel
         }
     }
 }

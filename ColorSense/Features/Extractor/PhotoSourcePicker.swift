@@ -26,6 +26,7 @@ struct PhotoSourcePicker: View {
     /// when this screen has no library access of its own.
     @State private var fallbackItem: PhotosPickerItem?
     @State private var loadFailed = false
+    @State private var cameraAccessDenied = false
     /// Created once and owned by this screen, not by the tile view — see CameraPreviewSession.
     @State private var preview = CameraPreviewSession()
     /// Read once into state rather than called in `body`. Evaluating it inline made the branch
@@ -68,6 +69,12 @@ struct PhotoSourcePicker: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("It may still be downloading from iCloud, or be in a format ColorSense can't open. Try another one.")
+            }
+            .alert("Camera access is off", isPresented: $cameraAccessDenied) {
+                Button("Open Settings") { openAppSettings() }
+                Button("Not Now", role: .cancel) {}
+            } message: {
+                Text("Allow Camera access in Settings to photograph something and pull a palette from its colors.")
             }
             .overlay {
                 if isLoadingSelection {
@@ -121,12 +128,12 @@ struct PhotoSourcePicker: View {
     private func cameraCell(side: CGFloat) -> some View {
         // Stops the preview and waits for the camera to actually be released before opening the
         // capture screen. Presenting first would leave two things reaching for one camera.
-        Button { preview.stop { cameraIsPresented = true } } label: {
+        Button { openCamera() } label: {
             ZStack {
                 Color.black
-                // Live only when the camera is already permitted — starting a session is what
-                // triggers that prompt, and the picker should not ask before the user shows any
-                // interest in the camera.
+                // Live only when the camera is already permitted. `openCamera()` requests access
+                // after the user taps this cell, so opening the photo grid never triggers a camera
+                // prompt by itself.
                 if cameraAuthorized {
                     // A `UIView` has `isUserInteractionEnabled` on by default, so a representable
                     // inside a Button's label can take the touch meant for the button. The preview
@@ -158,12 +165,8 @@ struct PhotoSourcePicker: View {
             message: "Allow photo access to pull a palette from a picture you already have. You can still take a new photo."
         ) {
             VStack(spacing: 12) {
-                Button("Open Settings") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                }
-                Button("Take a photo instead") { cameraIsPresented = true }
+                Button("Open Settings") { openAppSettings() }
+                Button("Take a photo instead") { openCamera() }
                 // Still works with access denied: PhotosPicker runs out of process, so the system
                 // hands back the one chosen image without this app ever seeing the library.
                 PhotosPicker(selection: $fallbackItem, matching: .images) {
@@ -175,6 +178,39 @@ struct PhotoSourcePicker: View {
     }
 
     // MARK: - Photos
+
+    private func openCamera() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            presentCamera()
+        case .notDetermined:
+            Task { @MainActor in
+                let granted = await AVCaptureDevice.requestAccess(for: .video)
+                cameraAuthorized = granted
+                if granted {
+                    presentCamera()
+                } else {
+                    AnalyticsService.capture(.permissionDenied, ["permission": "camera"])
+                    cameraAccessDenied = true
+                }
+            }
+        case .denied, .restricted:
+            AnalyticsService.capture(.permissionDenied, ["permission": "camera"])
+            cameraAccessDenied = true
+        @unknown default:
+            cameraAccessDenied = true
+        }
+    }
+
+    private func presentCamera() {
+        // Release the live preview before UIImagePickerController asks for the same camera.
+        preview.stop { cameraIsPresented = true }
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
 
     private func requestAccess() async {
         let current = PHPhotoLibrary.authorizationStatus(for: .readWrite)

@@ -12,13 +12,13 @@ struct PaletteHealthView: View {
     let palette: ExtractedPalette
     /// Pro gates the remap, not the scoring. The score and the report stay free.
     var isPro = false
-    var onRemap: ((Int, PaletteColor) -> Void)?
+    var onRemap: ((ContrastFixSheet.Proposal) -> Bool)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var seenAs: ColorBlindness.Kind = .deuteranopia
-    @State private var remapIsPresented = false
+    @State private var remapSession: ContrastFixSheet.Session?
 
     private var report: PaletteHealthReport {
         PaletteHealthReport.build(for: palette.colors, name: "", seenAs: seenAs)
@@ -44,12 +44,12 @@ struct PaletteHealthView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if palette.colors.count >= 2 { remapBar }
             }
-            .sheet(isPresented: $remapIsPresented) {
+            .sheet(item: $remapSession) { session in
                 ContrastFixSheet(
                     title: "Auto-remap",
                     isPro: isPro,
-                    proposals: remapProposals,
-                    onApply: { proposal in onRemap?(proposal.id, proposal.proposed) }
+                    proposals: session.proposals,
+                    onApply: { proposal in onRemap?(proposal) ?? false }
                 )
                 .presentationDetents([.medium, .large])
             }
@@ -239,6 +239,8 @@ struct PaletteHealthView: View {
                 ) else { return nil }
                 return ContrastFixSheet.Proposal(
                     id: row.backgroundIndex,
+                    swatchID: palette.colors[row.backgroundIndex].id,
+                    sourceHex: row.background.hex,
                     problem: "Text on \(row.backgroundName) measures \(row.ratioText), below WCAG AA. Going \(fix.wentLighter ? "lighter" : "darker") reaches \(String(format: "%.2f:1", fix.ratio)) while keeping the hue.",
                     original: row.background,
                     proposed: fix.swatch,
@@ -270,7 +272,7 @@ struct PaletteHealthView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                 } else {
-                    Button { remapIsPresented = true } label: {
+                    Button { remapSession = .init(proposals: proposals) } label: {
                         HStack(spacing: 8) {
                             Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
                                 .font(.system(size: 14, weight: .semibold))

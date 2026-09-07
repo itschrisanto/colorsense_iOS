@@ -10,8 +10,16 @@ import SwiftUI
 /// pairings at once, and which of them to correct is a judgement the reader should make one at a
 /// time. The Contrast tool passes a list of one.
 struct ContrastFixSheet: View {
+    /// Capture once when opening. Recomputing after Apply used to remove the sheet's content.
+    struct Session: Identifiable {
+        let id = UUID()
+        let proposals: [Proposal]
+    }
+
     struct Proposal: Identifiable {
         let id: Int
+        var swatchID: UUID? = nil
+        var sourceHex: String? = nil
         /// What is wrong, in plain words — shown before the remedy.
         let problem: String
         /// The colour being changed.
@@ -30,10 +38,11 @@ struct ContrastFixSheet: View {
     let title: String
     var isPro = true
     let proposals: [Proposal]
-    let onApply: (Proposal) -> Void
+    let onApply: (Proposal) -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var applied: Set<Int> = []
+    @State private var applyFailed = false
 
     var body: some View {
         NavigationStack {
@@ -60,6 +69,11 @@ struct ContrastFixSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .alert("This palette has changed", isPresented: $applyFailed) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Close this preview and ask for a new fix so you don't overwrite a newer color.")
             }
         }
     }
@@ -111,8 +125,11 @@ struct ContrastFixSheet: View {
 
             Button {
                 guard isPro else { return }
-                onApply(proposal)
-                applied.insert(proposal.id)
+                if onApply(proposal) {
+                    applied.insert(proposal.id)
+                } else {
+                    applyFailed = true
+                }
             } label: {
                 Label(
                     !isPro

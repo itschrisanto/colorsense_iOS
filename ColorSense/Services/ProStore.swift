@@ -1,87 +1,18 @@
 import Foundation
+import StoreKit
 
-/// The seam where In-App Purchase will go.
-///
-/// Nothing here talks to StoreKit yet, and that is the point: every screen that offers Pro already
-/// calls through this protocol, so wiring real purchases is writing one conforming type rather than
-/// rewriting the onboarding flow. Until then `PlaceholderProStore` answers `.notConfigured` and the
-/// callers behave exactly as they did before.
-///
-/// # What to do when the paid Apple Developer account lands
-///
-/// 1. In App Store Connect, create the two **auto-renewable subscriptions** in one subscription
-///    group, with the identifiers in `ProProduct`. They must be one group, or a reader cannot move
-///    between monthly and yearly without double-paying. Create the **Pro Pass separately as a
-///    consumable**, outside that group: it is a one-month one-time purchase that can be bought
-///    again once it lapses, which is what a consumable is and what a non-consumable is not.
-/// 2. Attach the free trial as an **introductory offer** on the monthly product. It is *not* a
-///    third product, which is why `ProProduct` has two cases and `Plan` in the onboarding flow has
-///    three. Whatever length is configured there has to match the copy on the plan beat, and it
-///    has to be added to the vault's pricing table, which still does not mention a trial at all.
-/// 3. Write `StoreKitProStore`, conforming to this protocol: `Product.products(for:)` for `load`,
-///    `product.purchase()` for `purchase`, and `AppStore.sync()` plus a `Transaction.currentEntitlements`
-///    sweep for `restore`. Verify every transaction before granting anything.
-/// 4. Point `ProStore.current` at it and set `isLive` to true.
-/// 5. **Add a Restore Purchases control to the plan beat.** App Review requires a restore path for
-///    auto-renewable subscriptions, and there is deliberately no dead button for it today. The
-///    method is already on this protocol so the call site is obvious.
-/// 6. **Show `Product.displayPrice`, never the strings below.** The App Store prices in the
-///    viewer's own storefront and currency, and Apple's price points do not map one-to-one onto
-///    "$5". The prices on `ProProduct` are right for the descriptive list they feed today and are
-///    wrong the moment anything can be bought, for anyone outside the US. `SubscriptionView` and
-///    the onboarding plan beat both read them, so both change together.
-/// 7. Re-check `PrivacyInfo.xcprivacy`: StoreKit does not add a required-reason API, but confirm
-///    nothing else moved with the SDK bump.
-///
-/// # Why the plan beat still shows while this is a placeholder
-///
-/// Guideline 3.1.1 makes a purchase screen that cannot purchase a rejection risk on its own. It
-/// stays visible because it is being demonstrated and filmed, and because hiding it would lose the
-/// design. Before any build is submitted, either finish the wiring above or set `isLive` to false
-/// **and** stop presenting the beat: `OnboardingFlowView` already routes past it through
-/// `advanceFromAccountAsk()`, so that is a one-line change and not a redesign.
-protocol ProStore: Sendable {
-    /// Whether real purchases can be made. False for the placeholder, and the single switch that
-    /// tells every caller whether this screen is a demo or a shop.
-    var isLive: Bool { get }
-
-    func purchase(_ product: ProProduct) async -> PurchaseOutcome
-    func restore() async -> PurchaseOutcome
-}
-
-/// The App Store product identifiers, in one place so they cannot drift from App Store Connect.
-///
-/// The trial is not here on purpose: it is an introductory offer on `monthly`, not a product.
-///
-/// **The Pass is not a subscription and must not be created as one.** The vault sells it as a
-/// one-month, one-time $9 purchase, which in StoreKit is a *consumable*: it can be bought again
-/// when it lapses, which a non-consumable cannot, and it does not belong in the subscription group
-/// with the other two. Getting this wrong is not a display bug, it is a wrong product in App Store
-/// Connect that has to be replaced rather than edited.
+/// The App Store products, kept in one place so the client and App Store Connect cannot drift.
 enum ProProduct: String, CaseIterable, Sendable {
     case monthly = "online.colorsense.ios.pro.monthly"
     case annual = "online.colorsense.ios.pro.annual"
     case pass = "online.colorsense.ios.pro.pass"
 
-    /// What kind of App Store product this is, which decides how it is created and how it is
-    /// verified after purchase.
-    enum Kind { case autoRenewable, consumable }
+    enum Kind: Equatable, Sendable { case autoRenewable, consumable }
 
     var kind: Kind {
         switch self {
         case .monthly, .annual: return .autoRenewable
         case .pass: return .consumable
-        }
-    }
-
-    /// Prices come from the vault (`Claude Skill.md` section 3) and are the same on every platform.
-    /// The Pass is **$9**: the vault calls that out specifically because it has been misquoted as
-    /// $3 and $5 before.
-    var price: String {
-        switch self {
-        case .monthly: return "$5"
-        case .annual: return "$39"
-        case .pass: return "$9"
         }
     }
 
@@ -92,48 +23,224 @@ enum ProProduct: String, CaseIterable, Sendable {
         case .pass: return "Pro Pass"
         }
     }
+}
 
-    var detail: String {
-        switch self {
-        case .monthly: return "$5 a month, billed monthly. Cancel any time."
-        case .annual: return "$39 a year. Two months cheaper than paying monthly."
-        case .pass: return "$9 once, for one month. It does not renew."
-        }
-    }
+/// Storefront-specific information. Prices always come from StoreKit, never hardcoded USD copy.
+struct ProProductInfo: Equatable, Sendable {
+    let product: ProProduct
+    let displayPrice: String
+    let isEligibleForIntroOffer: Bool
 }
 
 enum PurchaseOutcome: Equatable, Sendable {
     case purchased
     case cancelled
     case pending
-    /// No StoreKit yet. Callers treat this as "carry on", which is what the flow did before this
-    /// protocol existed.
     case notConfigured
     case failed(String)
 }
 
-/// The stand-in until StoreKit is wired. It buys nothing and says so.
+protocol ProStore: Sendable {
+    var isLive: Bool { get }
+    func start() async
+    func productInfo() async -> [ProProduct: ProProductInfo]
+    func purchase(_ product: ProProduct) async -> PurchaseOutcome
+    func restore() async -> PurchaseOutcome
+}
+
 struct PlaceholderProStore: ProStore {
     var isLive: Bool { false }
+    func start() async {}
+    func productInfo() async -> [ProProduct: ProProductInfo] { [:] }
     func purchase(_ product: ProProduct) async -> PurchaseOutcome { .notConfigured }
     func restore() async -> PurchaseOutcome { .notConfigured }
 }
 
-enum ProStoreRegistry {
-    /// Swap this for `StoreKitProStore()` when the products exist. Nothing else needs to change.
-    static let current: any ProStore = PlaceholderProStore()
+/// StoreKit 2 purchase handling. A transaction is finished only after the authenticated backend
+/// verifies Apple's JWS and `/api/me` reports the paid entitlement. If delivery fails, StoreKit
+/// keeps the transaction unfinished and `start()` retries it on the next launch.
+actor StoreKitProStore: ProStore {
+    nonisolated let isLive = true
+
+    private var productsByID: [String: Product] = [:]
+    private var updatesTask: Task<Void, Never>?
+
+    deinit { updatesTask?.cancel() }
+
+    func start() async {
+        guard updatesTask == nil else { return }
+
+        updatesTask = Task { [weak self] in
+            for await result in Transaction.updates {
+                guard !Task.isCancelled else { return }
+                await self?.deliver(result)
+            }
+        }
+
+        // Includes consumables that could not be delivered before the app closed. Finished
+        // consumables disappear from the receipt, so this retry must happen before finish().
+        for await result in Transaction.unfinished {
+            await deliver(result)
+        }
+    }
+
+    func productInfo() async -> [ProProduct: ProProductInfo] {
+        guard let products = try? await loadProducts() else { return [:] }
+        var result: [ProProduct: ProProductInfo] = [:]
+
+        for product in products {
+            guard let known = ProProduct(rawValue: product.id) else { continue }
+            let eligible: Bool
+            if known == .monthly,
+               product.subscription?.introductoryOffer != nil,
+               let subscription = product.subscription {
+                eligible = await subscription.isEligibleForIntroOffer
+            } else {
+                eligible = false
+            }
+            result[known] = ProProductInfo(
+                product: known,
+                displayPrice: product.displayPrice,
+                isEligibleForIntroOffer: eligible
+            )
+        }
+        return result
+    }
+
+    func purchase(_ product: ProProduct) async -> PurchaseOutcome {
+        let accountToken: UUID
+        switch await SavedPaletteService.appleAppAccountToken() {
+        case .success(let token):
+            accountToken = token
+        case .failure(let error):
+            return .failed(error.purchaseMessage)
+        }
+
+        do {
+            let products = try await loadProducts()
+            guard let storeProduct = products.first(where: { $0.id == product.rawValue }) else {
+                return .failed("That purchase is not available in your App Store right now.")
+            }
+            guard productMatchesConfiguredKind(storeProduct, expected: product.kind) else {
+                return .failed("This product is configured incorrectly in the App Store.")
+            }
+
+            switch try await storeProduct.purchase(options: [.appAccountToken(accountToken)]) {
+            case .success(let verification):
+                guard case .verified(let transaction) = verification else {
+                    return .failed("The App Store could not verify this purchase.")
+                }
+                guard transaction.productID == product.rawValue else {
+                    return .failed("The App Store returned a different ColorSense product. Try Restore Purchases.")
+                }
+                guard transaction.appAccountToken == accountToken else {
+                    return .failed("This purchase is linked to a different ColorSense account.")
+                }
+                return await reconcile(verification, transaction: transaction)
+            case .userCancelled:
+                return .cancelled
+            case .pending:
+                return .pending
+            @unknown default:
+                return .failed("The App Store returned an unknown purchase result.")
+            }
+        } catch {
+            return .failed("The purchase could not be completed. Please try again.")
+        }
+    }
+
+    func restore() async -> PurchaseOutcome {
+        guard await SavedPaletteService.hasAuthenticatedSession() else {
+            return .failed("Sign in to ColorSense before restoring purchases.")
+        }
+
+        do {
+            // Apple documents that this can show an App Store authentication prompt, so it runs
+            // only from the explicit Restore Purchases button.
+            try await AppStore.sync()
+            var foundSubscription = false
+
+            for await verification in Transaction.currentEntitlements {
+                guard case .verified(let transaction) = verification,
+                      let product = ProProduct(rawValue: transaction.productID),
+                      product.kind == .autoRenewable else { continue }
+                foundSubscription = true
+                let outcome = await reconcile(verification, transaction: transaction)
+                if case .purchased = outcome { continue }
+                return outcome
+            }
+
+            if foundSubscription { return .purchased }
+
+            // A finished consumable is intentionally absent from StoreKit's current entitlements.
+            // Pro Pass access is time-bound and persisted by the shared backend, so restore that
+            // entitlement from the authenticated ColorSense account after StoreKit sync completes.
+            switch await SavedPaletteService.currentPlan() {
+            case .success(let plan) where plan == "pro" || plan == "business":
+                return .purchased
+            case .success:
+                return .failed("No active ColorSense purchase was found to restore.")
+            case .failure(let error):
+                return .failed(error.purchaseMessage)
+            }
+        } catch {
+            return .failed("Purchases could not be restored. Please try again.")
+        }
+    }
+
+    private func loadProducts() async throws -> [Product] {
+        if productsByID.count == ProProduct.allCases.count {
+            return Array(productsByID.values)
+        }
+        let products = try await Product.products(for: ProProduct.allCases.map(\.rawValue))
+        productsByID = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
+        return products
+    }
+
+    private func productMatchesConfiguredKind(_ product: Product, expected: ProProduct.Kind) -> Bool {
+        switch expected {
+        case .autoRenewable: return product.type == .autoRenewable
+        case .consumable: return product.type == .consumable
+        }
+    }
+
+    private func deliver(_ verification: VerificationResult<Transaction>) async {
+        guard case .verified(let transaction) = verification,
+              ProProduct(rawValue: transaction.productID) != nil else { return }
+        _ = await reconcile(verification, transaction: transaction)
+    }
+
+    private func reconcile(
+        _ verification: VerificationResult<Transaction>,
+        transaction: Transaction
+    ) async -> PurchaseOutcome {
+        switch await SavedPaletteService.reconcileAppleTransaction(verification.jwsRepresentation) {
+        case .success(let plan) where plan == "pro" || plan == "business":
+            // The delivery response acknowledges this transaction. Refresh the shared
+            // entitlement separately so a stale or incorrectly combined plan can never cause a
+            // StoreKit transaction to be finished before iOS and the website actually have access.
+            switch await SavedPaletteService.currentPlan() {
+            case .success(let effectivePlan) where effectivePlan == "pro" || effectivePlan == "business":
+                await transaction.finish()
+                return .purchased
+            case .success, .failure:
+                return .failed("The purchase was verified, but Pro access is not active yet. Try Restore Purchases shortly.")
+            }
+        case .success:
+            return .failed("The purchase was verified, but Pro access is not active yet. Try Restore Purchases shortly.")
+        case .failure(let error):
+            return .failed(error.purchaseMessage)
+        }
+    }
 }
 
-/// Whether the signed-in account is already paying, read from the same `GET /api/me` the web app's
-/// `usePlan` uses and `SubscriptionView` already reads.
-///
-/// This is what stops onboarding pitching a 7-day trial to somebody who is already Pro on
-/// colorsense.online. It works today and needs no StoreKit: the account's plan is server side, so a
-/// subscriber who signs in on the phone is known to be a subscriber immediately.
+enum ProStoreRegistry {
+    static let current: any ProStore = AppConfig.storeKitPurchasesEnabled
+        ? StoreKitProStore()
+        : PlaceholderProStore()
+}
+
 enum ProEntitlement {
-    /// True only when the server says this account is on a paid plan. A failed request answers
-    /// false, so a network problem shows the offer rather than silently hiding it: being pitched
-    /// something you already have is a smaller harm than never being able to buy it.
     static func isPaid() async -> Bool {
         switch await SavedPaletteService.currentPlan() {
         case .success(let plan): return plan == "pro" || plan == "business"

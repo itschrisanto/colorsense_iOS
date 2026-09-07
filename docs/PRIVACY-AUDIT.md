@@ -90,7 +90,7 @@ admits only these plus PostHog's `$exception`. Anything else the SDK might gener
 | `color_reordered` | none |
 | `tool_opened` | `tool` (enum raw value) |
 | `contrast_checked` | none |
-| `permission_denied` | `permission` ("photos") |
+| `permission_denied` | `permission` ("photos", "camera") |
 | `feedback_sent` | none |
 | `svg_file_opened` | `colors` (count) |
 | `onboarding_viewed` | none |

@@ -2,12 +2,15 @@ import SwiftUI
 import Observation
 
 @Observable
+@MainActor
 final class WCAGCheckerViewModel {
     var foreground: Color
     var background: Color
     /// The app's current palette, offered as tappable shortcuts under each picker so the checker
     /// works on the same colors as every other tool rather than starting from black on white.
-    let paletteColors: [PaletteColor]
+    private(set) var paletteColors: [PaletteColor]
+    private(set) var foregroundID: UUID?
+    private(set) var backgroundID: UUID?
 
     /// Seeds the background from the palette's most dominant color and the text color from
     /// whichever remaining swatch contrasts with it best — so the checker opens on the most
@@ -21,6 +24,7 @@ final class WCAGCheckerViewModel {
             return
         }
         background = dominant.color
+        backgroundID = dominant.id
 
         let bestContrasting = palette.colors.dropFirst().max { lhs, rhs in
             ContrastCalculator.ratio(
@@ -35,6 +39,7 @@ final class WCAGCheckerViewModel {
             ?? (ContrastCalculator.prefersLightText(
                 onRed: dominant.red, green: dominant.green, blue: dominant.blue
             ) ? .white : .black)
+        foregroundID = bestContrasting?.id
     }
 
     var ratio: Double {
@@ -84,14 +89,53 @@ final class WCAGCheckerViewModel {
         )
     }
 
-    func apply(_ fix: (swatch: PaletteColor, ratio: Double, wentLighter: Bool)) {
-        foreground = fix.swatch.color
-    }
-
     func swap() {
         let previousForeground = foreground
         foreground = background
         background = previousForeground
+        let previousID = foregroundID
+        foregroundID = backgroundID
+        backgroundID = previousID
+    }
+
+    /// Keep palette shortcuts and selected swatches current while the workspace stays mounted.
+    /// Preserve custom picker edits unless the corresponding source swatch actually changed.
+    func synchronize(with palette: ExtractedPalette) {
+        if Set(palette.colors.map(\.id)).isDisjoint(with: paletteColors.map(\.id)) {
+            let fresh = WCAGCheckerViewModel(palette: palette)
+            foreground = fresh.foreground
+            background = fresh.background
+            foregroundID = fresh.foregroundID
+            backgroundID = fresh.backgroundID
+            paletteColors = palette.colors
+            return
+        }
+        if let id = foregroundID {
+            if let current = palette.colors.first(where: { $0.id == id }) {
+                if paletteColors.first(where: { $0.id == id })?.hex != current.hex {
+                    foreground = current.color
+                }
+            } else { foregroundID = nil }
+        }
+        if let id = backgroundID {
+            if let current = palette.colors.first(where: { $0.id == id }) {
+                if paletteColors.first(where: { $0.id == id })?.hex != current.hex {
+                    background = current.color
+                }
+            } else { backgroundID = nil }
+        }
+        paletteColors = palette.colors
+    }
+
+    func apply(_ proposal: ContrastFixSheet.Proposal, to store: PaletteStore) -> Bool {
+        if let id = proposal.swatchID {
+            guard let original = paletteColors.first(where: { $0.id == id }),
+                  store.applyFix(proposal.proposed, to: id, expectedHex: proposal.sourceHex ?? original.hex)
+            else { return false }
+        }
+        foreground = proposal.proposed.color
+        synchronize(with: store.palette)
+        return true
     }
 
     enum Role { case text, background }
@@ -110,8 +154,25 @@ final class WCAGCheckerViewModel {
 
     func assign(_ swatch: PaletteColor, to role: Role) {
         switch role {
-        case .text: foreground = swatch.color
-        case .background: background = swatch.color
+        case .text:
+            foreground = swatch.color
+            foregroundID = swatch.id
+        case .background:
+            background = swatch.color
+            backgroundID = swatch.id
+        }
+    }
+
+    /// A system-picker color is no longer the palette swatch that seeded the picker. Clear its
+    /// identity so Apply changes only this checker preview instead of overwriting that old swatch.
+    func assignCustom(_ color: Color, to role: Role) {
+        switch role {
+        case .text:
+            foreground = color
+            foregroundID = nil
+        case .background:
+            background = color
+            backgroundID = nil
         }
     }
 

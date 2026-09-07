@@ -1,11 +1,40 @@
 import SwiftUI
 import ClerkKit
 
+/// The reader's visual preference for ColorSense. Stored as a raw value so `@AppStorage` can
+/// propagate a change from AccountView all the way to the app root without a separate model.
+enum AppAppearance: String, CaseIterable, Identifiable {
+    static let storageKey = "appearance.preference"
+
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
+    }
+
+    var colorScheme: SwiftUI.ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
+
 @main
 struct ColorSenseApp: App {
     /// One palette for the whole app — every tool reads and writes this. Owned here so it
     /// outlives any individual screen and restores on launch.
     @State private var paletteStore = PaletteStore()
+    @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system.rawValue
 
     init() {
         AnalyticsService.start()
@@ -36,6 +65,7 @@ struct ColorSenseApp: App {
             RootView()
                 .environment(paletteStore)
                 .environment(Clerk.shared)
+                .preferredColorScheme(AppAppearance(rawValue: appearance)?.colorScheme)
                 // OAuth normally completes inside ASWebAuthenticationSession, but a callback can
                 // also arrive as a plain deep link — an email magic link, or the browser handing
                 // off via the URL scheme. `handle` ignores URLs it doesn't recognise, so this is
@@ -43,6 +73,7 @@ struct ColorSenseApp: App {
                 .onOpenURL { url in
                     Task { try? await Clerk.shared.handle(url) }
                 }
+                .task { await ProStoreRegistry.current.start() }
         }
     }
 }

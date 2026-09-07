@@ -11,7 +11,8 @@ struct WCAGCheckerView: View {
     let isPro: Bool
 
     @State private var viewModel: WCAGCheckerViewModel
-    @State private var fixIsPresented = false
+    @State private var fixSession: ContrastFixSheet.Session?
+    @Environment(PaletteStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
     init(isPro: Bool = false, palette: ExtractedPalette = .sample) {
@@ -27,8 +28,8 @@ struct WCAGCheckerView: View {
                     preview
                     verdict
                     VStack(spacing: 14) {
-                        ColorPicker("Text", selection: $viewModel.foreground, supportsOpacity: false)
-                        ColorPicker("Background", selection: $viewModel.background, supportsOpacity: false)
+                        ColorPicker("Text", selection: colorBinding(for: .text), supportsOpacity: false)
+                        ColorPicker("Background", selection: colorBinding(for: .background), supportsOpacity: false)
                     }
                     .font(BrandFont.ui(16, weight: .medium))
                     .padding(.horizontal, 20)
@@ -36,34 +37,30 @@ struct WCAGCheckerView: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) { fixItBar }
-            .sheet(isPresented: $fixIsPresented) {
-                if let target = fixTarget, let fix = viewModel.suggestedFix(target: target) {
-                    ContrastFixSheet(
-                        title: "Fix contrast",
-                        isPro: isPro,
-                        proposals: [
-                            .init(
-                                id: 0,
-                                problem: "Your text measures \(String(format: "%.2f:1", viewModel.ratio)) on this background, short of \(target >= 7 ? "AAA (7:1)" : "AA (4.5:1)"). Going \(fix.wentLighter ? "lighter" : "darker") reaches it while keeping the hue.",
-                                original: viewModel.foregroundSwatch,
-                                proposed: fix.swatch,
-                                against: viewModel.backgroundSwatch,
-                                changingIsForeground: true,
-                                currentRatio: viewModel.ratio,
-                                newRatio: fix.ratio,
-                                wentLighter: fix.wentLighter
-                            )
-                        ],
-                        onApply: { proposal in
-                            withAnimation(.snappy) { viewModel.foreground = proposal.proposed.color }
-                        }
-                    )
-                    .presentationDetents([.medium, .large])
-                }
+            .sheet(item: $fixSession) { session in
+                ContrastFixSheet(
+                    title: "Fix contrast",
+                    isPro: isPro,
+                    proposals: session.proposals,
+                    onApply: { proposal in
+                        withAnimation(.snappy) { viewModel.apply(proposal, to: store) }
+                    }
+                )
+                .presentationDetents([.medium, .large])
+            }
+            .onChange(of: store.palette.colors) { _, _ in
+                viewModel.synchronize(with: store.palette)
             }
             // Once per opening rather than on each ratio change: the question is whether the
             // checker gets used at all, not how much the sliders move.
             .onAppear { AnalyticsService.capture(.contrastChecked) }
+    }
+
+    private func colorBinding(for role: WCAGCheckerViewModel.Role) -> Binding<Color> {
+        Binding(
+            get: { role == .text ? viewModel.foreground : viewModel.background },
+            set: { viewModel.assignCustom($0, to: role) }
+        )
     }
 
     /// Swap sits in the content, next to the pair it acts on, rather than in the toolbar.
@@ -149,7 +146,22 @@ struct WCAGCheckerView: View {
                         // is the app overruling its user on the one thing the product is about.
                         // Free users open the same sheet: it shows the fix in full and names Pro
                         // as what applies it.
-                        fixIsPresented = true
+                        let source = viewModel.paletteColors.first { $0.id == viewModel.foregroundID }
+                        fixSession = .init(proposals: [
+                            .init(
+                                id: 0,
+                                swatchID: viewModel.foregroundID,
+                                sourceHex: source?.hex,
+                                problem: "Your text measures \(String(format: "%.2f:1", viewModel.ratio)) on this background, short of \(target >= 7 ? "AAA (7:1)" : "AA (4.5:1)"). \(source == nil ? "This changes the checker preview only; choose a palette swatch as text to update your palette." : "This updates the selected text swatch in your palette.")",
+                                original: viewModel.foregroundSwatch,
+                                proposed: fix.swatch,
+                                against: viewModel.backgroundSwatch,
+                                changingIsForeground: true,
+                                currentRatio: viewModel.ratio,
+                                newRatio: fix.ratio,
+                                wentLighter: fix.wentLighter
+                            )
+                        ])
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: isPro ? "wand.and.stars" : "lock.fill")
@@ -375,4 +387,5 @@ struct WCAGCheckerView: View {
 
 #Preview {
     WCAGCheckerView(palette: .sample)
+        .environment(PaletteStore())
 }

@@ -13,6 +13,7 @@ enum SavedPaletteService {
         case notSignedIn
         case unauthorized
         case rejected(status: Int)
+        case invalidResponse
         case offline
 
         var message: String {
@@ -20,6 +21,7 @@ enum SavedPaletteService {
             case .notSignedIn: return "Sign in to save palettes to your account."
             case .unauthorized: return "Your session expired — sign in again."
             case .rejected(let status): return "Couldn't save the palette (\(status))."
+            case .invalidResponse: return "ColorSense returned an invalid response."
             case .offline: return "Couldn't reach ColorSense. Check your connection."
             }
         }
@@ -34,6 +36,7 @@ enum SavedPaletteService {
             case .notSignedIn: return "Sign in to manage your saved items."
             case .unauthorized: return "Your session expired — sign in again."
             case .rejected: return "Couldn't delete that — it's back in the list."
+            case .invalidResponse: return "ColorSense returned an invalid response — it's back in the list."
             case .offline: return "Couldn't reach ColorSense — it's back in the list."
             }
         }
@@ -48,11 +51,28 @@ enum SavedPaletteService {
         var isRetryable: Bool {
             switch self {
             case .notSignedIn, .unauthorized: return false
-            case .rejected, .offline: return true
+            case .rejected, .invalidResponse, .offline: return true
             }
         }
 
         var errorDescription: String? { message }
+
+        var purchaseMessage: String {
+            switch self {
+            case .notSignedIn: return "Sign in to ColorSense before making a purchase."
+            case .unauthorized: return "Your session expired. Sign in again, then restore your purchase."
+            case .rejected(let status) where status == 403 || status == 409:
+                return "This App Store purchase is already linked to another ColorSense account."
+            case .rejected(let status):
+#if DEBUG
+                return "ColorSense could not verify the purchase (server status \(status))."
+#else
+                return "ColorSense could not verify the purchase yet. Try Restore Purchases shortly."
+#endif
+            case .invalidResponse: return "ColorSense could not prepare this purchase. Please try again."
+            case .offline: return "ColorSense could not verify the purchase. Check your connection, then try Restore Purchases."
+            }
+        }
     }
 
     /// The server validates each colour against `/^#[0-9A-Fa-f]{6}$/` and caps a palette at 20,
@@ -212,6 +232,18 @@ enum SavedPaletteService {
         let user: User
     }
 
+    private struct AppleTransactionRequest: Encodable {
+        let signedTransaction: String
+    }
+
+    private struct AppleAccountTokenResponse: Decodable {
+        let appAccountToken: String
+    }
+
+    private struct AppleTransactionResponse: Decodable {
+        let plan: String?
+    }
+
     /// The signed-in user's effective plan from `GET /api/me`. The server recomputes this per
     /// request so trial and voucher Pro grants lapse without a cron job — don't cache it.
     /// How many palettes and colors the account already holds.
@@ -239,6 +271,46 @@ enum SavedPaletteService {
     static func currentPlan() async -> Result<String?, SaveError> {
         await authorizedRequest(path: "me", method: "GET") { data in
             (try? JSONDecoder().decode(MeResponse.self, from: data))?.user.plan
+        }
+    }
+
+    static func hasAuthenticatedSession() async -> Bool {
+        guard let session = await Clerk.shared.session else { return false }
+        return (try? await session.getToken()) != nil
+    }
+
+    /// Fetches the opaque account ownership token issued by the backend. A new purchase must use
+    /// this exact UUID as StoreKit's appAccountToken; it must never be derived or generated on the
+    /// device because the server uses it to reject cross-account purchase claims.
+    static func appleAppAccountToken() async -> Result<UUID, SaveError> {
+        let result: Result<String?, SaveError> = await authorizedRequest(
+            path: "iap/apple/app-account-token",
+            method: "GET"
+        ) { data in
+            (try? JSONDecoder().decode(AppleAccountTokenResponse.self, from: data))?.appAccountToken
+        }
+
+        switch result {
+        case .success(let raw):
+            guard let raw, let token = UUID(uuidString: raw) else {
+                return .failure(.invalidResponse)
+            }
+            return .success(token)
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    /// Delivers StoreKit's signed transaction to the shared backend. The backend verifies and
+    /// records the JWS idempotently, then returns the same effective plan exposed by `GET /api/me`.
+    static func reconcileAppleTransaction(_ signedTransaction: String) async -> Result<String?, SaveError> {
+        let body = AppleTransactionRequest(signedTransaction: signedTransaction)
+        return await authorizedRequest(
+            path: "iap/apple/transactions",
+            method: "POST",
+            body: try? JSONEncoder().encode(body)
+        ) { data in
+            (try? JSONDecoder().decode(AppleTransactionResponse.self, from: data))?.plan
         }
     }
 

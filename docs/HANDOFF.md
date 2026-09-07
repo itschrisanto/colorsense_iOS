@@ -1,27 +1,32 @@
 # ColorSense iOS — handoff
 
-Written 2026-09-05, at the point where every remaining task is gated on the Apple Developer
-Program. Chris is enrolling. This is what you need to pick the project up.
+Written 2026-09-05 and updated 2026-09-07. Chris's Apple Developer Program enrollment is active.
+This is what you need to pick the project up.
 
 ## Read these first, in this order
 
-1. **`CLAUDE.md`** in the repo root. It is long and it is load-bearing — decisions, reversals, and
+1. **`docs/STOREKIT-RESUME-2026-09-07.md`** — the exact physical-device StoreKit checkpoint, account
+   state, completed evidence and first steps for resuming the Pro Pass test.
+2. **`CLAUDE.md`** in the repo root. It is long and it is load-bearing — decisions, reversals, and
    the reasons behind both. Do not skim it. Most "obvious improvements" you might reach for have
    already been tried and are recorded there with why they failed.
-2. **`docs/APP-STORE-SUBMISSION.md`** — the submission checklist and the drafted App Store Connect
+3. **`docs/APP-STORE-SUBMISSION.md`** — the submission checklist and the drafted App Store Connect
    metadata. This is the file to work from once the account exists.
-3. **`docs/PRIVACY-AUDIT.md`** — an evidence-backed audit of what the shipping build actually does.
+4. **`docs/PRIVACY-AUDIT.md`** — an evidence-backed audit of what the shipping build actually does.
    It is the **baseline**, and section 8c of the submission doc says it must be re-run against the
    final archived Release build.
-4. **The vault**, at
+5. **The vault**, at
    `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Daily Notes/Knowledge Base/Claude Skill.md`.
    It owns pricing, brand, voice and positioning. Read it fresh rather than trusting a copy. If it
    and this repo disagree, the vault wins.
 
 ## Repo state
 
-`main` at `b991510`, clean, fully pushed to `github.com:itschrisanto/colorsense_iOS`. **119 tests
-pass.** Also on the remote: `diagnostics/photo-picker-repro`, a reproduction harness for the photo
+The latest remote handoff before today's local checkpoint is `81f69b2`. The 2026-09-06 and
+2026-09-07 implementation, StoreKit, privacy, appearance, export and submission-preparation work is
+captured in the next local checkpoint commit. **135 tests across 26 suites pass**, most recently
+rerun during the 2026-09-07 StoreKit work (0 failed, 0 skipped). Also on the remote:
+`diagnostics/photo-picker-repro`, a reproduction harness for the photo
 picker — bring it back only if that screen misbehaves again.
 
 No `.xcodeproj` is committed. This is XcodeGen: edit `project.yml`, add files under `ColorSense/`,
@@ -63,46 +68,129 @@ refactor or "improve" any of it without him asking.
 - **Onboarding**, all six beats, including the splash wordmark with its palette sweep, the four
   Lauma clips, the rebuilt account ask, and the plan beat.
 - **Accounts, Library, About, Feedback, Share, export formats.**
+- **Appearance preference.** Account offers System, Light and Dark; the choice applies to the
+  whole app immediately and persists locally across launches.
+- **Camera permission recovery.** Camera access is requested only after a camera action. A denial
+  now produces a camera-specific explanation with a direct route to the app's system Settings.
 - **Analytics and error tracking.** Narrow by design. `AnalyticsService` is the whole contract.
 
 Two things in there are settled and often get re-litigated: the primary button is **white on coral**
 even though the app's own checker rates that POOR, deliberately and at Chris's call; and the
 Extractor stays on the dock rather than in the tool strip because it returns a palette and closes.
 
-## What to do once the Developer Program is live
+## Chris's tool feedback, fixed 2026-09-06
+
+- **Contrast and Palette Health fixes no longer blank or disappear after Apply.** The proposal list
+  is captured in a `ContrastFixSheet.Session` when the sheet opens instead of being recomputed from
+  state that Apply changes. Palette mutations target the swatch's UUID and expected hex rather than
+  a stale array index, and refuse to overwrite a color that changed while the sheet was open.
+- **Contrast Apply now updates the shared palette** when Text was selected from a palette swatch,
+  preserves the swatch identity and lock, updates its anchor, and persists it. A color chosen in
+  the system picker remains checker-only because it does not identify a palette slot; the fix sheet
+  says so. Palette Health uses the same identity-safe shared-store path.
+- **SVG Recolor has Shuffle colors.** It permutes the colors already mapped onto the SVG without
+  changing or generating palette colors. Recoloring now replaces original tokens atomically, so a
+  red/blue swap cannot collapse both into one color through sequential replacement.
+- **SVG Recolor and Visualizer export PNG images and SVG files.** The shared export sheet has real
+  preparation, error, and retry states instead of silently hiding a failed file. PNGs render locally
+  at a 2048px long edge through WebKit's vector output; JavaScript and external loads remain blocked.
+  Tests render every Visualizer scene and sample actual pixels so a blank or undersized image fails.
+
+## Apple Developer work now unblocked
 
 Work `docs/APP-STORE-SUBMISSION.md`. The order that matters:
 
-1. **Register the App ID, provision Sign in with Apple**, enable the entitlement for Debug too, and
-   register the Team ID and bundle ID as a Clerk Native Application. Until this is done **Release
-   does not compile at all** — it fails signing. Everything else is downstream.
-2. **Wire StoreKit.** Chris chose to keep the onboarding plan beat, so a purchase screen that cannot
-   purchase is a live guideline 3.1.1 rejection and **the app cannot be submitted until this is
-   done**. `Services/ProStore.swift` is the seam and carries the checklist. Two subscriptions in one
-   group; the Pro Pass is a **consumable**, not a subscription; add a Restore Purchases control.
+The App Store Connect record was created on 2026-09-06 as **ColorSense: Palette Studio** under
+Chrisanto Mendez. Its Apple ID is `6809134374`, bundle ID `online.colorsense.ios`, and SKU
+`colorsense-ios-001`. Apple created an iOS 1.0 listing, and the project now matches it with
+`MARKETING_VERSION = 1.0`.
+
+StoreKit records were created on 2026-09-07: subscription group **ColorSense Pro** (`22363784`),
+monthly (`6809206814`, $5.00), annual (`6809207967`, $39.00), and consumable Pro Pass
+(`6809208412`, $9.00). All use the existing `online.colorsense.ios.pro.*` product IDs and worldwide
+availability. Monthly has the agreed free one-week introductory offer with no end date. Review
+screenshots and backend reconciliation remain. The StoreKit 2 client and Restore Purchases controls
+are implemented behind `STOREKIT_PURCHASES_ENABLED`; keep it off until the backend passes sandbox
+testing. The Paid Apps Agreement, banking information, Certificate of Foreign Status and W-8BEN
+were all confirmed Active on 2026-09-07.
+
+The six approved product-page screenshots were uploaded to App Store Connect on 2026-09-07. They
+are 1290 x 2796 RGB PNGs without transparency and appear in order as palette, contrast, health,
+visualizer, SVG and schemes. App Store Connect shows 6 of 10 in the 6.9" slot and derives the 6.5"
+set from it. No build has been uploaded and the app has not been added for review.
+
+1. **Finish end-to-end Sign in with Apple testing.** Paid-team profiles and signed products carry
+   the entitlement. Apple credentials and the iOS bundle were saved in the existing Replit-managed
+   production Clerk tenant, and the production SSO pane showed Apple and Google enabled on
+   2026-09-07. A Release-configuration build installed on the physical iPhone and reached Apple's
+   native authorization sheet with both Share My Email and Hide My Email. The Share My Email flow
+   then completed: signed-in Account loaded and a test palette saved and appeared in Library through
+   the production API. Returning-user behavior also passed: after sign-out, Continue with Apple
+   reopened the same account and the saved palette remained in Library. Complete cancellation,
+   Hide My Email and relay-delivery cases using the matrix in
+   `docs/replit-sign-in-with-apple-handoff.md`.
+2. **Deploy StoreKit server reconciliation.** The StoreKit 2 client now loads localized products,
+   purchases monthly, annual and the consumable pass, retries unfinished delivery, and provides
+   Restore Purchases. It fetches the backend-issued app-account UUID before every new purchase and
+   passes it to StoreKit as `.appAccountToken`. `GET /api/me` remains the entitlement source. The
+   gate is enabled in the gitignored local configuration for physical-device acceptance testing;
+   do not submit a release until the remaining sandbox and lifecycle tests pass. The production
+   account-token and transaction routes were externally verified
+   on 2026-09-07 to require authentication, and the public notification route rejected an empty
+   probe as an invalid signed payload. This proves route deployment, but not real Apple signature
+   verification, migrations or entitlement reconciliation. Later that day, a physical-device
+   Monthly Sandbox purchase changed a newly created ColorSense account from Free to Pro after the
+   seven-day trial confirmation, and Pro persisted after force-quit and relaunch. This proves
+   signed-transaction delivery, backend persistence and `/api/me` activation. Restore Purchases
+   then replayed successfully on the owning account without changing its Pro state. Replit later
+   confirmed two Sandbox periods, valid ownership binding and final expiration at 07:56 Macau time;
+   both the web and iOS correctly reported Free after expiration. Renewal/expiration passed. An
+   Annual Sandbox purchase subsequently showed a generic local verification error after
+   Apple confirmation, then Restore Purchases reconciled it and activated Pro. Annual backend
+   activation passed; diagnose the immediate callback discrepancy before release. While Annual was
+   active, restoring from a second Free ColorSense account was rejected and left it Free, proving
+   live ownership protection. The deployed endpoint returned `403`; the iOS client now presents
+   the explicit account-ownership message for that response, verified on-device. Pro Pass was then
+   purchased with a clean Sandbox tester: it activated Pro, persisted after force quit/relaunch and
+   restored through the backend-entitlement fallback added for finished consumables. Replit
+   confirmed one correctly bound transaction, an exact 31-day grant, idempotent duplicate delivery
+   and effective Pro from `/api/me`. Pro Pass passed. Real Apple notification attempts initially
+   returned `400`; Replit fixed and deployed the Version 2 handler, then Apple's Sandbox test and
+   status APIs reported `SUCCESS`, HTTP `200`, verified JWS/bundle ID and no entitlement changes for
+   the `TEST` event. The notification transport and verification blocker is closed.
 3. **Fix account deletion.** The app calls Clerk's `user.delete()` and nothing else, so the
    ColorSense Postgres row and every saved palette survive. This is a backend job — a verified Clerk
    `user.deleted` webhook — and the in-app copy currently claims otherwise. Details and the full
    deferred plan are in section 8c. **Do not change `/api/saved-palettes` or `/api/me` contracts.**
 4. **Re-run the privacy audit** against the final archived build, then finalise the policy and the
-   App Store questionnaire in the order section 8c gives.
-5. **Settle the version numbers.** `MARKETING_VERSION` is still `0.1.0` and reads as a prototype.
+   App Store questionnaire in the order section 8c gives. The copy-ready Replit website brief for
+   both legal pages is `docs/replit-website-legal-handoff.md`.
+5. **Keep version numbers aligned.** The first App Store version and `MARKETING_VERSION` are `1.0`.
    `CURRENT_PROJECT_VERSION` must increment on **every** upload — App Store Connect rejects a reused
-   build number, and PostHog binds each dSYM to the release those numbers name. A symbol set already
-   exists against `0.1.0+1`, so the collision is real, not theoretical.
+   build number, and PostHog binds each dSYM to the release those numbers name.
 
-## Open work that needs no account
+## Release preparation completed 2026-09-06
 
-- **The iPhone SE layout pass.** The highest-value one. Checking it found a submission blocker: the
-  account ask laid out at 906.5pt on a 667pt screen and pushed "Maybe later" — the guideline
-  5.1.1(v) exit — off the display. That is fixed, but the fix traded it for a hero that scrolls, so
-  the last line of the paragraph can sit below the fold on any phone. Sizing the composition to fit
-  is the finishing pass. **`mood` and `plan` have never been checked on an SE at all.**
-- **Reconcile the vault** with what iOS actually ships: seven tools, Website Analyzer deferred,
-  Brand Kit waiting on demand, Schemes landed, and the 7-day trial the vault still does not mention.
-  This is not housekeeping — the onboarding Pro pitch promised brand kits and AI harmonies because
-  it was written from the web's feature list, and the vault is where those lists come from.
-- **App Store screenshots** at 6.9" (1320 x 2868), per section 7.
+- **Compact onboarding layout:** the outer viewport drives a compact composition below 740pt.
+  Smaller decorative strips and mascot frames keep the signed-out account paragraph and all three
+  actions in view on the SE. Hello, naming, mood and all three plan cards fit too. At
+  accessibility-extra-large the hero scrolls while the actions remain visible. Standard SE and
+  dark accessibility captures are in `.build/release-prep/`.
+- **The vault is reconciled:** `Claude Skill.md` sections 3 and 22 now record the agreed 7-day iOS
+  trial (awaiting StoreKit), seven tools, Schemes landing, Website Analyzer deferred, Brand Kit
+  waiting on demand, current Pro surfaces, and StoreKit as a release requirement.
+- **Six App Store screenshots:** native 1320 × 2868 PNGs in `docs/app-store/screenshots/` and a
+  review gallery at `docs/app-store/index.html`. They use sample content, including original
+  geometric SVG artwork. Temporary capture routes and Pro presentation overrides were removed
+  from the source after capture. Review against the final release before upload.
+- **Paid-team signing preflight:** Xcode automatically provisioned `online.colorsense.ios`, built
+  and launched Debug on the paired iPhone, archived Release, and exported an App Store Connect IPA.
+  Both signed apps carry Sign in with Apple; the export also carries `beta-reports-active` and has
+  `get-task-allow` disabled. Nothing was uploaded, and PostHog stayed in dry-run mode.
+
+Remaining local follow-up: physical-device verification of accessibility scrolling and exit taps.
+App Store Connect still needs the build, review information and final privacy questionnaire. The
+completed local changes are captured in the 2026-09-07 checkpoint commit.
 
 ## Chris has feedback and new features to discuss
 
@@ -153,10 +241,25 @@ Take them, but know the ground rules before you agree to anything.
 `Config/Secrets.xcconfig` and `Config/PostHogCLI.env` are gitignored and hold live values. Only the
 `.example` files are tracked. `posthog-cli` is installed at `~/.posthog/posthog-cli` (a `--prefix`
 install; a plain `npm -g` fails on the `/usr/local` prefix) and is authenticated — a real dSYM
-upload has been verified end to end.
+upload has been verified end to end. The signed preflight export used dry-run mode because build
+`0.1.0+1` already has symbols and a second binary under those numbers would collide.
 
 End commits with:
 
 ```
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 ```
+
+## Latest verification evidence
+
+- Final checkpoint suite: 135 passed, 0 failed, 0 skipped on ColorSense-SE, iOS 26.5, on
+  2026-09-07. XcodeBuildMCP reported no warnings or diagnostics.
+- The Appearance control was exercised live in the open Account sheet: Light to Dark and Dark to
+  System both applied immediately without dismissing the sheet. The simulator preference was left
+  on System.
+- Camera permission request, denial explanation and the Open Settings recovery route were exercised
+  in the simulator. The earlier `resumeOnce()` Swift concurrency warnings were fixed.
+- Screenshot dimensions verified from each PNG header: six images, all 1320 × 2868.
+- No `QA_BEAT`, `QA_TOOL`, sample SVG injection, or Pro presentation override remains in app source.
+- Paid-team Debug built, installed and launched on the paired iPhone. A signed Release archive and
+  App Store Connect IPA export succeeded with Sign in with Apple; no upload was performed.

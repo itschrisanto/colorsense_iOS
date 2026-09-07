@@ -49,73 +49,60 @@ struct OnboardingFlowView: View {
         case naming
         case mood
         case keep
-        /// Design only. Nothing here is wired to StoreKit, and it must be before this ships.
         case plan
     }
 
     private enum Plan: String, CaseIterable, Identifiable {
-        case trial
         case monthly
         case annual
 
         var id: String { rawValue }
 
-        var title: String {
+        func title(info: ProProductInfo?) -> String {
             switch self {
-            case .trial: return "7 days free"
-            case .monthly: return "Monthly"
+            case .monthly:
+                return info?.isEligibleForIntroOffer == true ? "7 days free" : "Monthly"
             case .annual: return "Yearly"
             }
         }
 
-        /// $5 a month and $39 a year are the vault's Pro Monthly and Pro Annual prices
-        /// (Claude Skill.md section 3). The trial is **not** in the vault: it is a StoreKit
-        /// introductory offer and, if it stays, a pricing decision that belongs there.
-        var detail: String {
+        func detail(info: ProProductInfo?) -> String {
+            let price = info?.displayPrice ?? "…"
             switch self {
-            case .trial: return "Then $5 a month. Cancel any time before it ends."
-            case .monthly: return "Billed every month."
+            case .monthly:
+                return info?.isEligibleForIntroOffer == true
+                    ? "Then \(price) a month. Cancel any time before it ends."
+                    : "\(price), billed every month."
             case .annual: return "Billed once a year."
             }
         }
 
-        /// Blank for the trial, because its whole point is that nothing is charged yet and a
-        /// price in that slot would contradict the line beside it.
-        var price: String {
-            switch self {
-            case .trial: return ""
-            case .monthly: return "$5"
-            case .annual: return "$39"
-            }
+        func price(info: ProProductInfo?) -> String {
+            info?.displayPrice ?? "…"
         }
 
         /// A colour per plan, so three choices read as three things rather than three identical
         /// boxes. Taken from the brand kit rather than invented, same as everywhere else.
         var accent: Color {
             switch self {
-            case .trial: return BrandColor.yellow
             case .monthly: return BrandColor.teal
             case .annual: return BrandColor.coral
             }
         }
 
-        /// "SAVE 35%" is arithmetic, not a claim: $5 a month is $60 a year against the vault's $39.
-        /// If either price moves in the vault, this number moves with it.
-        var badge: String? {
-            switch self {
-            case .trial: return "START HERE"
-            case .monthly: return nil
-            case .annual: return "SAVE 35%"
-            }
-        }
+        var badge: String? { nil }
 
-        var action: String {
+        func action(info: ProProductInfo?) -> String {
             switch self {
-            case .trial: return "Start my free trial"
-            case .monthly: return "Subscribe monthly"
+            case .monthly:
+                return info?.isEligibleForIntroOffer == true
+                    ? "Start my free trial"
+                    : "Subscribe monthly"
             case .annual: return "Subscribe yearly"
             }
         }
+
+        var product: ProProduct { self == .monthly ? .monthly : .annual }
     }
 
     private struct AuthRoute: Identifiable {
@@ -132,7 +119,10 @@ struct OnboardingFlowView: View {
     @State private var chosenMood: OnboardingMood?
     @State private var restorePalette: ExtractedPalette?
     @State private var authRoute: AuthRoute?
-    @State private var chosenPlan: Plan = .trial
+    @State private var chosenPlan: Plan = .monthly
+    @State private var productInfo: [ProProduct: ProProductInfo] = [:]
+    @State private var isPurchasing = false
+    @State private var purchaseMessage: String?
     /// Recorded when the account beat is answered, sent when the flow actually ends.
     @State private var exit: OnboardingExit = .later
     @State private var recordedView = false
@@ -155,6 +145,10 @@ struct OnboardingFlowView: View {
     /// Whether the signed-in account already pays, fetched ahead of the decision rather than at it.
     /// Nil means not known yet, which is treated as "not paying", so the offer shows.
     @State private var isPaidAccount: Bool?
+
+    // Measure the outer viewport, never the overflowing band stack.
+    @State private var viewportHeight: CGFloat = 874
+    private var isCompactScreen: Bool { viewportHeight < 740 }
 
     private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
 
@@ -199,7 +193,7 @@ struct OnboardingFlowView: View {
     /// the centre of the screen she is supposed to be standing in the middle of.
     private var stripHeight: CGFloat {
         if beat == .splash || beat == .hello || beat == .naming || beat == .plan { return 0 }
-        return isAccessibilitySize ? 34 : 84
+        return isAccessibilitySize ? 20 : (isCompactScreen ? 28 : (beat == .keep ? 60 : 84))
     }
 
     /// The primary button inverts the band it sits on: the fill is the band's own measured ink,
@@ -227,6 +221,16 @@ struct OnboardingFlowView: View {
     private var actionForeground: Color { foreground(onBandAt: 4) }
 
     var body: some View {
+        GeometryReader { viewport in
+            bandLayout
+                .onChange(of: viewport.size.height, initial: true) { _, height in
+                    viewportHeight = height
+                }
+        }
+        .ignoresSafeArea()
+    }
+
+    private var bandLayout: some View {
         VStack(spacing: 0) {
             hero
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -271,6 +275,14 @@ struct OnboardingFlowView: View {
                 // which looks wrong in dark mode. Same local mark the rest of the app uses.
                 .clerkAppIconView { ColorSenseAuthLogo() }
         }
+        .alert("ColorSense Pro", isPresented: Binding(
+            get: { purchaseMessage != nil },
+            set: { if !$0 { purchaseMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { purchaseMessage = nil }
+        } message: {
+            Text(purchaseMessage ?? "")
+        }
         // Signing in dismisses the auth sheet but not this, so finish once Clerk actually has a
         // user. That way the reader is never returned to an ask they have already answered.
         .onChange(of: clerk.user?.id) { _, id in
@@ -301,6 +313,10 @@ struct OnboardingFlowView: View {
             isPaidAccount = await ProEntitlement.isPaid()
         }
         .task(id: beat) {
+            if beat == .plan {
+                productInfo = await ProStoreRegistry.current.productInfo()
+                return
+            }
             guard beat == .splash else { return }
             // Five seconds, asked for directly on 2026-09-03: at 1.5s the blink was over before
             // the reader had focused on her face, and on device it was missed entirely. This is a
@@ -380,26 +396,21 @@ struct OnboardingFlowView: View {
     /// Lauma on top, the words underneath. Same vertical order as the introduction before it, so
     /// the two screens read as one sequence rather than two unrelated layouts, and she stops
     /// competing with the headline for the same corner.
-    /// The Pro offer. **Design only: nothing here talks to StoreKit.**
-    ///
-    /// Two things have to happen before this can ship. App Review guideline 3.1.1 requires digital
-    /// goods to go through In-App Purchase, so these buttons must be wired to real products, and a
-    /// purchase screen that does nothing is itself a rejection. The 7-day trial is a StoreKit
-    /// introductory offer configured in App Store Connect, and it is not in the vault's pricing
-    /// table yet. Until both are done, keep this behind the same skip the rest of the flow has.
-    /// Scrolling at accessibility sizes is handled by `hero` for every beat, so this is just the
-    /// content.
+    /// The Pro offer. StoreKit supplies the viewer's local prices and determines whether the
+    /// monthly subscription may honestly be described as a free trial.
     private var planHero: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
             // Smaller than the other beats: three plan cards need the room, and she is a
             // reaction here rather than the subject. `height` is the whole frame, not Lauma.
-            LaumaClip(clip: .cheer, height: isAccessibilitySize ? 104 : 162)
+            LaumaClip(clip: .cheer, height: isAccessibilitySize ? 104 : (isCompactScreen ? 48 : 162))
 
             VStack(spacing: 6) {
-                Text("Try Pro free\nfor 7 days.")
-                    .font(BrandFont.display(isAccessibilitySize ? 30 : 42))
+                Text(productInfo[.monthly]?.isEligibleForIntroOffer == true
+                     ? "Try Pro free\nfor 7 days."
+                     : "Choose your\nPro plan.")
+                    .font(BrandFont.display(isAccessibilitySize ? 30 : (isCompactScreen ? 34 : 42)))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -409,21 +420,21 @@ struct OnboardingFlowView: View {
                 // is deliberately absent here. Selling a feature the reader cannot then find is a
                 // refund conversation at best and a rejection at worst.
                 Text("SVG Recolor, contrast fixes, palette remaps and logo-free exports. Everything you have used so far stays free.")
-                    .font(BrandFont.ui(15))
+                    .font(BrandFont.ui(isCompactScreen ? 13 : 15))
                     .opacity(0.82)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 300)
-                    .padding(.top, 10)
+                    .padding(.top, isCompactScreen ? 6 : 10)
             }
-            .padding(.top, 16)
+            .padding(.top, isCompactScreen ? 6 : 16)
 
             VStack(spacing: 10) {
                 ForEach(Plan.allCases) { plan in
                     planCard(plan)
                 }
             }
-            .padding(.top, 20)
+            .padding(.top, isCompactScreen ? 10 : 20)
 
             Spacer(minLength: 0)
         }
@@ -434,7 +445,7 @@ struct OnboardingFlowView: View {
         // a headline. She is the first thing here and has her own margin inside the frame, and the
         // signed-out variant has to fit a 54pt headline, a three-line paragraph and three buttons:
         // at 68 with a 236pt frame her head was clipped and "Maybe later" fell off the bottom.
-        .padding(.top, 28)
+        .padding(.top, isCompactScreen ? 24 : 28)
         .padding(.bottom, 8)
     }
 
@@ -449,7 +460,7 @@ struct OnboardingFlowView: View {
     /// one. A taller phone simply leaves more air.
     private var keepClipHeight: CGFloat {
         if isAccessibilitySize { return clerk.user != nil ? 132 : 108 }
-        return clerk.user != nil ? 208 : 150
+        return isCompactScreen ? (clerk.user != nil ? 120 : 80) : (clerk.user != nil ? 208 : 150)
     }
 
     /// One plan, as a card that wears its own colour.
@@ -468,7 +479,8 @@ struct OnboardingFlowView: View {
         return Button { chosenPlan = plan } label: {
             HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 3) {
-                    let title = Text(plan.title).font(BrandFont.ui(16, weight: .bold))
+                    let info = productInfo[plan.product]
+                    let title = Text(plan.title(info: info)).font(BrandFont.ui(16, weight: .bold))
                     let badge = plan.badge.map { text in
                         Text(text)
                             .font(BrandFont.ui(10, weight: .bold))
@@ -495,7 +507,7 @@ struct OnboardingFlowView: View {
                         }
                     }
 
-                    Text(plan.detail)
+                    Text(plan.detail(info: info))
                         .font(BrandFont.ui(13))
                         .opacity(0.8)
                         .multilineTextAlignment(.leading)
@@ -503,10 +515,10 @@ struct OnboardingFlowView: View {
                 }
                 Spacer(minLength: 8)
 
-                Text(plan.price)
+                Text(plan.price(info: productInfo[plan.product]))
                     .font(BrandFont.ui(18, weight: .bold))
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, isCompactScreen ? 8 : 12)
             .padding(.leading, 18)
             .padding(.trailing, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -529,7 +541,12 @@ struct OnboardingFlowView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            [plan.title, plan.price, plan.detail, plan.badge]
+            [
+                plan.title(info: productInfo[plan.product]),
+                plan.price(info: productInfo[plan.product]),
+                plan.detail(info: productInfo[plan.product]),
+                plan.badge,
+            ]
                 .compactMap { $0 }
                 .filter { !$0.isEmpty }
                 .joined(separator: ". ")
@@ -543,11 +560,11 @@ struct OnboardingFlowView: View {
 
             // `height` is the whole frame, not Lauma, so this sits a little above the still it
             // replaced.
-            LaumaClip(clip: .naming, height: isAccessibilitySize ? 158 : 236)
+            LaumaClip(clip: .naming, height: isAccessibilitySize ? 158 : (isCompactScreen ? 180 : 236))
 
             VStack(spacing: 6) {
                 Text("Every color has a name.")
-                    .font(BrandFont.display(isAccessibilitySize ? 30 : 42))
+                    .font(BrandFont.display(isAccessibilitySize ? 30 : (isCompactScreen ? 34 : 42)))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -577,7 +594,7 @@ struct OnboardingFlowView: View {
         .frame(maxWidth: .infinity)
         .foregroundStyle(heroForeground)
         .padding(.horizontal, 22)
-        .padding(.top, 68)
+        .padding(.top, isCompactScreen ? 32 : 68)
         .padding(.bottom, 8)
     }
 
@@ -627,13 +644,13 @@ struct OnboardingFlowView: View {
             // The animated wave, not the still WELCOME pose. `height` here is the whole frame
             // rather than Lauma herself, and she fills about 93% of it at her largest, so this is
             // a little taller than the still she replaced.
-            LaumaClip(clip: .wave, height: isAccessibilitySize ? 205 : 320)
+            LaumaClip(clip: .wave, height: isAccessibilitySize ? 205 : (isCompactScreen ? 250 : 320))
 
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 22)
-        .padding(.top, 68)
+        .padding(.top, isCompactScreen ? 32 : 68)
         .padding(.bottom, 8)
     }
 
@@ -674,9 +691,13 @@ struct OnboardingFlowView: View {
     /// the consequence is not cosmetic: a rigid hero squeezes the action band, and the first
     /// control to go is "Maybe later", the guideline 5.1.1(v) exit. Measured on an iPhone SE it was
     /// pushed off the display entirely. The compact variant keeps every word and every button on
-    /// screen, and the `ViewThatFits` around the whole hero still scrolls if even that is too tall.
+    /// screen. The hero retains its scroll fallback for larger Dynamic Type settings.
     private var proseHero: some View {
-        keepHero(clipHeight: keepClipHeight)
+        keepHero(
+            clipHeight: keepClipHeight,
+            headlineSize: isCompactScreen && !isAccessibilitySize ? 38 : nil,
+            gap: isCompactScreen ? 10 : 18
+        )
     }
 
     /// The account ask: Lauma on top, the words centred underneath.
@@ -738,13 +759,13 @@ struct OnboardingFlowView: View {
         }
         .foregroundStyle(heroForeground)
         .padding(.horizontal, 22)
-        .padding(.top, 68)
+        .padding(.top, isCompactScreen ? 32 : 68)
         .padding(.bottom, 8)
     }
 
     private var headlineText: some View {
         Text(headline)
-            .font(BrandFont.display(isAccessibilitySize ? 34 : 52))
+            .font(BrandFont.display(isAccessibilitySize ? 34 : (isCompactScreen ? 38 : 52)))
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -785,7 +806,7 @@ struct OnboardingFlowView: View {
     /// inset that kept text clear of a bottom-trailing overlay are both gone.
     private var laumaHeight: CGFloat {
         if isAccessibilitySize { return 86 }
-        return chosenMood == nil ? 150 : 158
+        return isCompactScreen ? 100 : (chosenMood == nil ? 150 : 158)
     }
 
     // MARK: - Mood picker
@@ -873,24 +894,21 @@ struct OnboardingFlowView: View {
                 }
 
             case .plan:
-                primary(chosenPlan.action) { buy() }
+                primary(chosenPlan.action(info: productInfo[chosenPlan.product])) { buy() }
+                    .disabled(isPurchasing || productInfo[chosenPlan.product] == nil)
+                    .opacity(isPurchasing || productInfo[chosenPlan.product] == nil ? 0.55 : 1)
+                secondary("Restore Purchases") { restorePurchases() }
+                    .disabled(isPurchasing)
                 quiet("Not now") { onComplete() }
             }
         }
         .foregroundStyle(actionForeground)
         .padding(.horizontal, 22)
         .padding(.top, 18)
-        // Clearing the home indicator and leaving a visual gap are two different jobs, and one
-        // flat 34 was doing both: measured, the primary's bottom edge landed at 839.7pt on an
-        // 874pt screen, exactly the 34pt safe-area inset, so it sat *on* the indicator with no
-        // breathing room. It went unnoticed while a small "Skip for now" trailed the primary and
-        // absorbed the gap; removing that on `hello` and `naming` exposed it.
-        //
-        // It stays one flat number rather than `safeAreaPadding(.bottom)`, which was tried and
-        // measured: the band stack ignores the safe area for its full-bleed colour, so a child
-        // asking for the inset is told there is almost none and it added 2pt. 54 is the 34pt
-        // indicator plus a 20pt gap, measured on an 874pt screen.
-        .padding(.bottom, 54)
+        // The outer viewport supplies the screen height even though these bands are full bleed.
+        // Short SE screens have no home indicator: 24pt keeps a gap without wasting 30pt.
+        // Taller phones retain the approved 34pt indicator clearance plus a 20pt gap.
+        .padding(.bottom, isCompactScreen ? 24 : 54)
     }
 
     /// The buttons take their height from padding, and pad their label before expanding.
@@ -987,21 +1005,59 @@ struct OnboardingFlowView: View {
 
     /// The plan beat's primary action.
     ///
-    /// It routes through `ProStore` so that wiring StoreKit later is a new conforming type rather
-    /// than a change here. The placeholder answers `.notConfigured`, which finishes onboarding,
-    /// which is exactly what this button did before the seam existed.
+    /// It routes through `ProStore`; the live implementation finishes only after server
+    /// reconciliation, while the release-gated placeholder reports that purchases are unavailable.
     private func buy() {
-        let product: ProProduct = chosenPlan == .annual ? .annual : .monthly
+        guard clerk.user != nil else {
+            purchaseMessage = "Create or sign in to your ColorSense account first. Then choose your plan again."
+            authRoute = AuthRoute(mode: .signUp)
+            return
+        }
+        let product = chosenPlan.product
+        isPurchasing = true
         Task {
             switch await ProStoreRegistry.current.purchase(product) {
-            case .purchased, .notConfigured, .pending:
+            case .purchased:
+                isPurchasing = false
                 onComplete()
             case .cancelled:
+                isPurchasing = false
                 break
-            case .failed:
-                // Nothing is surfaced yet because nothing can fail yet. When `StoreKitProStore`
-                // lands this needs a message, and that is part of wiring it.
+            case .pending:
+                isPurchasing = false
+                purchaseMessage = "The purchase is waiting for approval. Pro will activate after the App Store completes it."
+            case .notConfigured:
+                isPurchasing = false
+                purchaseMessage = "In-app purchases are not available yet."
+            case .failed(let message):
+                isPurchasing = false
+                purchaseMessage = message
+            }
+        }
+    }
+
+    private func restorePurchases() {
+        guard clerk.user != nil else {
+            purchaseMessage = "Sign in to the ColorSense account that should receive the restored purchase."
+            authRoute = AuthRoute(mode: .signIn)
+            return
+        }
+        isPurchasing = true
+        Task {
+            let outcome = await ProStoreRegistry.current.restore()
+            isPurchasing = false
+            switch outcome {
+            case .purchased:
+                purchaseMessage = "Your purchase was restored."
+                isPaidAccount = true
+            case .cancelled:
                 break
+            case .pending:
+                purchaseMessage = "The purchase is still pending."
+            case .notConfigured:
+                purchaseMessage = "Restore Purchases is not available yet."
+            case .failed(let message):
+                purchaseMessage = message
             }
         }
     }

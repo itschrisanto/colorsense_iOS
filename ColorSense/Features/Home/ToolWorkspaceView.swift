@@ -72,9 +72,10 @@ struct ToolWorkspaceView: View {
             PaletteHealthView(
                 palette: store.palette,
                 isPro: isPro,
-                onRemap: { index, swatch in
-                    withAnimation(PaletteMotion.recolor(reduceMotion: reduceMotion)) {
-                        store.replace(at: index, with: swatch)
+                onRemap: { proposal in
+                    guard let id = proposal.swatchID else { return false }
+                    return withAnimation(PaletteMotion.recolor(reduceMotion: reduceMotion)) {
+                        store.applyFix(proposal.proposed, to: id, expectedHex: proposal.original.hex)
                     }
                 }
             )

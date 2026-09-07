@@ -31,6 +31,7 @@ struct VisualizerView: View {
     @State private var editing: EditingSwatch?
     @State private var suggestion: PaletteImprover.Suggestion?
     @State private var noSuggestion = false
+    @State private var exportDocument: SvgExportDocument?
 
     private struct EditingSwatch: Identifiable {
         let index: Int
@@ -87,6 +88,9 @@ struct VisualizerView: View {
                     store.replace(at: entry.index, with: updated)
                 }
             }
+            .sheet(item: $exportDocument) { document in
+                SvgExportSheet(document: document)
+            }
     }
 
     private var preview: some View {
@@ -125,8 +129,13 @@ struct VisualizerView: View {
     /// guideline 3.1.1 forbids pointing at an outside one.
     @ViewBuilder
     private var export: some View {
-        if isPro, let file = exportURL() {
-            ShareLink(item: file) {
+        if isPro {
+            Button {
+                exportDocument = .init(
+                    svg: VisualizerSVG.document(scene, palette: hexes),
+                    name: "colorsense-\(scene.title.lowercased().replacingOccurrences(of: " ", with: "-"))"
+                )
+            } label: {
                 Label("Export this scene", systemImage: "square.and.arrow.up")
             }
             .buttonStyle(.primaryAction)
@@ -317,16 +326,4 @@ struct VisualizerView: View {
         }
     }
 
-    /// The scene as a file the share sheet can hand on. SVG rather than PNG: it is what the scene
-    /// already is, it stays sharp at any size, and it avoids rasterising a web view.
-    private func exportURL() -> URL? {
-        let name = scene.title.lowercased().replacingOccurrences(of: " ", with: "-")
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("colorsense-\(name).svg")
-        do {
-            try VisualizerSVG.document(scene, palette: hexes).write(to: file, atomically: true, encoding: .utf8)
-            return file
-        } catch {
-            return nil
-        }
-    }
 }

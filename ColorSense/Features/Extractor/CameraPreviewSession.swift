@@ -2,6 +2,28 @@
 import os
 import SwiftUI
 
+/// Bridges a completion from the capture queue back to the main actor and guarantees that racing
+/// stop/deadline paths can invoke it only once.
+private final class MainActorOnce: @unchecked Sendable {
+    private let didRun = OSAllocatedUnfairLock(initialState: false)
+    private let action: @MainActor @Sendable () -> Void
+
+    init(_ action: @escaping @MainActor @Sendable () -> Void) {
+        self.action = action
+    }
+
+    func call() {
+        let shouldRun = didRun.withLock { ran -> Bool in
+            guard !ran else { return false }
+            ran = true
+            return true
+        }
+        guard shouldRun else { return }
+        let action = action
+        Task { @MainActor in action() }
+    }
+}
+
 /// Owns the capture session behind the picker's live camera tile.
 ///
 /// It exists as a separate object because the session's life must *not* be tied to the view's.
@@ -54,7 +76,7 @@ final class CameraPreviewSession {
     /// asynchronous from the caller's view, so presenting the capture screen immediately after
     /// asking to stop races it — and two things reaching for one camera is its own failure. The
     /// picker therefore waits for this before opening the camera.
-    func stop(then completion: (@MainActor () -> Void)? = nil) {
+    func stop(then completion: (@MainActor @Sendable () -> Void)? = nil) {
         let session = session
         guard let completion else {
             queue.async { if session.isRunning { session.stopRunning() } }
@@ -70,21 +92,13 @@ final class CameraPreviewSession {
         // action must not inherit AVFoundation's worst case. Releasing the camera first is still
         // worth attempting, so the deadline is a floor on responsiveness rather than a
         // replacement for waiting.
-        let hasResumed = OSAllocatedUnfairLock(initialState: false)
-        func resumeOnce() {
-            let alreadyRan = hasResumed.withLock { ran -> Bool in
-                defer { ran = true }
-                return ran
-            }
-            guard !alreadyRan else { return }
-            Task { @MainActor in completion() }
-        }
+        let resumeOnce = MainActorOnce(completion)
 
         queue.async {
             if session.isRunning { session.stopRunning() }
-            resumeOnce()
+            resumeOnce.call()
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { resumeOnce() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { resumeOnce.call() }
     }
 }
 

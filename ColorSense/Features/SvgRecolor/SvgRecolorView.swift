@@ -29,6 +29,7 @@ struct SvgRecolorView: View {
     /// Which found colour is being reassigned, if any. One sheet, not one picker per row.
     @State private var editing: EditingSvgColor?
     @State private var isConfirmingExit = false
+    @State private var exportDocument: SvgExportDocument?
 
     private var recolored: String? {
         source.map { SvgRecolor.recolor($0, mapping: mapping) }
@@ -72,6 +73,9 @@ struct SvgRecolorView: View {
                 allowsMultipleSelection: false
             ) { result in
                 load(result)
+            }
+            .sheet(item: $exportDocument) { document in
+                SvgExportSheet(document: document)
             }
     }
 
@@ -128,6 +132,15 @@ struct SvgRecolorView: View {
                         .disabled(found.isEmpty)
                 }
 
+                Button {
+                    mapping = SvgRecolor.shuffledMapping(found: found, mapping: mapping)
+                } label: {
+                    Label("Shuffle colors", systemImage: "shuffle")
+                }
+                .buttonStyle(.secondaryAction)
+                .disabled(Set(found.map { mapping[$0] ?? $0 }).count < 2)
+                .accessibilityHint("Rearranges the current SVG colors without changing your palette")
+
                 VStack(spacing: 0) {
                     ForEach(Array(found.enumerated()), id: \.element) { index, color in
                         if index > 0 { Divider() }
@@ -135,11 +148,11 @@ struct SvgRecolorView: View {
                     }
                 }
 
-                if let recolored, let file = exportURL(for: recolored) {
-                    // `ShareLink` is a Button underneath, so the house style applies to it the
-                    // same way it does to every other primary action.
-                    ShareLink(item: file) {
-                        Label("Export recolored SVG", systemImage: "square.and.arrow.up")
+                if let recolored {
+                    Button {
+                        exportDocument = .init(svg: recolored, name: "\(name)-recolored")
+                    } label: {
+                        Label("Export recolored artwork", systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(.primaryAction)
                     .padding(.top, 4)
@@ -281,17 +294,6 @@ struct SvgRecolorView: View {
         }
     }
 
-    /// Writes the result somewhere the share sheet can reach, named after the original.
-    private func exportURL(for svg: String) -> URL? {
-        let file = FileManager.default.temporaryDirectory
-            .appendingPathComponent("\(name)-recolored.svg")
-        do {
-            try SvgRecolor.sanitized(svg).write(to: file, atomically: true, encoding: .utf8)
-            return file
-        } catch {
-            return nil
-        }
-    }
 }
 
 /// The transparency checkerboard behind the preview.

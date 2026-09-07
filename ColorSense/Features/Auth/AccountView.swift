@@ -11,6 +11,7 @@ struct AccountView: View {
     /// Mirrors AnalyticsService.isOptedOut. Held here so the toggle animates immediately rather
     /// than waiting on a UserDefaults round trip.
     @State private var analyticsEnabled = !AnalyticsService.isOptedOut
+    @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system.rawValue
 
     @State private var route: Route?
     @State private var authIsPresented = false
@@ -51,6 +52,24 @@ struct AccountView: View {
                     // side, a reachable privacy policy is not optional.
                     section(title: "ColorSense") {
                         row("About", "info.circle", .about)
+                    }
+
+                    // This belongs to the device rather than the signed-in account, so it remains
+                    // available when signed out and takes effect immediately across the app.
+                    section(title: "Appearance") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("App appearance")
+                                .font(BrandFont.ui(15))
+                            Picker("App appearance", selection: $appearance) {
+                                ForEach(AppAppearance.allCases) { option in
+                                    Text(option.title).tag(option.rawValue)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .accessibilityLabel("App appearance")
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                     }
 
                     // Outside the signed-in block on purpose: analytics are pseudonymous and apply
@@ -109,6 +128,10 @@ struct AccountView: View {
                 }
             }
         }
+        // A presented sheet is its own presentation boundary. Applying the preference here makes
+        // System / Light / Dark update while Account is still open; the app-root application in
+        // ColorSenseApp continues to govern every other screen and future presentation.
+        .preferredColorScheme(AppAppearance(rawValue: appearance)?.colorScheme)
     }
 
     /// What a signed-out reader sees where the profile would be.
