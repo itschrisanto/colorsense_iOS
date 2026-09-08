@@ -395,10 +395,12 @@ order to the 6.9" slot on 2026-09-07 and the 6.5" set inherits them. The build, 
 privacy questionnaire, StoreKit backend reconciliation and sandbox purchase testing remain before
 release.
 
-Once enrolled: **internal** testers (≤100) skip Beta App Review and get builds in minutes, but each
-one needs a real App Store Connect role. **External** testers (≤10,000, invited by email or public
-link) need no team access but cost a Beta App Review per significant build. Builds expire after 90
-days either way.
+The **ColorSense Internal** group was created on 2026-09-08 with automatic distribution. Chris's
+App Store Connect Account Holder is its first tester, build `1.0 (1)` is assigned, and the group
+reports the build **Ready to Test**. Installation and the archived-build smoke test remain.
+**Internal** testers (≤100) skip Beta App Review, but each needs a real App Store Connect role.
+**External** testers (≤10,000, invited by email or public link) need no team access but cost a Beta
+App Review per significant build. Builds expire after 90 days either way.
 
 The repo side is done as far as it can go without an account:
 

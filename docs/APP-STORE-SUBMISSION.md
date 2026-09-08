@@ -24,9 +24,9 @@ Schemes and Library, plus onboarding, the palette workspace, Account, About and 
 
 **Apple Developer Program enrollment is active.** Automatic provisioning now produces signed Debug
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
-uploaded. Build `1.0 (1)` finished processing successfully and is **Ready to Submit** in TestFlight;
-internal TestFlight assignment, review information, the privacy questionnaire and release blockers
-remain. See section 2.
+uploaded. Build `1.0 (1)` finished processing successfully and is **Ready to Test** in the internal
+**ColorSense Internal** group; installation from TestFlight, review information, the privacy
+questionnaire and release blockers remain. See section 2.
 
 ---
 
@@ -72,14 +72,17 @@ remain. See section 2.
       version 1.0 build 1 is **Ready to Submit**. The uploaded app uses the App Store provisioning
       profile, includes Sign in with Apple and `beta-reports-active`, and has
       `get-task-allow = false`.
-- [ ] Create the internal TestFlight group **ColorSense Internal**, add Chris's App Store Connect
-      Apple ID as the first internal tester, assign build `1.0 (1)`, and install it from TestFlight.
-      Do not use either Sandbox Apple Account here; those accounts are only for StoreKit testing.
+- [x] Create the internal TestFlight group **ColorSense Internal**, add Chris's App Store Connect
+      Apple ID as the first internal tester, and assign build `1.0 (1)` (2026-09-08). The group has
+      one tester and one build; the build is **Ready to Test**. Automatic distribution is enabled.
+      Neither Sandbox Apple Account was used because those accounts are only for StoreKit testing.
+- [ ] Accept the internal invitation, install build `1.0 (1)` from TestFlight, and run the archived
+      build smoke test on the physical iPhone.
 
 Verification on 2026-09-08: the physical-device smoke test passed, the signed `1.0+1` Release
 archive and App Store Connect IPA passed local validation, its matching dSYM was verified in
-PostHog, and Apple completed package processing without an upload error. The build is parked at
-**Ready to Submit**, before creation of the first internal testing group.
+PostHog, and Apple completed package processing without an upload error. The internal group and
+tester are configured, and build `1.0 (1)` is **Ready to Test**; installation is the next step.
 
 ---
 
