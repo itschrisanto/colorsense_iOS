@@ -20,13 +20,14 @@ and Google sign-in, saving a palette to the account, and the palette appearing o
 
 **The app is built.** Seven tools ship: Extractor, Contrast, Health, SVG Recolor, Visualizer,
 Schemes and Library, plus onboarding, the palette workspace, Account, About and Feedback.
-135 tests across 26 suites pass.
+137 tests across 26 suites pass.
 
 **Apple Developer Program enrollment is active.** Automatic provisioning now produces signed Debug
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
-uploaded. Build `1.0 (1)` finished processing successfully and is **Ready to Test** in the internal
-**ColorSense Internal** group; installation from TestFlight, review information, the privacy
-questionnaire and release blockers remain. See section 2.
+uploaded. Build `1.0 (1)` finished processing and its main feature, StoreKit purchase and entitlement
+persistence tests passed. Build `1.0 (2)`, which fixes the remaining restore-path failure, was
+uploaded on 2026-09-09 and is processing. Review information, the privacy questionnaire and the
+remaining release blockers still apply. See section 2.
 
 ---
 
@@ -81,13 +82,28 @@ questionnaire and release blockers remain. See section 2.
       build's previously blank **What to Test** field refreshed distribution. App Store Connect now
       records **Installed 1.0 (1)** on the physical iPhone. The onboarding and main feature sweep
       passed after deleting retained data from the earlier Xcode-installed build.
+- [x] Complete the TestFlight Monthly purchase and persistence checks in build `1.0 (1)`
+      (2026-09-09). The Sandbox purchase completed, the signed-in ColorSense account immediately
+      showed **Pro - Active**, and it remained Pro after force-quit and relaunch.
+- [x] Diagnose and repair the explicit Restore Purchases failure from build `1.0 (1)`
+      (2026-09-09). It reproduced twice because an `AppStore.sync()` error returned before the app
+      checked StoreKit entitlements or the durable backend entitlement. Restore now continues both
+      checks after a sync error and succeeds only when Apple or `/api/me` confirms paid access.
+      Two focused regression tests cover the paid-account fallback and the free-account rejection;
+      all 137 tests across 26 suites pass.
+- [x] Archive and upload build `1.0 (2)` with the restore repair (2026-09-09). Apple's package
+      upload succeeded and processing began. PostHog has the exact archive dSYM under release
+      `online.colorsense.ios@1.0+2`, UUID `6BD22D4C-71B9-3C8C-B7C8-C6FAFE0E9B77`, with an uploaded
+      file and no failure reason.
 - [ ] Complete the StoreKit purchase, entitlement persistence and Restore Purchases smoke test in
-      the installed TestFlight build. TestFlight automatically uses Apple's sandbox environment.
+      build `1.0 (2)` after processing and automatic internal distribution complete. Purchase and
+      persistence already passed in build 1; only the repaired Restore result needs confirmation.
+      TestFlight automatically uses Apple's sandbox environment.
 
-Verification on 2026-09-08: the physical-device smoke test passed, the signed `1.0+1` Release
-archive and App Store Connect IPA passed local validation, its matching dSYM was verified in
-PostHog, and Apple completed package processing without an upload error. The internal group and
-tester are configured, and build `1.0 (1)` is **Ready to Test**; installation is the next step.
+Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
+and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
+is verified in PostHog, and Apple accepted the package upload. Build 2 processing and its one
+remaining physical-device Restore check are next.
 
 ---
 
@@ -316,6 +332,11 @@ logical size matches, with the status bar cleaned up.
       `06-schemes`. App Store Connect shows 6 of 10 and derives the 6.5" set from them.
 - [ ] 6.5" iPhone — 1242 x 2688, only if targeting that display class explicitly
 
+**No iPad set is required, and that is deliberate.** The app is iPhone-only for 1.0
+(`TARGETED_DEVICE_FAMILY: "1"`), so App Store Connect asks for no 13" iPad captures. If iPad support
+is ever added, this section gains a second full pass through all six screens. See "iPad is deferred,
+and the deferral has a trigger" in CLAUDE.md.
+
 Suggested order, leading with what the app is rather than with chrome: the palette bands; extraction
 from a photo; the contrast checker on a real pairing; Palette Health with its report; the Visualizer
 showing a scene; SVG Recolor.
@@ -365,7 +386,9 @@ tested against the build intended for submission. `docs/PRIVACY-AUDIT.md` is the
 the final word: it audited a development build, and the audit is to be re-run against the final
 archived Release build and its dependency lockfile.
 
-**1. Fix account deletion (blocker).** Add a *verified* Clerk `user.deleted` webhook to the
+**1. Fix account deletion (blocker).** Work from `docs/replit-account-deletion-handoff.md`, which
+carries the evidence, the per-table decisions and the acceptance criteria. In summary: add a
+*verified* Clerk `user.deleted` webhook to the
 backend: match the Clerk user to the local Postgres user, delete that row, and confirm the existing
 `saved_palettes.user_id` cascade removes the palettes. Webhook retries must be idempotent, and
 unsigned or invalid requests must be rejected. Test deletion from **both** the iOS app and the
@@ -412,13 +435,27 @@ public wording.
 - [ ] **Add a Clerk `user.deleted` webhook to the api-server** so deleting an account actually
       deletes the ColorSense user row and, through the existing cascade, its saved palettes. Blocks
       submission. Do not change the `/api/saved-palettes` or `/api/me` response contracts; the app
-      depends on both.
+      depends on both. **The implementation brief is `docs/replit-account-deletion-handoff.md`**
+      (written 2026-09-09), which adds two findings the audit did not have: the cascade reaches only
+      three tables, and `requireAuth`/`optionalAuth` recreate the user row lazily, so the webhook
+      alone leaves a resurrection race that can also fire a Loops welcome email at somebody who just
+      deleted their account.
 - [ ] **The web privacy policy never mentions mobile or iOS.** It is substantively accurate — same
       Clerk instance, same API, same data — but a reviewer checks that the policy covers the app.
       The website Terms also describe only the browser tool and omit accounts and App Store billing.
       Use `docs/replit-website-legal-handoff.md` for both pages when the Replit side is updated.
 - [ ] **Add "Leave a review" to the About screen** the day the App Store record exists, with the
       real App ID. It is deliberately absent because it would currently go nowhere.
+- [ ] **Read the device split before reopening iPad** (raised 2026-09-09). The case for an iPad app
+      rests on the claim that much of the target market works on iPad, and nothing in the repo or
+      the vault tests it. Two reads settle it: colorsense.online's own analytics, which cover the
+      same audience today, and App Store Connect after launch, since an iPhone-only app still
+      installs and runs on iPad in a scaled window and so reports iPad installs by itself. If either
+      shows a meaningful share, a real regular-size-class layout is a 1.1 update rather than
+      anything that blocks this submission. Does **not** block release.
+- [x] **Record the iPad deferral in the vault** (2026-09-09). Section 22 now carries it as a fourth
+      fact that matters beyond the code: iPhone-only for 1.0, portrait-locked, reopened only on a
+      measured device split, and a redesign rather than a resize if it is.
 - [x] **Reconcile the vault with iOS scope** (2026-09-06). Section 22 now records the seven tools,
       Schemes landing, Website Analyzer deferred, Brand Kit waiting on demand, the current Pro
       surfaces, and StoreKit as a release requirement.

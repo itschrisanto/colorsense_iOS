@@ -383,6 +383,54 @@ the file to work from at submission; this section records only the decisions beh
   through In-App Purchase, and no screen may link to a Lemon Squeezy checkout or name where to buy.
   Same rule that removed "Pro is available at colorsense.online".
 
+## iPad is deferred, and the deferral has a trigger (decided 2026-09-09)
+
+Asked directly, on the reasoning that much of the target market works on iPad. **The app ships
+iPhone-only for 1.0**: `TARGETED_DEVICE_FAMILY` is `"1"` and `UISupportedInterfaceOrientations` is
+portrait, both in `project.yml`. This is a deferral with a condition attached rather than a no.
+
+**The premise is untested, and it is cheap to test.** Nothing in this repo or the vault records the
+audience as iPad-first. Two sources answer it without writing any code, and both should be read
+before this is reopened:
+
+- **The web app's analytics.** colorsense.online already serves the same audience, so its device and
+  viewport split is the direct answer to the question the iPad app would be betting on.
+- **App Store Connect, after launch.** An iPhone-only app still installs and runs on iPad in a
+  scaled window, so 1.0 reports iPad installs on its own. Shipping iPhone-only locks nobody out. It
+  gives them a worse layout, which is a different problem from an absent one.
+
+**The trigger:** if iPad is a meaningful share of either number, build a real regular-size-class
+layout as 1.1. That is an ordinary update rather than a resubmission, so waiting for the number
+costs nothing but time.
+
+**Do not flip `TARGETED_DEVICE_FAMILY` to `"1,2"` as a shortcut.** It is one character and it is the
+worst outcome available: the listing then advertises iPad while the binary delivers a stretched
+phone layout, and review does check iPad layout on universal apps. Either do the layout or stay
+iPhone-only.
+
+**What an iPad layout actually costs**, because none of it is a scaling problem:
+
+- **The bands are sized by arithmetic that assumes a phone.** `PaletteBandsView` caps color names
+  with a 68pt constant, and its own comment says that constant is only legal because the app is
+  portrait-only, and that an iPad or landscape layout has to make it a function of the space
+  actually available. Eight full-bleed bands across 1366pt are not a larger phone screen, they are
+  a different composition.
+- **Portrait lock stops being an escape hatch.** iPad apps are expected to work both ways and are
+  resized by the system's windowing, which reopens exactly the landscape overflow `project.yml`
+  already records: eight bands against 44pt tap targets do not fit, and no type size fixes it.
+- **The dock is one fixed capsule sized for a thumb.** Centred at the bottom of a 13 inch screen it
+  reads as stranded rather than reachable, so `DockChrome` would need a size-class answer and the
+  tool strip built from it would need the same.
+- **Twenty-two `sheet` and `fullScreenCover` presentations change shape**, and more to the point,
+  "the tools are panels in one workspace and Back is the only way out" is a phone answer. The iPad
+  shape for that same idea is a sidebar and a detail pane, which is a redesign of the workspace.
+- **Onboarding is calibrated to 874pt.** `viewportHeight` defaults to it and `keepClipHeight` was
+  measured on it, and that measurement is the only thing keeping "Maybe later" on screen.
+- **Lauma's clips are cut for 3x phone heights.** At iPad layout sizes they would be visibly soft,
+  so this means re-cutting three clips onto a catalog already near 20MB.
+- **A second screenshot set.** Section 7 of the submission doc is iPhone-only, and a universal app
+  needs 13 inch iPad captures, which is another pass through six screens.
+
 ## Distributing to testers — what is ready and what is not (2026-09-03)
 
 The paid Apple Developer Program became active on 2026-09-06. Automatic signing now provisions the
@@ -398,7 +446,11 @@ release.
 The **ColorSense Internal** group was created on 2026-09-08 with automatic distribution. Chris's
 App Store Connect Account Holder is its first tester, build `1.0 (1)` is assigned, and the group
 records **Installed 1.0 (1)** on Chris's physical iPhone as of 2026-09-09. Onboarding and the main
-feature sweep passed; the TestFlight StoreKit purchase, persistence and restore smoke test remains.
+feature sweep passed. A Sandbox Monthly purchase activated Pro and persisted after relaunch. Restore
+failed twice because an `AppStore.sync()` error exited before the durable backend entitlement check;
+the client now continues reconciliation after that error. All 137 tests pass, including paid and
+free fallback regressions. Build `1.0 (2)` containing the fix was uploaded on 2026-09-09 and is
+processing; its remaining check is Restore on the physical TestFlight install.
 **Internal** testers (≤100) skip Beta App Review, but each needs a real App Store Connect role.
 **External** testers (≤10,000, invited by email or public link) need no team access but cost a Beta
 App Review per significant build. Builds expire after 90 days either way.
@@ -1943,6 +1995,9 @@ does this in one shared helper; route new endpoints through it rather than repea
   which is exactly why the restraint has to be deliberate.
 - Don't reintroduce a tab bar or a separate upload/landing screen. The app opens on the
   user's palette by design — see "One palette, many tools" above.
+- Don't add iPad support, and in particular don't flip `TARGETED_DEVICE_FAMILY` to `"1,2"` — see
+  "iPad is deferred, and the deferral has a trigger". iPhone-only is the 1.0 decision, the device
+  family is one character, and half-adding iPad is worse than not adding it at all.
 - Don't invent or hand-calculate WCAG contrast ratios in code comments, sample data, or
   docs — always route through `ContrastCalculator`, same rule the web app's content follows.
 - Don't hardcode brand hex values or font names outside `DesignSystem/` — extend

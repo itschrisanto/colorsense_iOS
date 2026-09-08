@@ -161,8 +161,14 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    the `TEST` event. The notification transport and verification blocker is closed.
 3. **Fix account deletion.** The app calls Clerk's `user.delete()` and nothing else, so the
    ColorSense Postgres row and every saved palette survive. This is a backend job — a verified Clerk
-   `user.deleted` webhook — and the in-app copy currently claims otherwise. Details and the full
-   deferred plan are in section 8c. **Do not change `/api/saved-palettes` or `/api/me` contracts.**
+   `user.deleted` webhook — and the in-app copy currently claims otherwise. The implementation brief
+   is **`docs/replit-account-deletion-handoff.md`** (2026-09-09); section 8c has the wider plan.
+   Two things in that brief are not in the privacy audit and change the shape of the work: the
+   cascade from `users` reaches only three tables, so Telegram links, voucher redemptions and
+   feedback need explicit decisions rather than being assumed gone; and `requireAuth`/`optionalAuth`
+   create the user row lazily on any authenticated request, so the webhook on its own leaves a race
+   that can recreate the row and fire a Loops welcome email at somebody who just left.
+   **Do not change `/api/saved-palettes` or `/api/me` contracts.**
 4. **Re-run the privacy audit** against the final archived build, then finalise the policy and the
    App Store questionnaire in the order section 8c gives. The copy-ready Replit website brief for
    both legal pages is `docs/replit-website-legal-handoff.md`.
@@ -195,12 +201,17 @@ The **ColorSense Internal** TestFlight group was created on 2026-09-08 with auto
 Chris's App Store Connect Apple ID as its one tester, and build `1.0 (1)` as its one build. On
 2026-09-09, the tester initially showed **No Builds Available** and no email arrived. Saving the
 build's previously blank **What to Test** field refreshed distribution. Chris accepted the invite,
-installed from TestFlight, and App Store Connect now records **Installed 1.0 (1)** on the physical
+installed from TestFlight, and App Store Connect records **Installed 1.0 (1)** on the physical
 iPhone. The onboarding and main feature sweep passed after deleting retained data from the earlier
-Xcode-installed build. The immediate task is the TestFlight StoreKit purchase, persistence and
-restore smoke test. The two Sandbox Apple Accounts remain StoreKit-only test identities. After
-internal testing, App Store Connect still needs review information and the final privacy
-questionnaire.
+Xcode-installed build. A Sandbox Monthly purchase immediately activated Pro and stayed active after
+force-quit and relaunch. Explicit Restore then failed twice because `AppStore.sync()` threw before
+the client checked the already-active backend entitlement. That control flow is repaired and
+covered by two focused tests; all 137 tests across 26 suites pass. Build `1.0 (2)` was archived and
+uploaded on 2026-09-09 and is processing. Its PostHog release is `online.colorsense.ios@1.0+2` with
+dSYM UUID `6BD22D4C-71B9-3C8C-B7C8-C6FAFE0E9B77`, an uploaded file and no failure. The immediate task
+is to install build 2 and confirm Restore reports success. The two Sandbox Apple Accounts remain
+StoreKit-only test identities. After internal testing, App Store Connect still needs review
+information and the final privacy questionnaire.
 
 ## Chris has feedback and new features to discuss
 
@@ -215,6 +226,12 @@ Take them, but know the ground rules before you agree to anything.
   port, pin it with tests whose expected values you produced by running the web's own arithmetic —
   that is how `ColorSchemeTests` was written, and it caught nothing only because the port was right.
 - **The Extractor and WCAG checker are never paywalled.** Vault rule, both platforms, forever.
+- **iPad is deferred with a trigger, and iPhone-only is the 1.0 decision** (2026-09-09). Do not flip
+  `TARGETED_DEVICE_FAMILY` to `"1,2"`. It is one character and it is the worst outcome available:
+  the listing advertises iPad while the binary delivers a stretched phone layout, and review checks
+  iPad layout on universal apps. The trigger for reopening it is a device split from the web's own
+  analytics or from App Store Connect after launch, not a hunch about the market. CLAUDE.md's
+  "iPad is deferred, and the deferral has a trigger" lists what a real layout would cost.
 - **No purchase copy anywhere** until StoreKit ships. Guideline 3.1.1 covers prose, not just
   buttons, and it is why the About screen has no Support row and nothing names where to buy.
 - **Copy rules:** American spelling in anything a user reads, no em dashes or en dashes, brand is

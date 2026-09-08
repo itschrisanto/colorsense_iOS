@@ -23,4 +23,29 @@ struct ProStoreTests {
         #expect(await store.purchase(.monthly) == .notConfigured)
         #expect(await store.restore() == .notConfigured)
     }
+
+    @Test func restoreUsesActiveBackendEntitlementWhenAppStoreSyncFails() async {
+        struct SyncFailure: Error {}
+        let store = StoreKitProStore(
+            hasAuthenticatedSession: { true },
+            syncAppStore: { throw SyncFailure() },
+            fetchCurrentPlan: { .success("pro") }
+        )
+
+        #expect(await store.restore() == .purchased)
+    }
+
+    @Test func restoreDoesNotGrantFreeAccountWhenAppStoreSyncFails() async {
+        struct SyncFailure: Error {}
+        let store = StoreKitProStore(
+            hasAuthenticatedSession: { true },
+            syncAppStore: { throw SyncFailure() },
+            fetchCurrentPlan: { .success("free") }
+        )
+
+        #expect(
+            await store.restore()
+                == .failed("Purchases could not be restored. Please try again.")
+        )
+    }
 }

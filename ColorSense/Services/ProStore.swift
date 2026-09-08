@@ -64,6 +64,25 @@ actor StoreKitProStore: ProStore {
 
     private var productsByID: [String: Product] = [:]
     private var updatesTask: Task<Void, Never>?
+    private let hasAuthenticatedSession: @Sendable () async -> Bool
+    private let syncAppStore: @Sendable () async throws -> Void
+    private let fetchCurrentPlan: @Sendable () async -> Result<String?, SavedPaletteService.SaveError>
+
+    init(
+        hasAuthenticatedSession: @escaping @Sendable () async -> Bool = {
+            await SavedPaletteService.hasAuthenticatedSession()
+        },
+        syncAppStore: @escaping @Sendable () async throws -> Void = {
+            try await AppStore.sync()
+        },
+        fetchCurrentPlan: @escaping @Sendable () async -> Result<String?, SavedPaletteService.SaveError> = {
+            await SavedPaletteService.currentPlan()
+        }
+    ) {
+        self.hasAuthenticatedSession = hasAuthenticatedSession
+        self.syncAppStore = syncAppStore
+        self.fetchCurrentPlan = fetchCurrentPlan
+    }
 
     deinit { updatesTask?.cancel() }
 
@@ -150,41 +169,46 @@ actor StoreKitProStore: ProStore {
     }
 
     func restore() async -> PurchaseOutcome {
-        guard await SavedPaletteService.hasAuthenticatedSession() else {
+        guard await hasAuthenticatedSession() else {
             return .failed("Sign in to ColorSense before restoring purchases.")
         }
 
+        // Apple documents that this can show an App Store authentication prompt, so it runs only
+        // from the explicit Restore Purchases button. A sync failure must not hide an entitlement
+        // the backend already verified and persisted, as can happen after a successful purchase.
+        let syncFailed: Bool
         do {
-            // Apple documents that this can show an App Store authentication prompt, so it runs
-            // only from the explicit Restore Purchases button.
-            try await AppStore.sync()
-            var foundSubscription = false
-
-            for await verification in Transaction.currentEntitlements {
-                guard case .verified(let transaction) = verification,
-                      let product = ProProduct(rawValue: transaction.productID),
-                      product.kind == .autoRenewable else { continue }
-                foundSubscription = true
-                let outcome = await reconcile(verification, transaction: transaction)
-                if case .purchased = outcome { continue }
-                return outcome
-            }
-
-            if foundSubscription { return .purchased }
-
-            // A finished consumable is intentionally absent from StoreKit's current entitlements.
-            // Pro Pass access is time-bound and persisted by the shared backend, so restore that
-            // entitlement from the authenticated ColorSense account after StoreKit sync completes.
-            switch await SavedPaletteService.currentPlan() {
-            case .success(let plan) where plan == "pro" || plan == "business":
-                return .purchased
-            case .success:
-                return .failed("No active ColorSense purchase was found to restore.")
-            case .failure(let error):
-                return .failed(error.purchaseMessage)
-            }
+            try await syncAppStore()
+            syncFailed = false
         } catch {
+            syncFailed = true
+        }
+
+        var foundSubscription = false
+        for await verification in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = verification,
+                  let product = ProProduct(rawValue: transaction.productID),
+                  product.kind == .autoRenewable else { continue }
+            foundSubscription = true
+            let outcome = await reconcile(verification, transaction: transaction)
+            if case .purchased = outcome { continue }
+            return outcome
+        }
+
+        if foundSubscription { return .purchased }
+
+        // A finished consumable is intentionally absent from StoreKit's current entitlements.
+        // The authenticated backend is also the durable entitlement source after a subscription
+        // transaction has already been delivered and finished.
+        switch await fetchCurrentPlan() {
+        case .success(let plan) where plan == "pro" || plan == "business":
+            return .purchased
+        case .success where syncFailed:
             return .failed("Purchases could not be restored. Please try again.")
+        case .success:
+            return .failed("No active ColorSense purchase was found to restore.")
+        case .failure(let error):
+            return .failed(error.purchaseMessage)
         }
     }
 

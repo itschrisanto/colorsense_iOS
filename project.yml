@@ -162,7 +162,7 @@ targets:
         # carrying the first build's symbols, so crash addresses would resolve to the wrong lines.
         # The first App Store listing and marketing version are both 1.0 as of 2026-09-07.
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         GENERATE_INFOPLIST_FILE: NO
       configs:
         Release:
