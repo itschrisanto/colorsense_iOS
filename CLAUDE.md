@@ -397,7 +397,8 @@ release.
 
 The **ColorSense Internal** group was created on 2026-09-08 with automatic distribution. Chris's
 App Store Connect Account Holder is its first tester, build `1.0 (1)` is assigned, and the group
-reports the build **Ready to Test**. Installation and the archived-build smoke test remain.
+records **Installed 1.0 (1)** on Chris's physical iPhone as of 2026-09-09. Onboarding and the main
+feature sweep passed; the TestFlight StoreKit purchase, persistence and restore smoke test remains.
 **Internal** testers (≤100) skip Beta App Review, but each needs a real App Store Connect role.
 **External** testers (≤10,000, invited by email or public link) need no team access but cost a Beta
 App Review per significant build. Builds expire after 90 days either way.

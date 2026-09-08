@@ -192,13 +192,15 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
 
 Remaining local follow-up: physical-device verification of accessibility scrolling and exit taps.
 The **ColorSense Internal** TestFlight group was created on 2026-09-08 with automatic distribution,
-Chris's App Store Connect Apple ID as its one tester, and build `1.0 (1)` as its one build. The build
-is **Ready to Test**. The immediate task is to accept the invitation, install it through TestFlight,
-and run the archived-build smoke test. The two Sandbox Apple Accounts remain StoreKit-only test
-identities. After internal testing, App Store Connect still needs review information and the final
-privacy questionnaire. On 2026-09-09, the tester initially showed **No Builds Available** and no
-email arrived. Saving the build's previously blank **What to Test** field refreshed distribution;
-App Store Connect now reports the tester as **Invited**.
+Chris's App Store Connect Apple ID as its one tester, and build `1.0 (1)` as its one build. On
+2026-09-09, the tester initially showed **No Builds Available** and no email arrived. Saving the
+build's previously blank **What to Test** field refreshed distribution. Chris accepted the invite,
+installed from TestFlight, and App Store Connect now records **Installed 1.0 (1)** on the physical
+iPhone. The onboarding and main feature sweep passed after deleting retained data from the earlier
+Xcode-installed build. The immediate task is the TestFlight StoreKit purchase, persistence and
+restore smoke test. The two Sandbox Apple Accounts remain StoreKit-only test identities. After
+internal testing, App Store Connect still needs review information and the final privacy
+questionnaire.
 
 ## Chris has feedback and new features to discuss
 
