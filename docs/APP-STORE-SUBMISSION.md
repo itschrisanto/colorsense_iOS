@@ -108,9 +108,10 @@ remaining release blockers still apply. See section 2.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
-is verified in PostHog, and the physical-device Restore check passed. The user explicitly parked
-account deletion on 2026-09-09. The current independent work is completing the IAP review
-screenshots and validating the repaired immediate-purchase path in the next TestFlight build.
+is verified in PostHog, and the physical-device Restore check passed. Build 3's repaired immediate
+purchase path also passed on the physical iPhone: a fresh Monthly purchase activated Pro directly
+without Restore and remained Pro after force-quit and relaunch. The user explicitly parked account
+deletion on 2026-09-09. The current independent work is completing the IAP review screenshots.
 
 ---
 
@@ -151,9 +152,14 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       it to **ColorSense Internal**. Focused purchase instructions are saved in **What to Test**.
       PostHog has the exact archive dSYM under release `online.colorsense.ios@1.0+3`, UUID
       `4FB029B4-222E-3541-B065-76BB69569F2C`, with an uploaded file and no failure reason.
-- [ ] Validate the repaired immediate-purchase path with a fresh Sandbox purchase in TestFlight
-      build `1.0 (3)`. If it still fails, capture the transaction endpoint status and the following
-      `/api/me` status and plan without logging a signed JWS or secret.
+- [x] Validate the repaired immediate-purchase path with a fresh Sandbox purchase in TestFlight
+      build `1.0 (3)` (2026-09-09). Pro Monthly purchased successfully on a new Sandbox Apple
+      Account while signed into a new Free ColorSense account. The screen changed directly to
+      **Pro - Active** without Restore Purchases and remained Pro after force-quit and relaunch.
+      The first attempt correctly rejected an older Apple purchase identity. App Store Connect
+      showed no purchase for the new tester, revealing that TestFlight was still using the Apple
+      Account signed into **Media & Purchases**. Signing out there before selecting the Sandbox
+      Apple Account under **Developer** allowed the intended fresh transaction.
 - [x] Confirm the In-App Purchase **tax category** for all three products. App Store Connect was
       rechecked on 2026-09-09: the parent app uses **App Store software**, and Monthly, Annual and
       Pro Pass all use **Match to parent app**.

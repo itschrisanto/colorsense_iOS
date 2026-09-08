@@ -86,7 +86,8 @@ second/free ColorSense account.
 
 ## Remaining StoreKit work after Pro Pass
 
-1. **Validate the repaired immediate-purchase path with a fresh Sandbox purchase.** The client fix
+1. **Validate the repaired immediate-purchase path with a fresh Sandbox purchase.** Completed on
+   the physical iPhone in TestFlight build `1.0 (3)` on 2026-09-09. The client fix
    was implemented on 2026-09-09 after the code review described below. Nothing in
    `ProStore` branches on Annual, so there is no Annual-specific fault to find, and the shape of
    the failure matches `reconcile(_:transaction:)` requiring its **second** call, `GET /api/me`, to
@@ -96,10 +97,9 @@ second/free ColorSense account.
 
    Acceptance run:
 
-   - On the next Annual Sandbox purchase, confirm that Apple success proceeds directly to active
-     Pro without requiring Restore Purchases. If it still fails, capture the reconcile call's status
-     and body, then the status and `plan` of the `/api/me` calls that follow, with the wall-clock gaps.
-     Share statuses and identifiers only; never paste a complete signed JWS or any secret.
+   - A fresh Monthly Sandbox purchase proceeded directly to **Pro - Active** without Restore
+     Purchases and remained Pro after force-quit and relaunch. Because all subscription products
+     share this purchase and reconciliation path, this accepts the repaired callback.
    - The implementation and unit regression tests are complete. The stale Free → Free → Pro test
      confirms the retry succeeds, while the all-Free test confirms the retry is bounded at four
      total reads and never grants access. The full 138-test simulator suite passed.
@@ -111,7 +111,11 @@ second/free ColorSense account.
    2026-09-09. App Store Connect finished processing it, marked it **Ready to Submit**, and added it
    to **ColorSense Internal**. Focused **What to Test** instructions are saved. PostHog has its
    archived dSYM UUID `4FB029B4-222E-3541-B065-76BB69569F2C` under
-   `online.colorsense.ios@1.0+3` with no failure. The remaining step is physical-device acceptance.
+   `online.colorsense.ios@1.0+3` with no failure. Physical-device acceptance passed. The initial
+   attempt returned the expected cross-account warning because TestFlight was still using the Apple
+   Account signed into **Media & Purchases**; the new Sandbox tester had no recorded purchase in
+   App Store Connect. Signing out of Media & Purchases before selecting the Sandbox account under
+   **Developer** produced the intended fresh transaction.
 2. Test cancellation/expiration and server-notification behavior for Annual if the Sandbox timing
    permits. Monthly lifecycle behavior already passed.
 3. The In-App Purchase tax category is confirmed: all three records match the parent app's

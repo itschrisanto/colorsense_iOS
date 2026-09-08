@@ -162,8 +162,9 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    archived and uploaded successfully on 2026-09-09. Apple finished processing it, marked it
    **Ready to Submit**, and distributed it to **ColorSense Internal**. Its archived dSYM UUID is
    `4FB029B4-222E-3541-B065-76BB69569F2C`, and PostHog has that symbol set under
-   `online.colorsense.ios@1.0+3` with no failure. A fresh Sandbox purchase in build 3 still
-   has to validate the repaired immediate callback. While Annual was
+   `online.colorsense.ios@1.0+3` with no failure. A fresh Monthly Sandbox purchase in build 3
+   activated Pro directly without Restore and remained Pro after force-quit and relaunch, so the
+   repaired immediate callback passed physical-device acceptance. While Annual was
    active, restoring from a second Free ColorSense account was rejected and left it Free, proving
    live ownership protection. The deployed endpoint returned `403`; the iOS client now presents
    the explicit account-ownership message for that response, verified on-device. Pro Pass was then
@@ -235,10 +236,11 @@ dSYM UUID `6BD22D4C-71B9-3C8C-B7C8-C6FAFE0E9B77`, an uploaded file and no failur
 build 2 and confirmed “your purchase restored,” completing the purchase/persistence/restore smoke
 test. Build `1.0 (3)` contains the immediate-purchase retry, is **Ready to Submit**, and is available
 to **ColorSense Internal** with focused **What to Test** instructions. Its PostHog dSYM upload is
-also verified. The next action is to install it and make a fresh Sandbox purchase that reaches Pro
-without using Restore. Account-deletion verification is explicitly parked. The
-two Sandbox Apple Accounts remain
-StoreKit-only test identities. After internal testing, App Store Connect still needs review
+also verified. Chris installed it, made a fresh Monthly Sandbox purchase from a new Free account,
+and confirmed immediate Pro activation plus persistence after relaunch. The first attempt exposed a
+TestFlight setup detail: **Media & Purchases** must be signed out before the Sandbox Apple Account
+selected under **Developer** is used. Account-deletion verification is explicitly parked. The
+three Sandbox Apple Accounts remain StoreKit-only test identities. App Store Connect still needs review
 information and the final privacy questionnaire.
 
 ## Chris has feedback and new features to discuss
