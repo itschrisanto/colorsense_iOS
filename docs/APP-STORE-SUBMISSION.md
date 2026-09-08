@@ -77,7 +77,9 @@ questionnaire and release blockers remain. See section 2.
       one tester and one build; the build is **Ready to Test**. Automatic distribution is enabled.
       Neither Sandbox Apple Account was used because those accounts are only for StoreKit testing.
 - [ ] Accept the internal invitation, install build `1.0 (1)` from TestFlight, and run the archived
-      build smoke test on the physical iPhone.
+      build smoke test on the physical iPhone. The tester initially showed **No Builds Available**
+      and Apple sent no email. Saving the build's previously blank **What to Test** field refreshed
+      distribution on 2026-09-09; the tester now shows **Invited**.
 
 Verification on 2026-09-08: the physical-device smoke test passed, the signed `1.0+1` Release
 archive and App Store Connect IPA passed local validation, its matching dSYM was verified in

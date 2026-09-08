@@ -196,7 +196,9 @@ Chris's App Store Connect Apple ID as its one tester, and build `1.0 (1)` as its
 is **Ready to Test**. The immediate task is to accept the invitation, install it through TestFlight,
 and run the archived-build smoke test. The two Sandbox Apple Accounts remain StoreKit-only test
 identities. After internal testing, App Store Connect still needs review information and the final
-privacy questionnaire.
+privacy questionnaire. On 2026-09-09, the tester initially showed **No Builds Available** and no
+email arrived. Saving the build's previously blank **What to Test** field refreshed distribution;
+App Store Connect now reports the tester as **Invited**.
 
 ## Chris has feedback and new features to discuss
 
