@@ -110,8 +110,9 @@ monthly (`6809206814`, $5.00), annual (`6809207967`, $39.00), and consumable Pro
 (`6809208412`, $9.00). All use the existing `online.colorsense.ios.pro.*` product IDs and worldwide
 availability. Monthly has the agreed free one-week introductory offer with no end date. All three
 products inherit the parent app's **App Store software** tax category, and their final App Review
-notes were saved in App Store Connect on 2026-09-09. The shared IAP review screenshot still has to
-be captured and uploaded. The StoreKit 2 client and Restore Purchases controls
+notes were saved in App Store Connect on 2026-09-09. Three IAP review screenshots, with Monthly,
+Annual and Pro Pass selected respectively, still have to be captured and uploaded. The StoreKit 2
+client and Restore Purchases controls
 are implemented behind `STOREKIT_PURCHASES_ENABLED`; keep it off until the backend passes sandbox
 testing. The Paid Apps Agreement, banking information, Certificate of Foreign Status and W-8BEN
 were all confirmed Active on 2026-09-07.
@@ -171,10 +172,10 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
 3. **Finish the three In-App Purchase review records.** App Store Connect was rechecked on
    2026-09-09. Monthly, Annual and Pro Pass are available in all 175 countries or regions, inherit
    the parent app's **App Store software** tax category, and now have final product-specific review
-   notes. Capture one clean Free-account **Account → Subscription** screen, upload it to the review
-   screenshot field on all three records, and create the demo account referenced by the saved notes
-   and app-level App Review Information. Do not add any product for review until those inputs and
-   the final build are ready.
+   notes. Capture three clean Free-account **Account → Subscription** screens with Monthly, Annual
+   and Pro Pass selected respectively, upload each to its matching review record, and create the
+   demo account referenced by the saved notes and app-level App Review Information. Do not add any
+   product for review until those inputs and the final build are ready.
 4. **Fix account deletion.** The app calls Clerk's `user.delete()` and nothing else, so the
    ColorSense Postgres row and every saved palette survive. This is a backend job — a verified Clerk
    `user.deleted` webhook — and the in-app copy currently claims otherwise. The implementation brief

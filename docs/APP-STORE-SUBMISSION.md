@@ -154,8 +154,8 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
 - [x] Add final App Review notes to all three StoreKit records. The product-specific notes in
       section 3a were saved in App Store Connect on 2026-09-09.
 - [ ] Add the required App Review screenshot to all three StoreKit records. Section 3a identifies
-      the screen to capture; the screenshot and the demo account used by both it and the app-level
-      App Review Information still have to be prepared.
+      the three product-selected captures; the screenshots and the demo account used by both them
+      and the app-level App Review Information still have to be prepared.
 - [ ] Add a signed-transaction endpoint and Apple subscription lifecycle handling to the shared
       backend. Keep `GET /api/me` as the source of truth and make transaction processing idempotent.
       The implementation brief is `docs/replit-storekit-backend-handoff.md`. Replit reported the
@@ -223,10 +223,10 @@ colorsense.online" and that keeps the About screen's Support row out.
 ### 3a. App Review screenshot and review notes for the three IAP records (updated 2026-09-09)
 
 The final product-specific notes were saved in each product's **App Review Information** in App
-Store Connect on 2026-09-09. The shared screenshot still has to be captured and uploaded to all
-three records.
+Store Connect on 2026-09-09. The three product-selected screenshots still have to be captured and
+uploaded to their matching records.
 
-**One screenshot serves all three records, and it is not one of the six product-page shots.**
+**Use one clean capture per product, and do not use one of the six product-page shots.**
 Those six are the store listing (palette, contrast, health, visualizer, SVG, schemes) and none of
 them shows a purchase. Apple wants the screen where the product is actually offered. That is
 **Account → Subscription** (`SubscriptionView`), which is the only surface carrying all three
@@ -234,7 +234,9 @@ products, the buy button and Restore Purchases together. The onboarding plan bea
 substitute: it offers monthly, annual and the trial, but never the Pro Pass.
 
 A device or simulator capture at the listing size (1290 x 2796) satisfies the 640 x 920 minimum.
-This screenshot does not exist in `docs/app-store/` yet and has to be taken.
+Take the screen three times, with Monthly, Annual and Pro Pass selected respectively, so each
+record shows its own selection and matching purchase button. These screenshots do not exist in
+`docs/app-store/` yet and have to be taken.
 
 **The reviewer must sign in before any of this is reachable, and that needs saying twice.**
 `AccountView` renders the Library and Account settings sections only when `clerk.user != nil`, so a
