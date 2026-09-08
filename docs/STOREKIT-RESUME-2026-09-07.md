@@ -86,10 +86,38 @@ second/free ColorSense account.
 
 ## Remaining StoreKit work after Pro Pass
 
-1. Diagnose the Annual immediate-purchase verification discrepancy. Replit should inspect the
-   Annual transaction submission and compare it with the successful Restore submission: verified
-   JWS status, product ID, app-account token, transaction ID and backend response status. Share
-   statuses and identifiers only; never paste the complete signed JWS or secrets.
+1. **Fix the Annual immediate-purchase discrepancy. It is most likely a client bug, not a backend
+   one.** Reframed on 2026-09-09 after reading the client; see "Client-side reading of the Annual
+   discrepancy" below for the full argument and the code references. In short: nothing in
+   `ProStore` branches on Annual, so there is no Annual-specific fault to find, and the shape of
+   the failure matches `reconcile(_:transaction:)` requiring its **second** call, `GET /api/me`, to
+   already report a paid plan, once, with no retry. A lagging read reports a successful purchase as
+   failed and tells the buyer to use Restore Purchases, which is what then worked.
+
+   Do it in this order:
+
+   - **Confirm before changing anything.** On the next Annual Sandbox purchase, capture the reconcile
+     call's status and body, then the status and `plan` of the `/api/me` call immediately after it,
+     with the wall-clock gap between the two. If reconcile returned a paid plan and `/api/me`
+     returned `free` milliseconds later, the cause is settled and the fix is client-side. Share
+     statuses and identifiers only; never paste a complete signed JWS or any secret.
+   - **Then fix it in `Services/ProStore.swift`:** retry the `/api/me` read a small number of times
+     with a short backoff before declaring failure. Do **not** simply trust the reconcile response
+     instead. That second read exists so a stale or wrongly combined plan cannot finish a StoreKit
+     transaction before iOS and the website actually have access, and that reason still holds.
+   - **Keep not finishing the transaction until access is confirmed.** The entitlement survived this
+     bug precisely because the unfinished transaction was picked up later by the launch-time retry
+     and by Restore. The defect is the false failure shown to the buyer, not lost access.
+   - **Make it testable in the same pass.** `restore()` reads the plan through the injected
+     `fetchCurrentPlan` closure, but `reconcile` calls `SavedPaletteService.currentPlan()` directly.
+     That one inconsistency is why no unit test can reach this branch today. Route `reconcile`
+     through the same closure and pin the retry with a test, the way the restore paths already are.
+   - **If the capture disproves the hypothesis**, fall back to the original comparison: verified JWS
+     status, product ID, app-account token, transaction ID and backend response status for the
+     failing Annual submission against the successful Restore one.
+
+   Owner: whoever holds the StoreKit work. Not started as of 2026-09-09; the diagnosis below is
+   the only part that is done.
 2. Test cancellation/expiration and server-notification behavior for Annual if the Sandbox timing
    permits. Monthly lifecycle behavior already passed.
 3. Confirm the In-App Purchase tax category for Monthly, Annual and Pro Pass.

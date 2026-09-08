@@ -152,7 +152,10 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    both the web and iOS correctly reported Free after expiration. Renewal/expiration passed. An
    Annual Sandbox purchase subsequently showed a generic local verification error after
    Apple confirmation, then Restore Purchases reconciled it and activated Pro. Annual backend
-   activation passed; diagnose the immediate callback discrepancy before release. While Annual was
+   activation passed. **The immediate callback discrepancy is now an open task with a diagnosis
+   and ordered steps**, not an open question: see `docs/STOREKIT-RESUME-2026-09-07.md` item 1. It
+   reads as a client bug in `ProStore.reconcile`, which requires a second `/api/me` read to already
+   report paid with no retry, rather than anything Annual-specific. While Annual was
    active, restoring from a second Free ColorSense account was rejected and left it Free, proving
    live ownership protection. The deployed endpoint returned `403`; the iOS client now presents
    the explicit account-ownership message for that response, verified on-device. Pro Pass was then

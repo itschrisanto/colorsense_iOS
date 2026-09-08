@@ -138,6 +138,16 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       are complete. The agreement, bank account and both required U.S. forms—the Certificate of
       Foreign Status and W-8BEN—were confirmed Active on 2026-09-07. Apple requires the agreement
       to be Active even for sandbox purchase testing.
+- [ ] **Fix the Annual immediate-purchase discrepancy, most likely in the client.** A successful
+      Annual Sandbox purchase reported a verification failure to the buyer and only Restore
+      Purchases activated Pro. Reread on 2026-09-09: nothing in `ProStore` branches on Annual, so
+      there is no Annual-specific fault, and the failure matches `reconcile(_:transaction:)`
+      requiring its second call, `GET /api/me`, to already report paid, once, with no retry. Capture
+      both responses on the next Sandbox purchase to confirm, then retry that read with a short
+      backoff, and route `reconcile` through the injected `fetchCurrentPlan` closure so a test can
+      reach the branch at all. Full write-up and ordered steps: `docs/STOREKIT-RESUME-2026-09-07.md`
+      item 1. **Telling a buyer their purchase failed after taking their money is the worst
+      false negative in the app**, so this should not ship as-is.
 - [ ] Confirm the In-App Purchase **tax category** for all three products.
 - [ ] Add the required App Review screenshots and final review notes to all three StoreKit records.
       **Drafted in section 3a**, along with the screenshot that has to be captured and the demo
