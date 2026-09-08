@@ -6,7 +6,7 @@ import SwiftUI
 /// for the app. The contact address is section 12's, the handle is section 13's `@colorsensehq`,
 /// and the legal pages are the two routes the web app actually serves.
 ///
-/// Three things in the reference design were deliberately **not** copied:
+/// Two things in the reference design are still deliberately **not** copied:
 ///
 /// - **No Cookie Policy.** The web app serves `/privacy-policy` and `/terms` and nothing else. A
 ///   link to a page that does not exist is worse than an absent link.
@@ -14,8 +14,12 @@ import SwiftUI
 ///   at an external purchase route from inside the app is exactly what guideline 3.1.1 forbids and
 ///   what got "Pro is available at colorsense.online" removed already. Email reaches a person
 ///   anyway.
-/// - **No "Leave a review".** There is no App Store listing yet, so the link would go nowhere. It
-///   belongs here the day the App Store record exists, together with the real App ID.
+///
+/// The third, **"Leave a review", arrived on 2026-09-09** on the condition it was always waiting
+/// for: the App Store record now exists, so there is a real App ID to point at. One thing to know
+/// about the interim, because it looks like a bug and is not: `?action=write-review` resolves only
+/// once the listing is **public**. Until 1.0 is released, a TestFlight tester who taps it reaches a
+/// page the App Store cannot show. That resolves itself at release and needs no code change.
 struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -24,14 +28,26 @@ struct AboutView: View {
 
     /// `@colorsensehq` on every platform, per the vault. The URLs are built from that handle rather
     /// than recorded anywhere, so they are worth checking once against the live accounts.
-    private static let socials: [(name: String, url: String)] = [
-        ("Instagram", "https://instagram.com/colorsensehq"),
-        ("Threads", "https://www.threads.net/@colorsensehq"),
-        ("X", "https://x.com/colorsensehq"),
-        ("Facebook", "https://facebook.com/colorsensehq"),
-        ("Pinterest", "https://pinterest.com/colorsensehq"),
-        ("TikTok", "https://tiktok.com/@colorsensehq"),
+    /// The asset name is spelled out rather than derived from `name`. A wrong image name does
+    /// not crash and does not warn, it renders an empty slot, which is the same silent failure
+    /// this repo already records for a misnamed font.
+    private static let socials: [(name: String, asset: String, url: String)] = [
+        ("Instagram", "SocialInstagram", "https://instagram.com/colorsensehq"),
+        ("Threads", "SocialThreads", "https://www.threads.net/@colorsensehq"),
+        ("X", "SocialX", "https://x.com/colorsensehq"),
+        ("Facebook", "SocialFacebook", "https://facebook.com/colorsensehq"),
+        ("Pinterest", "SocialPinterest", "https://pinterest.com/colorsensehq"),
+        ("TikTok", "SocialTikTok", "https://tiktok.com/@colorsensehq"),
     ]
+
+    /// The App Store listing, opened straight onto the review sheet.
+    ///
+    /// `6809134374` is the app's real Apple ID from App Store Connect, where the record is
+    /// **ColorSense: Palette Studio**. It is written out here rather than assembled from the bundle
+    /// identifier because the two are unrelated: Apple mints this number, and no value in the app
+    /// can be used to derive it.
+    private static let writeReviewURL =
+        "https://apps.apple.com/app/id6809134374?action=write-review"
 
     private var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
@@ -71,12 +87,19 @@ struct AboutView: View {
 
                         Divider().padding(.leading, 50)
                         link("Email us", "envelope", "mailto:hello@colorsense.online")
+
+                        // Last of the three on purpose: they run from the most private way to say
+                        // something to the most public one. A review is not "reaching us" in the
+                        // way the other two are, but it is the same impulse pointed elsewhere, and
+                        // a one-row group of its own would weigh more than the row is worth.
+                        Divider().padding(.leading, 50)
+                        link("Leave a review", "star", Self.writeReviewURL)
                     }
 
-                    group("Social") {
+                    group("Social", note: "@colorsensehq") {
                         ForEach(Array(Self.socials.enumerated()), id: \.element.name) { index, social in
                             if index > 0 { Divider().padding(.leading, 50) }
-                            link(social.name, "at", social.url)
+                            link(social.name, asset: social.asset, social.url)
                         }
                     }
 
@@ -169,12 +192,23 @@ struct AboutView: View {
 
     private static let portraitAsset = "AuthorPortrait"
 
-    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    /// A titled card of rows, optionally with a `note` set against the title.
+    ///
+    /// The note exists for the Social group, where the vault's own framing is "same handle
+    /// everywhere". Repeating `@colorsensehq` on all six rows would be six copies of one fact
+    /// rather than six facts, so it is stated once beside the heading instead.
+    ///
+    /// It sits in a `ViewThatFits` for the same reason the plan card's title and badge do: at
+    /// accessibility sizes the pair is wider than the screen, and the heading is the half that
+    /// must survive. Stacking is the fallback, never truncation.
+    private func group<Content: View>(
+        _ title: String,
+        note: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(BrandFont.ui(13, weight: .bold))
-                .foregroundStyle(.secondary)
-                .padding(.leading, 4)
+            heading(title, note: note)
+                .padding(.horizontal, 4)
             VStack(spacing: 0) {
                 content()
             }
@@ -182,15 +216,71 @@ struct AboutView: View {
         }
     }
 
+    @ViewBuilder
+    private func heading(_ title: String, note: String?) -> some View {
+        let label = Text(title)
+            .font(BrandFont.ui(13, weight: .bold))
+            .foregroundStyle(.secondary)
+
+        if let note {
+            let value = Text(note)
+                .font(BrandFont.ui(13))
+                .foregroundStyle(.tertiary)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    label
+                    Spacer(minLength: 8)
+                    value
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    label
+                    value
+                }
+            }
+            // One statement, so VoiceOver should read it as one rather than stopping twice.
+            .accessibilityElement(children: .combine)
+        } else {
+            label
+        }
+    }
+
     private func link(_ title: String, _ systemImage: String, _ url: String) -> some View {
+        linkRow(title, url) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15))
+                .frame(width: 22)
+        }
+    }
+
+    /// A row carrying a brand mark instead of an SF Symbol.
+    ///
+    /// Each asset is a **template** image: colour was thrown away when they were cut, leaving
+    /// only the shape as an alpha mask, so the glyph takes the row's own ink and follows light
+    /// and dark like every other icon here. That is the whole reason six marks from six sources
+    /// read as one set rather than as six pasted logos.
+    ///
+    /// They are authored at exactly this size, and like the SF Symbols beside them they do not
+    /// scale with Dynamic Type. That is the existing behaviour of this list, not a new decision.
+    private func link(_ title: String, asset: String, _ url: String) -> some View {
+        linkRow(title, url) {
+            Image(asset)
+                .renderingMode(.template)
+                .frame(width: 22, height: 22)
+        }
+    }
+
+    private func linkRow<Icon: View>(
+        _ title: String,
+        _ url: String,
+        @ViewBuilder icon: () -> Icon
+    ) -> some View {
         Button {
             guard let destination = URL(string: url) else { return }
             openURL(destination)
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15))
-                    .frame(width: 22)
+                icon()
                 Text(title)
                     .font(BrandFont.ui(16))
                 Spacer()

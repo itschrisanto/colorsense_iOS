@@ -140,6 +140,8 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       to be Active even for sandbox purchase testing.
 - [ ] Confirm the In-App Purchase **tax category** for all three products.
 - [ ] Add the required App Review screenshots and final review notes to all three StoreKit records.
+      **Drafted in section 3a**, along with the screenshot that has to be captured and the demo
+      account both it and the app-level App Review Information depend on.
 - [ ] Add a signed-transaction endpoint and Apple subscription lifecycle handling to the shared
       backend. Keep `GET /api/me` as the source of truth and make transaction processing idempotent.
       The implementation brief is `docs/replit-storekit-backend-handoff.md`. Replit reported the
@@ -204,6 +206,69 @@ colorsense.online" and that keeps the About screen's Support row out.
 
 ---
 
+### 3a. App Review screenshot and review notes for the three IAP records (drafted 2026-09-09)
+
+The two open checklist items above need facts that only exist in the app, so they are drafted here
+rather than composed in the browser. Paste into each product's **App Review Information** in App
+Store Connect.
+
+**One screenshot serves all three records, and it is not one of the six product-page shots.**
+Those six are the store listing (palette, contrast, health, visualizer, SVG, schemes) and none of
+them shows a purchase. Apple wants the screen where the product is actually offered. That is
+**Account → Subscription** (`SubscriptionView`), which is the only surface carrying all three
+products, the buy button and Restore Purchases together. The onboarding plan beat is not a
+substitute: it offers monthly, annual and the trial, but never the Pro Pass.
+
+A device or simulator capture at the listing size (1290 x 2796) satisfies the 640 x 920 minimum.
+This screenshot does not exist in `docs/app-store/` yet and has to be taken.
+
+**The reviewer must sign in before any of this is reachable, and that needs saying twice.**
+`AccountView` renders the Library and Account settings sections only when `clerk.user != nil`, so a
+signed-out reviewer never sees a Subscription row at all. The purchase itself also requires a
+session, because the client fetches a backend-issued `appAccountToken` before calling StoreKit; a
+signed-out tap on the onboarding plan beat is answered with "Create or sign in to your ColorSense
+account first" rather than a failure. So:
+
+- **App Review Information at the app level needs demo account credentials.** Nothing in this repo
+  records a demo account today. Create one, verify it can reach Account → Subscription, and put it
+  in the app record before submitting.
+- Repeat the path in each IAP's review notes, because reviewers read those separately.
+
+**Shared preamble** (use in all three records):
+
+> ColorSense Pro can be unlocked by any of three products. To reach the purchase screen: open the
+> app, tap the account icon at the right end of the bottom bar, sign in with the demo account
+> provided in App Review Information, then tap Subscription. All three products and Restore
+> Purchases are on that one screen.
+>
+> Pro unlocks the SVG Recolor tool, one-tap WCAG contrast fixes, the Palette Health remap, the Pro
+> Visualizer scenes and artwork export, palette slots six through eight, and the Pro export formats.
+> A ColorSense account is required before purchasing because the entitlement is stored on the
+> ColorSense backend rather than only on the device, which is what lets a purchase survive a
+> reinstall and be restored.
+
+**Per product, appended to the preamble:**
+
+- **Pro Monthly** (`online.colorsense.ios.pro.monthly`): "Auto-renewable at $5.00/month, with a
+  seven-day free introductory offer for eligible new subscribers. The seven-day wording appears only
+  when StoreKit reports the Apple account is eligible. It shares the ColorSense Pro subscription
+  group with Pro Annual, so a subscriber can move between the two without repurchasing."
+- **Pro Annual** (`online.colorsense.ios.pro.annual`): "Auto-renewable at $39.00/year. Shares the
+  ColorSense Pro subscription group with Pro Monthly."
+- **Pro Pass** (`online.colorsense.ios.pro.pass`): "A consumable, not a subscription: a single
+  31-day grant of Pro that does not renew and can be purchased again once it lapses. Because a
+  finished consumable does not appear in StoreKit's `Transaction.currentEntitlements`, Pro Pass
+  access is restored from the ColorSense backend entitlement instead. Restore Purchases on the
+  Subscription screen performs that restore and is the correct way to verify it."
+
+**One sentence in the preamble is a judgment call, not a fact to copy blindly.** Explaining that the
+entitlement lives on the backend is what makes the sign-in requirement look deliberate rather than
+like a gate in front of a purchase, and it explains the Pro Pass restore path a reviewer would
+otherwise flag. It also, unavoidably, says ColorSense has an account system spanning a website. That
+is true and is not a 3.1.1 problem on its own, since nothing in the app links to or names an outside
+purchase. Keep it factual, and do not extend it into anything about where Pro can otherwise be
+bought.
+
 ## 4. Settle before uploading
 
 - [x] **Decide the real version number.** The first App Store version and `MARKETING_VERSION` are
@@ -242,6 +307,12 @@ colorsense.online" and that keeps the About screen's Support row out.
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan
       only runs server-side at upload, so the first upload is the real test.
+      **Checked 2026-09-09 and still accurate**, against the resolved versions rather than from
+      memory: clerk-ios `1.5.1` (the version the manifest itself names, so Clerk has not moved),
+      Nuke `13.2.0`, PhoneNumberKit `5.0.8`, posthog-ios `3.71.2`. Searching the SPM checkouts for
+      `PrivacyInfo.xcprivacy` finds none in clerk-ios or Nuke, one in PhoneNumberKit, and two under
+      posthog-ios (its own plus the bundled PHPLCrashReporter). That is exactly what the manifest
+      assumes. Left unchecked because it has to be re-run whenever a version moves, not ticked once.
 
 ---
 
@@ -450,8 +521,14 @@ public wording.
       Clerk instance, same API, same data — but a reviewer checks that the policy covers the app.
       The website Terms also describe only the browser tool and omit accounts and App Store billing.
       Use `docs/replit-website-legal-handoff.md` for both pages when the Replit side is updated.
-- [ ] **Add "Leave a review" to the About screen** the day the App Store record exists, with the
-      real App ID. It is deliberately absent because it would currently go nowhere.
+- [x] **Add "Leave a review" to the About screen** (2026-09-09). The App Store record exists, so the
+      condition it was waiting on is met. It is the third row in About's "Reach us" group, ordered
+      after Send feedback and Email us so the three run from the most private way to say something
+      to the most public. It opens
+      `https://apps.apple.com/app/id6809134374?action=write-review`, the app's real Apple ID.
+      **One thing to expect before release:** that URL resolves only once the listing is public, so
+      a TestFlight tester who taps it now reaches a page the App Store cannot show. It fixes itself
+      at release and needs no code change, but it will look like a bug if a tester reports it.
 - [ ] **Read the device split before reopening iPad** (raised 2026-09-09). The case for an iPad app
       rests on the claim that much of the target market works on iPad, and nothing in the repo or
       the vault tests it. Two reads settle it: colorsense.online's own analytics, which cover the

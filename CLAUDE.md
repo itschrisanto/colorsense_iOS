@@ -1092,6 +1092,50 @@ it is worth re-checking this line every time the Pro surface changes.
 The plan screen is now wired to StoreKit and uses StoreKit's localized prices and introductory-offer
 eligibility. Purchases remain release-gated until server verification is deployed.
 
+### The social marks are alpha masks, not logos (added 2026-09-09)
+
+About's Social rows carry the six platform marks. **Every one is a template image holding only a
+shape**, and that is the decision worth keeping rather than the pictures themselves.
+
+SF Symbols ships no brand glyphs, so the six previously shared one `at` symbol. The marks arrived as
+a mixed bag: two AVIF, two WebP, two PNG, three of them black plates that would vanish in dark mode,
+one with a transparency checkerboard painted into its pixels, and one white mark on opaque black.
+Six logos from six sources do not make a set.
+
+**Colour is discarded and the shape is kept as alpha.** Each glyph then takes the row's own ink
+through `.renderingMode(.template)`, so light and dark are solved by construction rather than by
+shipping two sets. Where the plate is coloured, brightness alone does not separate the mark from it
+(Facebook's blue disc has mid luminance and came out as a 36% grey plate), so those carry a measured
+threshold: Facebook 170, Pinterest 160, TikTok 150, Threads 128.
+
+**Threads needed a threshold even though its plate is black**, which is the counterintuitive one.
+Its source is a JPEG inside an AVIF, so compression noise lifts the background off zero and an
+unthresholded mask picked up a haze across the whole frame. It was caught by measurement, not by
+eye: the glyph's bounding box came back as exactly 512x512, the entire canvas.
+
+**Sizing normalises the geometric mean of each glyph's bounding box**, not its longest edge.
+Longest-edge makes a tall narrow mark read thin and weak beside a square one, and equal-area
+over-inflates the busy ones; `sqrt(w * h)` sits between. The measured boxes at a 512 working size
+are Instagram 511x511, Threads 246x282, X 294x302, Facebook 233x417, Pinterest 178x229,
+TikTok 196x240. Same rule as "Measuring UI alignment": measure, do not eyeball.
+
+**Only Instagram came from an official file.** `Instagram_Glyph_Black` is a bare glyph with real
+alpha and needed no cutting. TikTok's official pack does **not** contain a bare glyph despite
+appearing to: both pages of `TikTok_Icon_Black.ai` are full-colour plates, and its three Button SVGs
+are 315x44 "Continue with TikTok" login buttons. The other five derive from stock-site downloads,
+so the shapes are the genuine marks but the files were not obtained from the brands. **Replacing
+them is a file swap with no code change**, which is the property that made shipping them now safe.
+
+Two things to know before touching this again:
+
+- **Facebook is a bare `f`.** Meta's current mark is the `f` inside its blue circle, so going
+  monochrome changes which mark it is rather than only its colour. Deliberate, so the row does not
+  hold one coloured disc among five flat glyphs.
+- **The glyphs do not scale with Dynamic Type**, matching the SF Symbols beside them. That is this
+  list's existing behaviour, not a new decision, and changing it would affect every row.
+
+The six add about 96KB, which is nothing against the roughly 20MB the Lauma clips occupy.
+
 ### About, and what was deliberately left out of it (added 2026-09-04)
 
 `Features/About/AboutView.swift`, reached from Account. Modelled on a reference design Chris
