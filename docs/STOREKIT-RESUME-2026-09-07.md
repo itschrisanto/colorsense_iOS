@@ -107,7 +107,11 @@ second/free ColorSense account.
      status, product ID, app-account token, transaction ID and backend response status for the
      failing Annual submission against the successful Restore one.
 
-   The remaining step is physical-device acceptance in a new TestFlight build.
+   TestFlight build `1.0 (3)` containing the fix was archived and uploaded successfully on
+   2026-09-09. App Store Connect finished processing it, marked it **Ready to Submit**, and added it
+   to **ColorSense Internal**. Focused **What to Test** instructions are saved. PostHog has its
+   archived dSYM UUID `4FB029B4-222E-3541-B065-76BB69569F2C` under
+   `online.colorsense.ios@1.0+3` with no failure. The remaining step is physical-device acceptance.
 2. Test cancellation/expiration and server-notification behavior for Annual if the Sandbox timing
    permits. Monthly lifecycle behavior already passed.
 3. The In-App Purchase tax category is confirmed: all three records match the parent app's

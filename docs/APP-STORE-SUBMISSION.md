@@ -145,8 +145,14 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       transaction until the shared backend reports Pro or Business. Regression tests cover a stale
       Free → Free → Pro sequence and the bounded all-Free path. The full simulator suite passed
       with 138 tests on 2026-09-09.
-- [ ] Validate the repaired immediate-purchase path with a fresh Sandbox purchase in the next
-      TestFlight build. If it still fails, capture the transaction endpoint status and the following
+- [x] Archive and upload TestFlight build `1.0 (3)` with the immediate-purchase retry
+      (2026-09-09). The signed Release archive and App Store Connect upload both succeeded. Apple
+      finished processing it, its status is **Ready to Submit**, and automatic distribution added
+      it to **ColorSense Internal**. Focused purchase instructions are saved in **What to Test**.
+      PostHog has the exact archive dSYM under release `online.colorsense.ios@1.0+3`, UUID
+      `4FB029B4-222E-3541-B065-76BB69569F2C`, with an uploaded file and no failure reason.
+- [ ] Validate the repaired immediate-purchase path with a fresh Sandbox purchase in TestFlight
+      build `1.0 (3)`. If it still fails, capture the transaction endpoint status and the following
       `/api/me` status and plan without logging a signed JWS or secret.
 - [x] Confirm the In-App Purchase **tax category** for all three products. App Store Connect was
       rechecked on 2026-09-09: the parent app uses **App Store software**, and Monthly, Annual and

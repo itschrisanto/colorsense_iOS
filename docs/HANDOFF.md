@@ -158,8 +158,12 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    activation passed. The client race was repaired on 2026-09-09: `ProStore.reconcile` now retries
    its injected `/api/me` reader after 250 ms, 500 ms and 1 second, while keeping the transaction
    unfinished until paid access is confirmed. Regression tests cover eventual Pro and bounded
-   all-Free responses; the full 138-test simulator suite passed. A fresh Sandbox purchase in the
-   next TestFlight build still has to validate the repaired immediate callback. While Annual was
+   all-Free responses; the full 138-test simulator suite passed. TestFlight build `1.0 (3)` was
+   archived and uploaded successfully on 2026-09-09. Apple finished processing it, marked it
+   **Ready to Submit**, and distributed it to **ColorSense Internal**. Its archived dSYM UUID is
+   `4FB029B4-222E-3541-B065-76BB69569F2C`, and PostHog has that symbol set under
+   `online.colorsense.ios@1.0+3` with no failure. A fresh Sandbox purchase in build 3 still
+   has to validate the repaired immediate callback. While Annual was
    active, restoring from a second Free ColorSense account was rejected and left it Free, proving
    live ownership protection. The deployed endpoint returned `403`; the iOS client now presents
    the explicit account-ownership message for that response, verified on-device. Pro Pass was then
@@ -227,11 +231,13 @@ force-quit and relaunch. Explicit Restore then failed twice because `AppStore.sy
 the client checked the already-active backend entitlement. That control flow is repaired and
 covered by two focused tests; all 137 tests across 26 suites pass. Build `1.0 (2)` was archived and
 uploaded on 2026-09-09 and finished processing. Its PostHog release is `online.colorsense.ios@1.0+2` with
-dSYM UUID `6BD22D4C-71B9-3C8C-B7C8-C6FAFE0E9B77`, an uploaded file and no failure. The immediate task
-is account-deletion verification: Chris installed build 2 and confirmed “your purchase restored,”
-completing the purchase/persistence/restore smoke test. Confirm Replit's deployed deletion handling
-against `docs/replit-account-deletion-handoff.md`, then test with a disposable account and saved
-palette; server-side removal needs backend evidence, not just an iOS sign-out. The two Sandbox Apple Accounts remain
+dSYM UUID `6BD22D4C-71B9-3C8C-B7C8-C6FAFE0E9B77`, an uploaded file and no failure. Chris installed
+build 2 and confirmed “your purchase restored,” completing the purchase/persistence/restore smoke
+test. Build `1.0 (3)` contains the immediate-purchase retry, is **Ready to Submit**, and is available
+to **ColorSense Internal** with focused **What to Test** instructions. Its PostHog dSYM upload is
+also verified. The next action is to install it and make a fresh Sandbox purchase that reaches Pro
+without using Restore. Account-deletion verification is explicitly parked. The
+two Sandbox Apple Accounts remain
 StoreKit-only test identities. After internal testing, App Store Connect still needs review
 information and the final privacy questionnaire.
 
