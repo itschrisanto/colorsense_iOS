@@ -97,6 +97,54 @@ second/free ColorSense account.
 5. Turn the purchase gate on for the final Release configuration only after every remaining test
    passes, then run the full test suite and create a fresh archive with an incremented build number.
 
+### Client-side reading of the Annual discrepancy (added 2026-09-09)
+
+Read from the code rather than reproduced, so treat this as the hypothesis the next Sandbox run
+should test rather than a settled cause. It does narrow where to look, and it argues the item above
+is **mis-framed**.
+
+**Nothing in the client branches on Annual.** `ProStore.purchase(_:)` and `reconcile(_:transaction:)`
+handle Monthly and Annual through one identical path; the only product-dependent checks are the
+product ID match, the configured-kind check, and the `appAccountToken` equality test, and all three
+produce their own specific messages rather than a generic one. So there is no Annual-specific client
+bug to find. Whatever happened, Annual lost a race that Monthly and the Pass happened to win.
+
+**The likely branch is the second network call inside `reconcile`.** After the backend has already
+confirmed the grant, `reconcile` makes a *separate* `GET /api/me` call and requires it to report
+`pro` or `business` before finishing the transaction. If that read does not yet see the write the
+previous call just made, the purchase is reported to the reader as:
+
+> "The purchase was verified, but Pro access is not active yet. Try Restore Purchases shortly."
+
+That is a failure message shown immediately after money has been taken, and it names Restore
+Purchases, which is exactly what then worked. The reported symptom fits this branch closely.
+
+Three things make it more likely than a verification fault:
+
+- **There is one read and no retry.** A single lagging response is enough to produce the error.
+- **The two calls need not see the same database state.** `/api/me` recomputes the plan at read time
+  through `effectivePlan(...)` and can also run `reconcileEntitlement`; nothing guarantees the
+  just-committed grant is visible to it if the read lands on a different pooled connection.
+- **The transaction is deliberately not finished in this branch**, which is correct and is why the
+  entitlement survived: the launch-time retry and Restore both pick it up afterwards. The defect is
+  the message and the false negative, not lost access.
+
+**What to capture on the next Annual Sandbox purchase**, which decides it in one run: the HTTP
+status and body of the reconcile call, then the status and `plan` value of the `/api/me` call that
+follows it, with the wall-clock gap between them. If reconcile returned a paid plan and `/api/me`
+returned `free` milliseconds later, this is the cause and the fix is client-side.
+
+**Fix shape, if confirmed.** Retry the `/api/me` read two or three times with a short backoff before
+declaring failure, and keep not finishing the transaction until access is confirmed. Do not simply
+trust the reconcile response instead: the second read exists so a stale or wrongly combined plan
+cannot finish a transaction before iOS and the website actually have access, which is a good reason.
+
+**One testability note worth fixing in the same pass.** `restore()` reads the plan through the
+injected `fetchCurrentPlan` closure, but `reconcile` calls `SavedPaletteService.currentPlan()`
+directly. That single inconsistency is why this branch cannot be exercised by a unit test today,
+and it is the reason a regression test does not already cover it. Routing `reconcile` through the
+same injected closure would make the retry behavior pinnable the way the restore paths already are.
+
 ## Product and service references
 
 - App: **ColorSense: Palette Studio**, Apple ID `6809134374`
