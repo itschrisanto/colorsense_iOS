@@ -2,13 +2,18 @@ import SwiftUI
 import Testing
 @testable import ColorSense
 
+/// The two rendering tests pass a deliberately generous `loadTimeout`.
+///
+/// They drive a real WKWebView, and a cold WebKit process competing with the rest of the suite is
+/// slow to start: measured at 18.6s alone against a 31.7s timeout under load, which made them fail
+/// at random. The production default stays 30s, because that one is a person waiting for artwork.
 @MainActor
 @Suite("SVG and image exports", .serialized)
 struct SvgExportTests {
     private let fixture = ##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><rect width="100" height="100" fill="#ff0000"/><rect x="100" width="100" height="100" fill="#0000ff"/></svg>"##
 
     @Test func pngContainsArtworkNotABlankWebView() async throws {
-        let renderer = SvgPNGRenderer(document: .init(svg: fixture, name: "test"))
+        let renderer = SvgPNGRenderer(document: .init(svg: fixture, name: "test"), loadTimeout: .seconds(180))
         let data = try await renderer.pngData()
         let image = try #require(UIImage(data: data)?.cgImage)
         #expect(image.width == 2048)
@@ -21,7 +26,7 @@ struct SvgExportTests {
     @Test func allVisualizerScenesProduceNonemptyPNGImages() async throws {
         for scene in VisualizerScene.allCases {
             let svg = VisualizerSVG.document(scene, palette: ExtractedPalette.sample.colors.map(\.hex))
-            let renderer = SvgPNGRenderer(document: .init(svg: svg, name: scene.title))
+            let renderer = SvgPNGRenderer(document: .init(svg: svg, name: scene.title), loadTimeout: .seconds(180))
             let data = try await renderer.pngData()
             let image = try #require(UIImage(data: data)?.cgImage)
             #expect(image.width == 2048)

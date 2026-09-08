@@ -64,8 +64,19 @@ final class SvgPNGRenderer: NSObject, WKNavigationDelegate {
     private var pendingLoad: CheckedContinuation<Void, Error>?
     private var timeout: Task<Void, Never>?
 
-    init(document: SvgExportDocument) {
+    /// How long a load may take before it is called stuck.
+    ///
+    /// Injectable because the shipping value and the testable value are answering different
+    /// questions. Thirty seconds is a person waiting for artwork, and raising it would make a
+    /// real failure take a minute to report. The suite is a cold WebKit process competing with
+    /// 136 other tests, where thirty seconds is a coin flip: `pngContainsArtworkNotABlankWebView`
+    /// finished in 18.6s run alone and timed out at 31.7s run with everything else. That is a
+    /// budget problem, not a defect, and a suite that fails at random is one people stop reading.
+    private let loadTimeout: Duration
+
+    init(document: SvgExportDocument, loadTimeout: Duration = .seconds(30)) {
         self.document = document
+        self.loadTimeout = loadTimeout
         let configuration = WKWebViewConfiguration()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
         configuration.websiteDataStore = .nonPersistent()
@@ -100,11 +111,11 @@ final class SvgPNGRenderer: NSObject, WKNavigationDelegate {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 pendingLoad = continuation
                 webView.loadHTMLString(Self.html(for: document.svg), baseURL: nil)
-                timeout = Task { [weak self] in
+                timeout = Task { [weak self, loadTimeout] in
                     // A cold Simulator WebKit process has taken 17 seconds to launch under the
                     // full test suite. The renderer was healthy once it started, so allow startup
                     // headroom while retaining a finite failure path for a genuinely stuck load.
-                    do { try await Task.sleep(for: .seconds(30)) } catch { return }
+                    do { try await Task.sleep(for: loadTimeout) } catch { return }
                     self?.finish(.failure(SvgExportError.timedOut))
                 }
             }
