@@ -148,10 +148,14 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       reach the branch at all. Full write-up and ordered steps: `docs/STOREKIT-RESUME-2026-09-07.md`
       item 1. **Telling a buyer their purchase failed after taking their money is the worst
       false negative in the app**, so this should not ship as-is.
-- [ ] Confirm the In-App Purchase **tax category** for all three products.
-- [ ] Add the required App Review screenshots and final review notes to all three StoreKit records.
-      **Drafted in section 3a**, along with the screenshot that has to be captured and the demo
-      account both it and the app-level App Review Information depend on.
+- [x] Confirm the In-App Purchase **tax category** for all three products. App Store Connect was
+      rechecked on 2026-09-09: the parent app uses **App Store software**, and Monthly, Annual and
+      Pro Pass all use **Match to parent app**.
+- [x] Add final App Review notes to all three StoreKit records. The product-specific notes in
+      section 3a were saved in App Store Connect on 2026-09-09.
+- [ ] Add the required App Review screenshot to all three StoreKit records. Section 3a identifies
+      the screen to capture; the screenshot and the demo account used by both it and the app-level
+      App Review Information still have to be prepared.
 - [ ] Add a signed-transaction endpoint and Apple subscription lifecycle handling to the shared
       backend. Keep `GET /api/me` as the source of truth and make transaction processing idempotent.
       The implementation brief is `docs/replit-storekit-backend-handoff.md`. Replit reported the
@@ -216,11 +220,11 @@ colorsense.online" and that keeps the About screen's Support row out.
 
 ---
 
-### 3a. App Review screenshot and review notes for the three IAP records (drafted 2026-09-09)
+### 3a. App Review screenshot and review notes for the three IAP records (updated 2026-09-09)
 
-The two open checklist items above need facts that only exist in the app, so they are drafted here
-rather than composed in the browser. Paste into each product's **App Review Information** in App
-Store Connect.
+The final product-specific notes were saved in each product's **App Review Information** in App
+Store Connect on 2026-09-09. The shared screenshot still has to be captured and uploaded to all
+three records.
 
 **One screenshot serves all three records, and it is not one of the six product-page shots.**
 Those six are the store listing (palette, contrast, health, visualizer, SVG, schemes) and none of
@@ -244,32 +248,34 @@ account first" rather than a failure. So:
   in the app record before submitting.
 - Repeat the path in each IAP's review notes, because reviewers read those separately.
 
-**Shared preamble** (use in all three records):
+**Saved product notes:**
 
-> ColorSense Pro can be unlocked by any of three products. To reach the purchase screen: open the
-> app, tap the account icon at the right end of the bottom bar, sign in with the demo account
-> provided in App Review Information, then tap Subscription. All three products and Restore
-> Purchases are on that one screen.
->
-> Pro unlocks the SVG Recolor tool, one-tap WCAG contrast fixes, the Palette Health remap, the Pro
-> Visualizer scenes and artwork export, palette slots six through eight, and the Pro export formats.
-> A ColorSense account is required before purchasing because the entitlement is stored on the
-> ColorSense backend rather than only on the device, which is what lets a purchase survive a
-> reinstall and be restored.
-
-**Per product, appended to the preamble:**
-
-- **Pro Monthly** (`online.colorsense.ios.pro.monthly`): "Auto-renewable at $5.00/month, with a
-  seven-day free introductory offer for eligible new subscribers. The seven-day wording appears only
-  when StoreKit reports the Apple account is eligible. It shares the ColorSense Pro subscription
-  group with Pro Annual, so a subscriber can move between the two without repurchasing."
-- **Pro Annual** (`online.colorsense.ios.pro.annual`): "Auto-renewable at $39.00/year. Shares the
-  ColorSense Pro subscription group with Pro Monthly."
-- **Pro Pass** (`online.colorsense.ios.pro.pass`): "A consumable, not a subscription: a single
-  31-day grant of Pro that does not renew and can be purchased again once it lapses. Because a
-  finished consumable does not appear in StoreKit's `Transaction.currentEntitlements`, Pro Pass
-  access is restored from the ColorSense backend entitlement instead. Restore Purchases on the
-  Subscription screen performs that restore and is the correct way to verify it."
+- **Pro Monthly** (`online.colorsense.ios.pro.monthly`): open ColorSense and sign in with the demo
+  account provided in App Review Information. Tap the account icon at the right end of the bottom
+  bar, then tap Subscription. Select Pro Monthly and tap the purchase button. This is an
+  auto-renewable monthly subscription with a seven-day free introductory offer for eligible new
+  subscribers. The trial wording appears only when StoreKit reports that the Apple account is
+  eligible. Pro unlocks SVG Recolor, one-tap WCAG contrast fixes, Palette Health remapping, Pro
+  Visualizer scenes, artwork export, palette slots six through eight, and Pro export formats. The
+  app verifies Apple's signed transaction with the ColorSense server before activating Pro.
+  Restore Purchases is available on the same screen.
+- **Pro Annual** (`online.colorsense.ios.pro.annual`): open ColorSense and sign in with the demo
+  account provided in App Review Information. Tap the account icon at the right end of the bottom
+  bar, then tap Subscription. Select Pro Annual and tap Choose Annual. This is an auto-renewable
+  annual subscription billed yearly. It shares the ColorSense Pro subscription group with Pro
+  Monthly. Pro unlocks SVG Recolor, one-tap WCAG contrast fixes, Palette Health remapping, Pro
+  Visualizer scenes, artwork export, palette slots six through eight, and Pro export formats. The
+  app verifies Apple's signed transaction with the ColorSense server before activating Pro.
+  Restore Purchases is available on the same screen.
+- **Pro Pass** (`online.colorsense.ios.pro.pass`): open ColorSense and sign in with the demo account
+  provided in App Review Information. Tap the account icon at the right end of the bottom bar, then
+  tap Subscription. Select Pro Pass and tap Get Pro Pass. This consumable grants 31 days of
+  ColorSense Pro access and does not renew. It can be purchased again after the grant expires. Pro
+  unlocks SVG Recolor, one-tap WCAG contrast fixes, Palette Health remapping, Pro Visualizer scenes,
+  artwork export, palette slots six through eight, and Pro export formats. The app verifies Apple's
+  signed transaction with the ColorSense server before activating Pro. Because a finished
+  consumable is not included in StoreKit current entitlements, Restore Purchases restores an active
+  Pro Pass from the ColorSense server.
 
 **One sentence in the preamble is a judgment call, not a fact to copy blindly.** Explaining that the
 entitlement lives on the backend is what makes the sign-in requirement look deliberate rather than

@@ -108,8 +108,10 @@ Chrisanto Mendez. Its Apple ID is `6809134374`, bundle ID `online.colorsense.ios
 StoreKit records were created on 2026-09-07: subscription group **ColorSense Pro** (`22363784`),
 monthly (`6809206814`, $5.00), annual (`6809207967`, $39.00), and consumable Pro Pass
 (`6809208412`, $9.00). All use the existing `online.colorsense.ios.pro.*` product IDs and worldwide
-availability. Monthly has the agreed free one-week introductory offer with no end date. Review
-screenshots and backend reconciliation remain. The StoreKit 2 client and Restore Purchases controls
+availability. Monthly has the agreed free one-week introductory offer with no end date. All three
+products inherit the parent app's **App Store software** tax category, and their final App Review
+notes were saved in App Store Connect on 2026-09-09. The shared IAP review screenshot still has to
+be captured and uploaded. The StoreKit 2 client and Restore Purchases controls
 are implemented behind `STOREKIT_PURCHASES_ENABLED`; keep it off until the backend passes sandbox
 testing. The Paid Apps Agreement, banking information, Certificate of Foreign Status and W-8BEN
 were all confirmed Active on 2026-09-07.
@@ -166,7 +168,14 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    returned `400`; Replit fixed and deployed the Version 2 handler, then Apple's Sandbox test and
    status APIs reported `SUCCESS`, HTTP `200`, verified JWS/bundle ID and no entitlement changes for
    the `TEST` event. The notification transport and verification blocker is closed.
-3. **Fix account deletion.** The app calls Clerk's `user.delete()` and nothing else, so the
+3. **Finish the three In-App Purchase review records.** App Store Connect was rechecked on
+   2026-09-09. Monthly, Annual and Pro Pass are available in all 175 countries or regions, inherit
+   the parent app's **App Store software** tax category, and now have final product-specific review
+   notes. Capture one clean Free-account **Account → Subscription** screen, upload it to the review
+   screenshot field on all three records, and create the demo account referenced by the saved notes
+   and app-level App Review Information. Do not add any product for review until those inputs and
+   the final build are ready.
+4. **Fix account deletion.** The app calls Clerk's `user.delete()` and nothing else, so the
    ColorSense Postgres row and every saved palette survive. This is a backend job — a verified Clerk
    `user.deleted` webhook — and the in-app copy currently claims otherwise. The implementation brief
    is **`docs/replit-account-deletion-handoff.md`** (2026-09-09); section 8c has the wider plan.
@@ -176,10 +185,10 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    create the user row lazily on any authenticated request, so the webhook on its own leaves a race
    that can recreate the row and fire a Loops welcome email at somebody who just left.
    **Do not change `/api/saved-palettes` or `/api/me` contracts.**
-4. **Re-run the privacy audit** against the final archived build, then finalise the policy and the
+5. **Re-run the privacy audit** against the final archived build, then finalise the policy and the
    App Store questionnaire in the order section 8c gives. The copy-ready Replit website brief for
    both legal pages is `docs/replit-website-legal-handoff.md`.
-5. **Keep version numbers aligned.** The first App Store version and `MARKETING_VERSION` are `1.0`.
+6. **Keep version numbers aligned.** The first App Store version and `MARKETING_VERSION` are `1.0`.
    `CURRENT_PROJECT_VERSION` must increment on **every** upload — App Store Connect rejects a reused
    build number, and PostHog binds each dSYM to the release those numbers name.
 
