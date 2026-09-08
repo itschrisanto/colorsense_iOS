@@ -291,6 +291,15 @@ account first" rather than a failure. So:
   consumable is not included in StoreKit current entitlements, Restore Purchases restores an active
   Pro Pass from the ColorSense server.
 
+**If the screenshots are captured through temporary code, the removal is a release blocker.**
+Added 2026-09-09, while that capture was being built: a Debug-only launch mode that supplies fixed
+prices and a forced Free state is the cleanest way to photograph this screen without a live Sandbox
+account, and it is also exactly the kind of scaffolding that ships by accident. This repo already
+keeps one reproduction harness on the `diagnostics/photo-picker-repro` branch rather than main for
+that reason, and section 8 already carries the same rule for the temporary crash trigger. Before the
+archive: confirm the launch mode and any fixed price table are gone from the tree, and grep the
+Release build for the capture flag rather than trusting that it was removed.
+
 **One sentence in the preamble is a judgment call, not a fact to copy blindly.** Explaining that the
 entitlement lives on the backend is what makes the sign-in requirement look deliberate rather than
 like a gate in front of a purchase, and it explains the Pro Pass restore path a reviewer would

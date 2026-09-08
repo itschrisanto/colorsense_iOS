@@ -1,5 +1,23 @@
 # Subscription redesign brief
 
+> **Status: implemented in `038273a`, verified against this brief on 2026-09-09.** Kept as the
+> record of what was asked for and why, not as work to do. `SubscriptionView` carries the hero with
+> Lauma and the "Make every color count" headline, `HeroColorConfetti` supplies the restrained
+> colour objects that replaced the reference's floating banknotes, the three product cards gate the
+> trial on `isEligibleForIntroOffer`, the primary label follows the selection, and the paid state
+> leads with Pro active without naming a product. It was refactored into the private components
+> this brief predicted.
+>
+> **One point was not carried across.** Benefit three below is "Keep Pro access across ColorSense
+> when signed in"; the shipped row says "Keep the Extractor and WCAG checker free" instead. That
+> satisfies the free-tools requirement further down, but it drops the answer to "am I buying this
+> twice?" on a screen that requires an account before it will sell anything. Worth revisiting, and
+> the reason CLAUDE.md flags the App/Website benefits split as the part of Coolors' paywall worth
+> borrowing.
+>
+> Still unevidenced: the accessibility-size and dark-appearance sweep of this specific screen, which
+> the interaction requirements below ask for.
+
 Requested by Chris on 2026-09-07. Implement after the StoreKit notification work is complete.
 The reference is a playful subscription sheet with a decorative hero, mascot, benefit list,
 selectable products, one purchase button and legal/restore links. Adapt the structure to ColorSense;
