@@ -127,8 +127,12 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    native authorization sheet with both Share My Email and Hide My Email. The Share My Email flow
    then completed: signed-in Account loaded and a test palette saved and appeared in Library through
    the production API. Returning-user behavior also passed: after sign-out, Continue with Apple
-   reopened the same account and the saved palette remained in Library. Complete cancellation,
-   Hide My Email and relay-delivery cases using the matrix in
+   reopened the same account and the saved palette remained in Library. Cancellation passed in
+   TestFlight build `1.0 (2)` on 2026-09-09: the Apple sheet reached Face ID and cancelling returned
+   control without signing in or trapping the UI. That phone still receives Apple's returning-user
+   sheet, but ColorSense is absent from its Apple Account revocation list; do not sign the main
+   phone out of iCloud to force a reset. Complete Hide My Email and relay delivery with the first
+   external tester whose Apple Account has never authorized ColorSense, using the matrix in
    `docs/replit-sign-in-with-apple-handoff.md`.
 2. **Deploy StoreKit server reconciliation.** The StoreKit 2 client now loads localized products,
    purchases monthly, annual and the consumable pass, retries unfinished delivery, and provides
@@ -207,9 +211,12 @@ Xcode-installed build. A Sandbox Monthly purchase immediately activated Pro and 
 force-quit and relaunch. Explicit Restore then failed twice because `AppStore.sync()` threw before
 the client checked the already-active backend entitlement. That control flow is repaired and
 covered by two focused tests; all 137 tests across 26 suites pass. Build `1.0 (2)` was archived and
-uploaded on 2026-09-09 and is processing. Its PostHog release is `online.colorsense.ios@1.0+2` with
+uploaded on 2026-09-09 and finished processing. Its PostHog release is `online.colorsense.ios@1.0+2` with
 dSYM UUID `6BD22D4C-71B9-3C8C-B7C8-C6FAFE0E9B77`, an uploaded file and no failure. The immediate task
-is to install build 2 and confirm Restore reports success. The two Sandbox Apple Accounts remain
+is account-deletion verification: Chris installed build 2 and confirmed “your purchase restored,”
+completing the purchase/persistence/restore smoke test. Confirm Replit's deployed deletion handling
+against `docs/replit-account-deletion-handoff.md`, then test with a disposable account and saved
+palette; server-side removal needs backend evidence, not just an iOS sign-out. The two Sandbox Apple Accounts remain
 StoreKit-only test identities. After internal testing, App Store Connect still needs review
 information and the final privacy questionnaire.
 

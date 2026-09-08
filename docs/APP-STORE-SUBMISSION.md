@@ -26,7 +26,8 @@ Schemes and Library, plus onboarding, the palette workspace, Account, About and 
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
 uploaded. Build `1.0 (1)` finished processing and its main feature, StoreKit purchase and entitlement
 persistence tests passed. Build `1.0 (2)`, which fixes the remaining restore-path failure, was
-uploaded on 2026-09-09 and is processing. Review information, the privacy questionnaire and the
+uploaded on 2026-09-09, finished processing, and passed the physical-device Restore check.
+Review information, the privacy questionnaire and the
 remaining release blockers still apply. See section 2.
 
 ---
@@ -45,16 +46,21 @@ remaining release blockers still apply. See section 2.
       `docs/replit-sign-in-with-apple-handoff.md` for the test matrix.
 - [x] Confirm the Apple option reaches Apple's native authorization sheet on the physical iPhone.
       Both **Share My Email** and **Hide My Email** were presented on 2026-09-07. Completing sign-in,
-      Clerk/API access and returning-user behavior passed; cancellation, Hide My Email and the
-      relay-email flow remain to test.
+      Clerk/API access, returning-user behavior and cancellation passed; Hide My Email and the
+      relay-email flow remain to test. Cancellation was verified in TestFlight build `1.0 (2)` on
+      2026-09-09: the native sheet reached Face ID, cancelling returned control without signing in,
+      an error, or a stuck loading state. The same device shows Apple's returning-user sheet but
+      ColorSense is absent from the Apple Account's revocation list, so its first-authorization
+      Share/Hide choice cannot be safely reset there. Complete Hide My Email and relay delivery
+      with the first external tester whose Apple Account has never authorized ColorSense.
 - [x] Complete the first-user **Share My Email** path on the physical iPhone (2026-09-07). Apple
       authorization completed, the app reached its signed-in Account state, account data loaded,
       and a test palette saved and appeared in Library. This proves the Apple-created Clerk session
       works with the production ColorSense API.
 - [x] Complete the returning-user Apple path on the physical iPhone (confirmed 2026-09-07).
       Signing out and choosing Continue with Apple reopened the same ColorSense account, and the
-      previously saved palette remained in Library. Cancellation, Hide My Email and relay delivery
-      remain.
+      previously saved palette remained in Library. Cancellation also passed in TestFlight build
+      `1.0 (2)`; Hide My Email and relay delivery remain.
 - [x] Create the App Store Connect record. Created 2026-09-06 as **ColorSense: Palette Studio**
       under Chrisanto Mendez; Apple ID `6809134374`, bundle ID `online.colorsense.ios`, SKU
       `colorsense-ios-001`, primary language English (U.S.), Full Access.
@@ -95,15 +101,15 @@ remaining release blockers still apply. See section 2.
       upload succeeded and processing began. PostHog has the exact archive dSYM under release
       `online.colorsense.ios@1.0+2`, UUID `6BD22D4C-71B9-3C8C-B7C8-C6FAFE0E9B77`, with an uploaded
       file and no failure reason.
-- [ ] Complete the StoreKit purchase, entitlement persistence and Restore Purchases smoke test in
-      build `1.0 (2)` after processing and automatic internal distribution complete. Purchase and
-      persistence already passed in build 1; only the repaired Restore result needs confirmation.
+- [x] Complete the StoreKit purchase, entitlement persistence and Restore Purchases smoke test
+      (2026-09-09). Purchase and persistence passed in build 1; after updating to build `1.0 (2)`,
+      Chris confirmed “your purchase restored.” Build 2 completed processing and internal distribution.
       TestFlight automatically uses Apple's sandbox environment.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
-is verified in PostHog, and Apple accepted the package upload. Build 2 processing and its one
-remaining physical-device Restore check are next.
+is verified in PostHog, and the physical-device Restore check passed. Account deletion is next:
+confirm the deployed backend implements the handoff before testing with a disposable account.
 
 ---
 
