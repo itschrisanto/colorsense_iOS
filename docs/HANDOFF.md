@@ -155,10 +155,11 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    both the web and iOS correctly reported Free after expiration. Renewal/expiration passed. An
    Annual Sandbox purchase subsequently showed a generic local verification error after
    Apple confirmation, then Restore Purchases reconciled it and activated Pro. Annual backend
-   activation passed. **The immediate callback discrepancy is now an open task with a diagnosis
-   and ordered steps**, not an open question: see `docs/STOREKIT-RESUME-2026-09-07.md` item 1. It
-   reads as a client bug in `ProStore.reconcile`, which requires a second `/api/me` read to already
-   report paid with no retry, rather than anything Annual-specific. While Annual was
+   activation passed. The client race was repaired on 2026-09-09: `ProStore.reconcile` now retries
+   its injected `/api/me` reader after 250 ms, 500 ms and 1 second, while keeping the transaction
+   unfinished until paid access is confirmed. Regression tests cover eventual Pro and bounded
+   all-Free responses; the full 138-test simulator suite passed. A fresh Sandbox purchase in the
+   next TestFlight build still has to validate the repaired immediate callback. While Annual was
    active, restoring from a second Free ColorSense account was rejected and left it Free, proving
    live ownership protection. The deployed endpoint returned `403`; the iOS client now presents
    the explicit account-ownership message for that response, verified on-device. Pro Pass was then
@@ -190,8 +191,9 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    App Store questionnaire in the order section 8c gives. The copy-ready Replit website brief for
    both legal pages is `docs/replit-website-legal-handoff.md`.
 6. **Keep version numbers aligned.** The first App Store version and `MARKETING_VERSION` are `1.0`.
-   `CURRENT_PROJECT_VERSION` must increment on **every** upload — App Store Connect rejects a reused
-   build number, and PostHog binds each dSYM to the release those numbers name.
+   `CURRENT_PROJECT_VERSION` is `3` for the immediate-purchase retry build and must increment on
+   **every** later upload — App Store Connect rejects a reused build number, and PostHog binds each
+   dSYM to the release those numbers name.
 
 ## Release preparation completed 2026-09-06
 

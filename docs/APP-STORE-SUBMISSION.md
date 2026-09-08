@@ -108,8 +108,9 @@ remaining release blockers still apply. See section 2.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
-is verified in PostHog, and the physical-device Restore check passed. Account deletion is next:
-confirm the deployed backend implements the handoff before testing with a disposable account.
+is verified in PostHog, and the physical-device Restore check passed. The user explicitly parked
+account deletion on 2026-09-09. The current independent work is completing the IAP review
+screenshots and validating the repaired immediate-purchase path in the next TestFlight build.
 
 ---
 
@@ -138,16 +139,15 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       are complete. The agreement, bank account and both required U.S. forms—the Certificate of
       Foreign Status and W-8BEN—were confirmed Active on 2026-09-07. Apple requires the agreement
       to be Active even for sandbox purchase testing.
-- [ ] **Fix the Annual immediate-purchase discrepancy, most likely in the client.** A successful
-      Annual Sandbox purchase reported a verification failure to the buyer and only Restore
-      Purchases activated Pro. Reread on 2026-09-09: nothing in `ProStore` branches on Annual, so
-      there is no Annual-specific fault, and the failure matches `reconcile(_:transaction:)`
-      requiring its second call, `GET /api/me`, to already report paid, once, with no retry. Capture
-      both responses on the next Sandbox purchase to confirm, then retry that read with a short
-      backoff, and route `reconcile` through the injected `fetchCurrentPlan` closure so a test can
-      reach the branch at all. Full write-up and ordered steps: `docs/STOREKIT-RESUME-2026-09-07.md`
-      item 1. **Telling a buyer their purchase failed after taking their money is the worst
-      false negative in the app**, so this should not ship as-is.
+- [x] **Fix the immediate-purchase false negative in the client.** `reconcile` now reads through
+      the injected `fetchCurrentPlan` closure and retries `/api/me` after 250 ms, 500 ms and 1 second
+      before reporting that access is not active. It still refuses to finish the StoreKit
+      transaction until the shared backend reports Pro or Business. Regression tests cover a stale
+      Free → Free → Pro sequence and the bounded all-Free path. The full simulator suite passed
+      with 138 tests on 2026-09-09.
+- [ ] Validate the repaired immediate-purchase path with a fresh Sandbox purchase in the next
+      TestFlight build. If it still fails, capture the transaction endpoint status and the following
+      `/api/me` status and plan without logging a signed JWS or secret.
 - [x] Confirm the In-App Purchase **tax category** for all three products. App Store Connect was
       rechecked on 2026-09-09: the parent app uses **App Store software**, and Monthly, Annual and
       Pro Pass all use **Match to parent app**.
@@ -292,10 +292,11 @@ bought.
 - [x] **Decide the real version number.** The first App Store version and `MARKETING_VERSION` are
       both `1.0`; `CURRENT_PROJECT_VERSION` is `1`. Both are hand-edited in `project.yml`; nothing
       bumps them automatically.
-- [ ] **Increment `CURRENT_PROJECT_VERSION` on every upload**, including re-uploads of the same
+- [x] **Increment `CURRENT_PROJECT_VERSION` on every upload**, including re-uploads of the same
       marketing version. Two independent reasons: App Store Connect rejects a reused build number,
       and PostHog binds each uploaded dSYM to the release these numbers identify, so two builds at
-      one version collide and either fail the build or silently attach the wrong symbols.
+      one version collide and either fail the build or silently attach the wrong symbols. The next
+      validation upload is set to `1.0 (3)` in `project.yml`.
 - [x] **`posthog-cli` is authenticated, and the upload is proved end to end (2026-09-05).**
       `Config/PostHogCLI.env` holds a personal API key and the project ID; it is gitignored and
       untracked, verified both ways. A real Release build with `CODE_SIGNING_ALLOWED=NO` created the

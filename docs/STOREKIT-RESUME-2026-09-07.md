@@ -86,50 +86,41 @@ second/free ColorSense account.
 
 ## Remaining StoreKit work after Pro Pass
 
-1. **Fix the Annual immediate-purchase discrepancy. It is most likely a client bug, not a backend
-   one.** Reframed on 2026-09-09 after reading the client; see "Client-side reading of the Annual
-   discrepancy" below for the full argument and the code references. In short: nothing in
+1. **Validate the repaired immediate-purchase path with a fresh Sandbox purchase.** The client fix
+   was implemented on 2026-09-09 after the code review described below. Nothing in
    `ProStore` branches on Annual, so there is no Annual-specific fault to find, and the shape of
    the failure matches `reconcile(_:transaction:)` requiring its **second** call, `GET /api/me`, to
-   already report a paid plan, once, with no retry. A lagging read reports a successful purchase as
-   failed and tells the buyer to use Restore Purchases, which is what then worked.
+   already report a paid plan, once, with no retry. `reconcile` now uses the injected plan reader
+   and retries after 250 ms, 500 ms and 1 second. It still leaves the Apple transaction unfinished
+   unless `/api/me` confirms Pro or Business.
 
-   Do it in this order:
+   Acceptance run:
 
-   - **Confirm before changing anything.** On the next Annual Sandbox purchase, capture the reconcile
-     call's status and body, then the status and `plan` of the `/api/me` call immediately after it,
-     with the wall-clock gap between the two. If reconcile returned a paid plan and `/api/me`
-     returned `free` milliseconds later, the cause is settled and the fix is client-side. Share
-     statuses and identifiers only; never paste a complete signed JWS or any secret.
-   - **Then fix it in `Services/ProStore.swift`:** retry the `/api/me` read a small number of times
-     with a short backoff before declaring failure. Do **not** simply trust the reconcile response
-     instead. That second read exists so a stale or wrongly combined plan cannot finish a StoreKit
-     transaction before iOS and the website actually have access, and that reason still holds.
-   - **Keep not finishing the transaction until access is confirmed.** The entitlement survived this
-     bug precisely because the unfinished transaction was picked up later by the launch-time retry
-     and by Restore. The defect is the false failure shown to the buyer, not lost access.
-   - **Make it testable in the same pass.** `restore()` reads the plan through the injected
-     `fetchCurrentPlan` closure, but `reconcile` calls `SavedPaletteService.currentPlan()` directly.
-     That one inconsistency is why no unit test can reach this branch today. Route `reconcile`
-     through the same closure and pin the retry with a test, the way the restore paths already are.
+   - On the next Annual Sandbox purchase, confirm that Apple success proceeds directly to active
+     Pro without requiring Restore Purchases. If it still fails, capture the reconcile call's status
+     and body, then the status and `plan` of the `/api/me` calls that follow, with the wall-clock gaps.
+     Share statuses and identifiers only; never paste a complete signed JWS or any secret.
+   - The implementation and unit regression tests are complete. The stale Free → Free → Pro test
+     confirms the retry succeeds, while the all-Free test confirms the retry is bounded at four
+     total reads and never grants access. The full 138-test simulator suite passed.
    - **If the capture disproves the hypothesis**, fall back to the original comparison: verified JWS
      status, product ID, app-account token, transaction ID and backend response status for the
      failing Annual submission against the successful Restore one.
 
-   Owner: whoever holds the StoreKit work. Not started as of 2026-09-09; the diagnosis below is
-   the only part that is done.
+   The remaining step is physical-device acceptance in a new TestFlight build.
 2. Test cancellation/expiration and server-notification behavior for Annual if the Sandbox timing
    permits. Monthly lifecycle behavior already passed.
-3. Confirm the In-App Purchase tax category for Monthly, Annual and Pro Pass.
-4. Add an App Review screenshot and concise review notes to every StoreKit record.
+3. The In-App Purchase tax category is confirmed: all three records match the parent app's
+   **App Store software** category.
+4. Final review notes are saved for all three StoreKit records. Capture and upload the three
+   product-selected App Review screenshots described in `docs/APP-STORE-SUBMISSION.md` section 3a.
 5. Turn the purchase gate on for the final Release configuration only after every remaining test
    passes, then run the full test suite and create a fresh archive with an incremented build number.
 
-### Client-side reading of the Annual discrepancy (added 2026-09-09)
+### Client-side reading of the Annual discrepancy (diagnosis applied 2026-09-09)
 
-Read from the code rather than reproduced, so treat this as the hypothesis the next Sandbox run
-should test rather than a settled cause. It does narrow where to look, and it argues the item above
-is **mis-framed**.
+This was the code-based diagnosis that led to the bounded retry. The next Sandbox run still has to
+confirm it against Apple's real purchase callback.
 
 **Nothing in the client branches on Annual.** `ProStore.purchase(_:)` and `reconcile(_:transaction:)`
 handle Monthly and Annual through one identical path; the only product-dependent checks are the
@@ -137,7 +128,7 @@ product ID match, the configured-kind check, and the `appAccountToken` equality 
 produce their own specific messages rather than a generic one. So there is no Annual-specific client
 bug to find. Whatever happened, Annual lost a race that Monthly and the Pass happened to win.
 
-**The likely branch is the second network call inside `reconcile`.** After the backend has already
+**The likely branch was the second network call inside `reconcile`.** After the backend had already
 confirmed the grant, `reconcile` makes a *separate* `GET /api/me` call and requires it to report
 `pro` or `business` before finishing the transaction. If that read does not yet see the write the
 previous call just made, the purchase is reported to the reader as:
@@ -149,7 +140,7 @@ Purchases, which is exactly what then worked. The reported symptom fits this bra
 
 Three things make it more likely than a verification fault:
 
-- **There is one read and no retry.** A single lagging response is enough to produce the error.
+- **There was one read and no retry.** A single lagging response was enough to produce the error.
 - **The two calls need not see the same database state.** `/api/me` recomputes the plan at read time
   through `effectivePlan(...)` and can also run `reconcileEntitlement`; nothing guarantees the
   just-committed grant is visible to it if the read lands on a different pooled connection.
@@ -162,16 +153,14 @@ status and body of the reconcile call, then the status and `plan` value of the `
 follows it, with the wall-clock gap between them. If reconcile returned a paid plan and `/api/me`
 returned `free` milliseconds later, this is the cause and the fix is client-side.
 
-**Fix shape, if confirmed.** Retry the `/api/me` read two or three times with a short backoff before
-declaring failure, and keep not finishing the transaction until access is confirmed. Do not simply
-trust the reconcile response instead: the second read exists so a stale or wrongly combined plan
-cannot finish a transaction before iOS and the website actually have access, which is a good reason.
+**Applied fix.** The client retries the `/api/me` read after 250 ms, 500 ms and 1 second before
+declaring failure, and still does not finish the transaction until access is confirmed. It does not
+simply trust the reconcile response: the second read prevents a stale or wrongly combined plan from
+finishing a transaction before iOS and the website actually have access.
 
-**One testability note worth fixing in the same pass.** `restore()` reads the plan through the
-injected `fetchCurrentPlan` closure, but `reconcile` calls `SavedPaletteService.currentPlan()`
-directly. That single inconsistency is why this branch cannot be exercised by a unit test today,
-and it is the reason a regression test does not already cover it. Routing `reconcile` through the
-same injected closure would make the retry behavior pinnable the way the restore paths already are.
+**Applied testability change.** Both `restore()` and `reconcile` now read the plan through the
+injected `fetchCurrentPlan` closure. The regression tests exercise eventual paid access and the
+bounded failure path without waiting in real time.
 
 ## Product and service references
 
@@ -183,8 +172,5 @@ same injected closure would make the retry behavior pinnable the way the restore
 - Subscription group: **ColorSense Pro**, ID `22363784`
 - Server notification URL: `https://colorsense.online/api/webhooks/apple/app-store`
 
-The repository has a large pre-existing uncommitted release-preparation working tree. Do not reset,
-clean or discard it. `ColorSense.xcodeproj` is generated by XcodeGen and is intentionally untracked.
-
-After the StoreKit notification blocker is resolved, implement the user-requested Subscription page
-redesign from `docs/SUBSCRIPTION-REDESIGN-BRIEF.md`.
+`ColorSense.xcodeproj` is generated by XcodeGen. The user-requested Subscription redesign is
+implemented; its original brief remains in `docs/SUBSCRIPTION-REDESIGN-BRIEF.md`.

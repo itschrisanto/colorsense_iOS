@@ -67,6 +67,13 @@ actor StoreKitProStore: ProStore {
     private let hasAuthenticatedSession: @Sendable () async -> Bool
     private let syncAppStore: @Sendable () async throws -> Void
     private let fetchCurrentPlan: @Sendable () async -> Result<String?, SavedPaletteService.SaveError>
+    private let pauseBeforePlanRetry: @Sendable (Duration) async -> Void
+
+    private static let planRefreshRetryDelays: [Duration] = [
+        .milliseconds(250),
+        .milliseconds(500),
+        .seconds(1)
+    ]
 
     init(
         hasAuthenticatedSession: @escaping @Sendable () async -> Bool = {
@@ -77,11 +84,15 @@ actor StoreKitProStore: ProStore {
         },
         fetchCurrentPlan: @escaping @Sendable () async -> Result<String?, SavedPaletteService.SaveError> = {
             await SavedPaletteService.currentPlan()
+        },
+        pauseBeforePlanRetry: @escaping @Sendable (Duration) async -> Void = { delay in
+            try? await Task.sleep(for: delay)
         }
     ) {
         self.hasAuthenticatedSession = hasAuthenticatedSession
         self.syncAppStore = syncAppStore
         self.fetchCurrentPlan = fetchCurrentPlan
+        self.pauseBeforePlanRetry = pauseBeforePlanRetry
     }
 
     deinit { updatesTask?.cancel() }
@@ -243,17 +254,35 @@ actor StoreKitProStore: ProStore {
             // The delivery response acknowledges this transaction. Refresh the shared
             // entitlement separately so a stale or incorrectly combined plan can never cause a
             // StoreKit transaction to be finished before iOS and the website actually have access.
-            switch await SavedPaletteService.currentPlan() {
-            case .success(let effectivePlan) where effectivePlan == "pro" || effectivePlan == "business":
+            if await confirmsPaidPlanAfterReconciliation() {
                 await transaction.finish()
                 return .purchased
-            case .success, .failure:
-                return .failed("The purchase was verified, but Pro access is not active yet. Try Restore Purchases shortly.")
             }
+            return .failed("The purchase was verified, but Pro access is not active yet. Try Restore Purchases shortly.")
         case .success:
             return .failed("The purchase was verified, but Pro access is not active yet. Try Restore Purchases shortly.")
         case .failure(let error):
             return .failed(error.purchaseMessage)
+        }
+    }
+
+    /// The transaction endpoint may commit before a subsequent `/api/me` request reaches the same
+    /// database state. Keep the transaction unfinished unless a short bounded retry confirms that
+    /// the shared entitlement source now reports paid access.
+    func confirmsPaidPlanAfterReconciliation() async -> Bool {
+        if await currentPlanIsPaid() { return true }
+
+        for delay in Self.planRefreshRetryDelays {
+            await pauseBeforePlanRetry(delay)
+            if await currentPlanIsPaid() { return true }
+        }
+        return false
+    }
+
+    private func currentPlanIsPaid() async -> Bool {
+        switch await fetchCurrentPlan() {
+        case .success(let plan): return plan == "pro" || plan == "business"
+        case .failure: return false
         }
     }
 }

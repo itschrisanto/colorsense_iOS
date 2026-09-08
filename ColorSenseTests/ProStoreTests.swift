@@ -48,4 +48,56 @@ struct ProStoreTests {
                 == .failed("Purchases could not be restored. Please try again.")
         )
     }
+
+    @Test func reconciliationRetriesUntilSharedEntitlementBecomesPaid() async {
+        actor PlanResponses {
+            private var responses: [String?] = ["free", "free", "pro"]
+            private(set) var reads = 0
+
+            func next() -> Result<String?, SavedPaletteService.SaveError> {
+                reads += 1
+                return .success(responses.removeFirst())
+            }
+        }
+
+        actor DelayRecorder {
+            private(set) var values: [Duration] = []
+            func append(_ value: Duration) { values.append(value) }
+        }
+
+        let plans = PlanResponses()
+        let delays = DelayRecorder()
+        let store = StoreKitProStore(
+            fetchCurrentPlan: { await plans.next() },
+            pauseBeforePlanRetry: { await delays.append($0) }
+        )
+
+        #expect(await store.confirmsPaidPlanAfterReconciliation())
+        #expect(await plans.reads == 3)
+        #expect(await delays.values == [.milliseconds(250), .milliseconds(500)])
+    }
+
+    @Test func reconciliationStopsAfterBoundedRetriesWithoutGrantingAccess() async {
+        actor CallCounts {
+            private(set) var reads = 0
+            private(set) var pauses = 0
+
+            func recordRead() -> Result<String?, SavedPaletteService.SaveError> {
+                reads += 1
+                return .success("free")
+            }
+
+            func recordPause() { pauses += 1 }
+        }
+
+        let calls = CallCounts()
+        let store = StoreKitProStore(
+            fetchCurrentPlan: { await calls.recordRead() },
+            pauseBeforePlanRetry: { _ in await calls.recordPause() }
+        )
+
+        #expect(!(await store.confirmsPaidPlanAfterReconciliation()))
+        #expect(await calls.reads == 4)
+        #expect(await calls.pauses == 3)
+    }
 }
