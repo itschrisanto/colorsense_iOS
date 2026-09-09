@@ -128,7 +128,15 @@ app, and the two things that fail it here are the two that would fail the full r
 
 - [ ] **Provide a demo account, and say the app needs one.** This is the same blocker section 3a
       raises for the IAP records, and it bites harder here: a reviewer who cannot sign in cannot
-      reach Library, Subscription, saved palettes or anything Pro. Onboarding's "Maybe later" exit
+      reach Library, Subscription, saved palettes or anything Pro.
+      **It is a mechanism, not a nicety** (noted 2026-09-09, when parking it was considered): the
+      purchase path fetches a backend-issued `appAccountToken` through an *authenticated* request
+      before it calls StoreKit, and the entitlement binds to a Clerk account. A signed-out reviewer
+      reaches the paywall and can go no further, and In-App Purchase is precisely what they have to
+      exercise to approve the app. App Store Connect has a sign-in-required field for this; leaving
+      it empty while a core flow needs a login is a routine "Information Needed" rejection and a
+      full round trip. The screenshots are the exception and genuinely need no account, because the
+      `-iap-review-*` capture flag reaches that screen directly. Onboarding's "Maybe later" exit
       means the app is usable without an account, so say that too, or the reviewer may assume the
       gate is harder than it is. Nothing in this repo records a demo account today.
 - [ ] **Write the Beta App Description.** What ColorSense is, in a sentence or two, for someone who
