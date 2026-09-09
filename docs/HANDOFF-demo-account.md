@@ -1,9 +1,10 @@
 # Handoff: the App Review demo account
 
-For whoever holds browser and App Store Connect access. The repo-side agent cannot do this: creating
-a Clerk user needs either a browser, a tap-through of `AuthView`, or `CLERK_SECRET_KEY`. This repo
-holds only the publishable key, and `osascript` has no assistive access on this machine, so there is
-no scripted route to the sign-up form. It is a five-minute task for someone with a browser.
+Completed for the app-level review record on 2026-09-10. A dedicated Free Clerk account was created
+and validated through a returning sign-in on the physical device. Its credentials, review contact
+information and a reviewer note were saved directly in App Store Connect. The credentials are
+intentionally absent from this repository. The same account still needs to be entered in Beta App
+Review Information when external TestFlight testing is prepared.
 
 ## Why it is not optional
 
@@ -13,8 +14,8 @@ the paywall and stops there, and In-App Purchase is precisely what they have to 
 the app. Leaving App Store Connect's sign-in-required field empty while a core flow needs a login is
 a routine "Information Needed" rejection and a full round trip.
 
-It unblocks three items at once: the app-level App Review Information, the three IAP records, and
-Beta App Review for external TestFlight testers.
+It unblocked the app-level App Review Information and the three IAP records. Copying the same
+credentials into Beta App Review remains for external TestFlight testing.
 
 ## The account must be Free, and this is the part that is easy to get wrong
 
@@ -41,20 +42,20 @@ Two ways an account acquires Pro without anyone intending it, both worth avoidin
 
 ## It only counts as working when all of these pass
 
-- [ ] Signing in on a **physical device** reaches the signed-in Account state.
-- [ ] **Account → Subscription** shows three products with real prices, not a loading or error state.
+- [x] Signing in on a **physical device** reaches the signed-in Account state.
+- [x] **Account → Subscription** shows three products with real prices, not a loading or error state.
       This is the screen the reviewer needs and it is signed-in only.
-- [ ] The account reads as **Free**, so the paywall offers something to buy.
-- [ ] **Library** loads, both saved palettes and saved colors, even if empty.
-- [ ] A Sandbox purchase completes and Pro activates, then **Restore Purchases** works.
-      Afterwards, decide whether to leave it Pro or make a second Free account: the reviewer needs
-      Free, so if the test leaves it entitled, reset or recreate it before submitting.
+- [x] The account reads as **Free**, so the paywall offers something to buy.
+- [x] **Library** loads, both saved palettes and saved colors, even when empty.
+- [x] A Sandbox purchase completes and Pro activates, then **Restore Purchases** works. These checks
+      passed with separate purchase-test accounts, leaving the dedicated review account Free.
 
 ## Where the credentials go, and where they must not
 
-App Store Connect only: **App Review Information**, with the sign-in-required box ticked, plus the
-review notes on each of the three IAP records (section 3a of `docs/APP-STORE-SUBMISSION.md` drafts
-those). Put a copy in a password manager.
+App Store Connect only: the app-level **App Review Information** now has the sign-in-required box,
+credentials, contact information and reviewer note. The three IAP records have their product notes.
+Copy the credentials to Beta App Review when external TestFlight testing is prepared, and keep a
+copy in a password manager.
 
 **Never commit them.** Not to this repo, not to a doc, not to a comment. `Config/Secrets.xcconfig` is
 gitignored and is for build values, not review credentials, so it is not the right home either.

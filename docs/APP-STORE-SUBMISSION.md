@@ -112,7 +112,9 @@ is verified in PostHog, and the physical-device Restore check passed. Build 3's 
 purchase path also passed on the physical iPhone: a fresh Monthly purchase activated Pro directly
 without Restore and remained Pro after force-quit and relaunch. The user explicitly parked account
 deletion on 2026-09-09. The three IAP review screenshots were captured, verified and uploaded to
-their matching App Store Connect records by 2026-09-10. The demo account and remaining submission
+their matching App Store Connect records by 2026-09-10. A dedicated Free demo account was also
+validated on-device, and its credentials, contact information and reviewer note were saved only in
+the app-level App Review Information. External TestFlight information and the remaining submission
 metadata are the next review-readiness work.
 
 ---
@@ -128,21 +130,24 @@ expire after 90 days either way.
 Beta App Review is a real review. It is lighter than App Store review but it is a person opening the
 app, and the two things that fail it here are the two that would fail the full review.
 
-- [ ] **Provide a demo account, and say the app needs one.** This is the same blocker section 3a
-      raises for the IAP records, and it bites harder here: a reviewer who cannot sign in cannot
-      reach Library, Subscription, saved palettes or anything Pro.
+- [ ] **Provide the validated demo account in Beta App Review, and say the app needs one.** The
+      Free review account was created, tested and saved in the app-level App Review Information on
+      2026-09-10. Copy the same credentials into TestFlight's Beta App Review Information when the
+      first external group is prepared; credentials must remain outside the repository. This is the
+      same requirement section 3a raises for the IAP records, and it bites harder here: a reviewer
+      who cannot sign in cannot reach Library, Subscription, saved palettes or anything Pro.
       **It is a mechanism, not a nicety** (noted 2026-09-09, when parking it was considered): the
       purchase path fetches a backend-issued `appAccountToken` through an *authenticated* request
       before it calls StoreKit, and the entitlement binds to a Clerk account. A signed-out reviewer
       reaches the paywall and can go no further, and In-App Purchase is precisely what they have to
       exercise to approve the app. App Store Connect has a sign-in-required field for this; leaving
       it empty while a core flow needs a login is a routine "Information Needed" rejection and a
-      full round trip. The screenshots are the exception and genuinely need no account, because the
-      `-iap-review-*` capture flag reaches that screen directly.
-      **Spec: `docs/HANDOFF-demo-account.md`** — it must be a **Free** account, and it cannot be
-      created from the repo side. Onboarding's "Maybe later" exit
+      full round trip. The screenshots were the exception because temporary, now-removed capture
+      flags reached that screen without a live account.
+      **Spec: `docs/HANDOFF-demo-account.md`** — the account is **Free** and was created outside the
+      repository. Onboarding's "Maybe later" exit
       means the app is usable without an account, so say that too, or the reviewer may assume the
-      gate is harder than it is. Nothing in this repo records a demo account today.
+      gate is harder than it is. The repository intentionally does not record the credentials.
 - [ ] **Write the Beta App Description.** What ColorSense is, in a sentence or two, for someone who
       has never seen it. Draw from section 5's drafted metadata rather than writing a second
       description that can drift from it.
@@ -218,7 +223,8 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       captures in `docs/app-store/iap-review/` were uploaded to their matching records by
       2026-09-10. Monthly and Annual use 1320 × 2868; the Pro Pass copy uses Apple's accepted
       1242 × 2688 size because its consumable IAP form rejected the newer 6.9-inch dimensions.
-      The app-level demo account remains to be created and verified.
+      A dedicated Free demo account was created, verified through a returning sign-in, and saved in
+      the app-level App Review Information on 2026-09-10.
 - [ ] Add a signed-transaction endpoint and Apple subscription lifecycle handling to the shared
       backend. Keep `GET /api/me` as the source of truth and make transaction processing idempotent.
       The implementation brief is `docs/replit-storekit-backend-handoff.md`. Replit reported the
@@ -304,9 +310,10 @@ them shows a purchase. Apple wants the screen where the product is actually offe
 products, the buy button and Restore Purchases together. The onboarding plan beat is not a
 substitute: it offers monthly, annual and the trial, but never the Pro Pass.
 
-A device or simulator capture at the listing size (1290 x 2796) satisfies the 640 x 920 minimum.
-The completed set uses the larger 1320 × 2868 simulator size. Monthly, Annual and Pro Pass each
-have a separate capture showing its own selection and matching purchase button.
+A device or simulator capture using one of Apple's supported iPhone dimensions satisfies this
+field. Monthly and Annual use the 1320 × 2868 simulator size. Pro Pass uses 1242 × 2688 because its
+consumable IAP form rejected the newer 6.9-inch dimensions. Each product has a separate capture
+showing its own selection and matching purchase button.
 
 **The reviewer must sign in before any of this is reachable, and that needs saying twice.**
 `AccountView` renders the Library and Account settings sections only when `clerk.user != nil`, so a
@@ -315,9 +322,10 @@ session, because the client fetches a backend-issued `appAccountToken` before ca
 signed-out tap on the onboarding plan beat is answered with "Create or sign in to your ColorSense
 account first" rather than a failure. So:
 
-- **App Review Information at the app level needs demo account credentials.** Nothing in this repo
-  records a demo account today. Create one, verify it can reach Account → Subscription, and put it
-  in the app record before submitting.
+- **App Review Information at the app level has validated demo credentials.** A dedicated Free
+  account passed returning sign-in and reached Account → Subscription on-device on 2026-09-10.
+  Its credentials, contact information and reviewer note were saved directly in App Store Connect;
+  the repository intentionally records none of the credentials.
 - Repeat the path in each IAP's review notes, because reviewers read those separately.
 
 **Saved product notes:**
