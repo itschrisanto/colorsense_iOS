@@ -227,7 +227,9 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
   after processing. App Store Connect accepted the build-4 upload at 05:34 UTC on 2026-09-10 and
   reported that package processing had begun. The exported IPA remains available locally.
 
-Remaining local follow-up: physical-device verification of accessibility scrolling and exit taps.
+Physical-device accessibility follow-up completed on 2026-09-10 with build 4 on the connected
+iPhone 17 Pro Max at the largest accessibility text setting. The signed-in account **Continue** and
+all three plan actions remained visible; tapping **Not now** returned to the main palette.
 The **ColorSense Internal** TestFlight group was created on 2026-09-08 with automatic distribution,
 Chris's App Store Connect Apple ID as its one tester, and build `1.0 (1)` as its one build. On
 2026-09-09, the tester initially showed **No Builds Available** and no email arrived. Saving the

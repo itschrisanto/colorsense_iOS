@@ -432,14 +432,14 @@ bought.
       and visually checked at standard text size. Account, mood and plan were also checked in dark
       appearance at accessibility-extra-large: action controls and exits stay visible, with hero
       content in the scroll fallback. Evidence: `.build/release-prep/se-*.png`.
-- [ ] **Physical-device follow-up:** verify scrolling through the accessibility hero content and
-      tapping each exit. Simulator screenshots prove visibility, not touch or scroll behavior.
-      **Still open for the onboarding plan beat**, which is what this item is about. The equivalent
-      check on the **Subscription** screen was completed on 2026-09-09; see below.
-      The interactive simulator pass was repeated at accessibility-extra-large on 2026-09-10:
-      Account's **Maybe later** and the plan beat's purchase, Restore Purchases and **Not now**
-      controls were all exposed to accessibility, and tapping **Not now** returned to the palette.
-      Keep this item open only for the physical-device touch/scroll confirmation.
+- [x] **Physical-device accessibility follow-up completed (2026-09-10).** Build 4 was launched on
+      the connected iPhone 17 Pro Max with Larger Accessibility Sizes enabled at the largest setting.
+      The signed-in account beat kept **Continue** visible. The plan beat kept **Subscribe monthly**,
+      **Restore Purchases** and **Not now** visible, and tapping **Not now** returned to the main
+      palette screen. This closes the touch/exit check that simulator screenshots could not prove.
+      The signed-out **Maybe later** path was separately exposed and exercised in the interactive
+      simulator pass at accessibility-extra-large. The equivalent **Subscription** screen check was
+      completed on the physical phone on 2026-09-09; see below.
 - [x] **Subscription screen swept at accessibility sizes and in dark (2026-09-09).** Dark and the
       default size were already correct. One defect found and fixed: the hero's decorative chips
       are positioned at fixed fractions of a hero that grows with its own type, so at
