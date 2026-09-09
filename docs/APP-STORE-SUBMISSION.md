@@ -65,7 +65,7 @@ remaining release blockers still apply. See section 2.
       under Chrisanto Mendez; Apple ID `6809134374`, bundle ID `online.colorsense.ios`, SKU
       `colorsense-ios-001`, primary language English (U.S.), Full Access.
 - [x] Create the StoreKit products (section 3). The records were created on 2026-09-07; review
-      review screenshots and server reconciliation remain.
+      review screenshot uploads remain; the three final captures are prepared locally.
 - [x] Produce a signed Release archive and App Store Connect export. The preflight archive and IPA
       were created on 2026-09-06 with automatic signing; nothing was uploaded.
 - [x] Upload and verify the matching PostHog dSYM for TestFlight build `1.0+1` (2026-09-08).
@@ -111,7 +111,8 @@ and persistence checks passed. Build 2's signed Release archive passed locally, 
 is verified in PostHog, and the physical-device Restore check passed. Build 3's repaired immediate
 purchase path also passed on the physical iPhone: a fresh Monthly purchase activated Pro directly
 without Restore and remained Pro after force-quit and relaunch. The user explicitly parked account
-deletion on 2026-09-09. The current independent work is completing the IAP review screenshots.
+deletion on 2026-09-09. The three IAP review screenshots were captured and verified on
+2026-09-09; uploading them to the matching App Store Connect records is the remaining portal step.
 
 ---
 
@@ -212,9 +213,10 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       Pro Pass all use **Match to parent app**.
 - [x] Add final App Review notes to all three StoreKit records. The product-specific notes in
       section 3a were saved in App Store Connect on 2026-09-09.
-- [ ] Add the required App Review screenshot to all three StoreKit records. Section 3a identifies
-      the three product-selected captures; the screenshots and the demo account used by both them
-      and the app-level App Review Information still have to be prepared.
+- [ ] Add the required App Review screenshot to all three StoreKit records. The three final
+      1320 × 2868 JPEG captures are prepared in `docs/app-store/iap-review/` and mapped in section
+      3a. They still need to be uploaded to their matching App Store Connect records. The app-level
+      demo account also remains to be created and verified.
 - [ ] Add a signed-transaction endpoint and Apple subscription lifecycle handling to the shared
       backend. Keep `GET /api/me` as the source of truth and make transaction processing idempotent.
       The implementation brief is `docs/replit-storekit-backend-handoff.md`. Replit reported the
@@ -282,8 +284,15 @@ colorsense.online" and that keeps the About screen's Support row out.
 ### 3a. App Review screenshot and review notes for the three IAP records (updated 2026-09-09)
 
 The final product-specific notes were saved in each product's **App Review Information** in App
-Store Connect on 2026-09-09. The three product-selected screenshots still have to be captured and
-uploaded to their matching records.
+Store Connect on 2026-09-09. The three product-selected screenshots were captured and verified on
+2026-09-09. They are ready locally and still need to be uploaded to their matching records:
+
+- **Pro Monthly** → `docs/app-store/iap-review/pro-monthly.jpg`
+- **Pro Annual** → `docs/app-store/iap-review/pro-annual.jpg`
+- **Pro Pass** → `docs/app-store/iap-review/pro-pass.jpg`
+
+Each file is a 1320 × 2868 JPEG without alpha. The image shows its matching product selected and
+the correct purchase button.
 
 **Use one clean capture per product, and do not use one of the six product-page shots.**
 Those six are the store listing (palette, contrast, health, visualizer, SVG, schemes) and none of
@@ -293,9 +302,8 @@ products, the buy button and Restore Purchases together. The onboarding plan bea
 substitute: it offers monthly, annual and the trial, but never the Pro Pass.
 
 A device or simulator capture at the listing size (1290 x 2796) satisfies the 640 x 920 minimum.
-Take the screen three times, with Monthly, Annual and Pro Pass selected respectively, so each
-record shows its own selection and matching purchase button. These screenshots do not exist in
-`docs/app-store/` yet and have to be taken.
+The completed set uses the larger 1320 × 2868 simulator size. Monthly, Annual and Pro Pass each
+have a separate capture showing its own selection and matching purchase button.
 
 **The reviewer must sign in before any of this is reachable, and that needs saying twice.**
 `AccountView` renders the Library and Account settings sections only when `clerk.user != nil`, so a
@@ -338,14 +346,11 @@ account first" rather than a failure. So:
   consumable is not included in StoreKit current entitlements, Restore Purchases restores an active
   Pro Pass from the ColorSense server.
 
-**If the screenshots are captured through temporary code, the removal is a release blocker.**
-Added 2026-09-09, while that capture was being built: a Debug-only launch mode that supplies fixed
-prices and a forced Free state is the cleanest way to photograph this screen without a live Sandbox
-account, and it is also exactly the kind of scaffolding that ships by accident. This repo already
-keeps one reproduction harness on the `diagnostics/photo-picker-repro` branch rather than main for
-that reason, and section 8 already carries the same rule for the temporary crash trigger. Before the
-archive: confirm the launch mode and any fixed price table are gone from the tree, and grep the
-Release build for the capture flag rather than trusting that it was removed.
+**The temporary screenshot mode was removed after capture.** The set was produced with Debug-only
+launch flags that supplied fixed review prices and a forced Free state. Those capture routes and
+their fixed price data were removed from the app source on 2026-09-09; only the final JPEG assets
+remain. Before the submission archive, grep the Release source and product for `iap-review` as a
+final guard against capture scaffolding entering the build.
 
 **One sentence in the preamble is a judgment call, not a fact to copy blindly.** Explaining that the
 entitlement lives on the backend is what makes the sign-in requirement look deliberate rather than
