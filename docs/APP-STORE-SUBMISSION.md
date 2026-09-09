@@ -116,7 +116,9 @@ Internal**. The privacy questionnaire and remaining release blockers still apply
       accepted that dSYM for `online.colorsense.ios@1.0+4` without error. Dashboard confirmation
       remains. The IPA is retained at `.build/testflight/export-1.0-4/ColorSense.ipa`. App Store
       Connect accepted the upload at 05:34 UTC, completed processing without an upload warning or
-      error, marked it **Ready to Submit**, and assigned it to **ColorSense Internal**.
+      error, marked it **Ready to Submit**, and assigned it to **ColorSense Internal**. Chris then
+      installed it from TestFlight on the physical iPhone and confirmed the app's About screen
+      reports **Version 1.0 (4)**.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
@@ -454,8 +456,8 @@ bought.
       reach for that flag whenever this screen is checked on a device.
       **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is included in
       build 4. Its Release archive and App Store-signed IPA passed locally on 2026-09-10, and Apple
-      completed processing and assigned it to the internal group. PostHog dashboard confirmation
-      remains.
+      completed processing and assigned it to the internal group. PostHog confirmation of the
+      build-4 dSYM in Symbol sets remains.
 - [x] **Re-check `PrivacyInfo.xcprivacy` for build 4.** It covers the whole package
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan
@@ -578,8 +580,10 @@ showing a scene; SVG Recolor.
 
 ## 8. After the first upload
 
-- [ ] Confirm the archive carries the production PostHog token and host, launch it, and verify
-      `app_opened` reaches the dashboard.
+- [x] Confirm the archive carries the production PostHog token and host, launch it, and verify
+      `app_opened` reaches the dashboard. Confirmed 2026-09-10 after installing the uploaded build
+      from TestFlight: PostHog received recent `app_opened` events from `posthog-ios` on iOS with
+      application version `1.0` and build `4`.
 - [x] Verify the dSYM appears in PostHog Symbol sets. Confirmed 2026-09-08 for
       `online.colorsense.ios@1.0+1`; PostHog reports the archive UUID as uploaded with no failure.
 - [ ] Trigger one controlled crash in an internal build, relaunch so the stored report uploads, and
