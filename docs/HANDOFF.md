@@ -281,6 +281,11 @@ PostHog project `590983` was also changed to `anonymize_ips: true` and read back
 properties are absent and IP data is anonymized before omitting Coarse Location from App Store
 Connect.
 
+The App Privacy questionnaire was then fully configured in App Store Connect on 2026-09-10 with
+the data types, purposes, identity linkage and no-tracking answers recorded in section 6 of
+`docs/APP-STORE-SUBMISSION.md`. It remains deliberately unpublished until the public privacy-policy
+route is correct and the replacement build passes that fresh-event GeoIP check.
+
 ## Chris has feedback and new features to discuss
 
 Take them, but know the ground rules before you agree to anything.

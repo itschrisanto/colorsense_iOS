@@ -145,7 +145,8 @@ the remaining submission metadata are the next review-readiness work.
   and support URLs serve the correct public pages. The Subscription accessibility patch is now part
   of the build-4 source.
 - **App Store Review: hold.** Verified backend account deletion, correct public legal/support pages,
-  the final App Privacy answers and a real refund/revocation entitlement test remain.
+  publication of the configured App Privacy answers and a real refund/revocation entitlement test
+  remain.
 
 ---
 
@@ -507,7 +508,9 @@ keywords; support and marketing URLs; copyright; and manual release. Promotional
 The app download is free and public in all 175 countries or regions. Automatic distribution on Mac
 and Apple Vision Pro is off because the iPhone build has not been tested there. Six approved iPhone
 screenshots were uploaded in order on 2026-09-07. Build `1.0 (3)` is processed; app-level and Beta
-App Review credentials are saved. The final privacy questionnaire remains unset.
+App Review credentials are saved. The App Privacy data types and per-type answers were configured
+on 2026-09-10 but intentionally remain unpublished until the public privacy-policy route is correct
+and a replacement build contains the matching source manifest and PostHog controls.
 
 **Keywords** (100 characters, comma separated, no spaces after commas, no words already in the name
 or subtitle): `palette,hex,wcag,contrast,accessibility,designer,swatch,brand,photo,extract,svg,mockup`
@@ -541,6 +544,13 @@ a colour.
 ## 6. App Privacy questionnaire
 
 Must match the app and every bundled SDK. Answers, with the reasoning:
+
+**Configured in App Store Connect on 2026-09-10, not published:** Name, Email Address, Customer
+Support, Other User Content, User ID and Purchases use App Functionality, are linked to identity and
+are not used for tracking. Product Interaction and Other Usage Data use Analytics, are not linked
+and are not used for tracking. Crash Data and Other Diagnostic Data use App Functionality, are not
+linked and are not used for tracking. Every other data type is unselected. Do not publish until the
+public privacy policy is fixed and the next build passes the GeoIP verification below.
 
 **Data linked to the user** (through the Clerk account):
 - Contact Info — email address, name. Clerk, for authentication.
