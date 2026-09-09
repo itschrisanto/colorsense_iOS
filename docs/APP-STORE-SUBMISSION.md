@@ -111,8 +111,9 @@ and persistence checks passed. Build 2's signed Release archive passed locally, 
 is verified in PostHog, and the physical-device Restore check passed. Build 3's repaired immediate
 purchase path also passed on the physical iPhone: a fresh Monthly purchase activated Pro directly
 without Restore and remained Pro after force-quit and relaunch. The user explicitly parked account
-deletion on 2026-09-09. The three IAP review screenshots were captured and verified on
-2026-09-09; uploading them to the matching App Store Connect records is the remaining portal step.
+deletion on 2026-09-09. The three IAP review screenshots were captured, verified and uploaded to
+their matching App Store Connect records by 2026-09-10. The demo account and remaining submission
+metadata are the next review-readiness work.
 
 ---
 
@@ -213,10 +214,11 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       Pro Pass all use **Match to parent app**.
 - [x] Add final App Review notes to all three StoreKit records. The product-specific notes in
       section 3a were saved in App Store Connect on 2026-09-09.
-- [ ] Add the required App Review screenshot to all three StoreKit records. The three final
-      1320 × 2868 JPEG captures are prepared in `docs/app-store/iap-review/` and mapped in section
-      3a. They still need to be uploaded to their matching App Store Connect records. The app-level
-      demo account also remains to be created and verified.
+- [x] Add the required App Review screenshot to all three StoreKit records. The three final JPEG
+      captures in `docs/app-store/iap-review/` were uploaded to their matching records by
+      2026-09-10. Monthly and Annual use 1320 × 2868; the Pro Pass copy uses Apple's accepted
+      1242 × 2688 size because its consumable IAP form rejected the newer 6.9-inch dimensions.
+      The app-level demo account remains to be created and verified.
 - [ ] Add a signed-transaction endpoint and Apple subscription lifecycle handling to the shared
       backend. Keep `GET /api/me` as the source of truth and make transaction processing idempotent.
       The implementation brief is `docs/replit-storekit-backend-handoff.md`. Replit reported the
@@ -285,14 +287,15 @@ colorsense.online" and that keeps the About screen's Support row out.
 
 The final product-specific notes were saved in each product's **App Review Information** in App
 Store Connect on 2026-09-09. The three product-selected screenshots were captured and verified on
-2026-09-09. They are ready locally and still need to be uploaded to their matching records:
+2026-09-09, then uploaded to their matching records by 2026-09-10:
 
 - **Pro Monthly** → `docs/app-store/iap-review/pro-monthly.jpg`
 - **Pro Annual** → `docs/app-store/iap-review/pro-annual.jpg`
 - **Pro Pass** → `docs/app-store/iap-review/pro-pass.jpg`
 
-Each file is a 1320 × 2868 JPEG without alpha. The image shows its matching product selected and
-the correct purchase button.
+Each file is a JPEG without alpha. Monthly and Annual are 1320 × 2868. Pro Pass is 1242 × 2688,
+an accepted 6.5-inch iPhone size, because the consumable IAP review field rejected its original
+1320 × 2868 copy. Every image shows its matching product selected and the correct purchase button.
 
 **Use one clean capture per product, and do not use one of the six product-page shots.**
 Those six are the store listing (palette, contrast, health, visualizer, SVG, schemes) and none of

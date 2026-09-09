@@ -19,6 +19,6 @@ Captured September 9, 2026 on the iPhone 17 Pro Max simulator. These JPEGs are f
 
 1. `iap-review/pro-monthly.jpg` — Pro Monthly selected, $5.00, seven-day trial action
 2. `iap-review/pro-annual.jpg` — Pro Annual selected, $39.00, annual action
-3. `iap-review/pro-pass.jpg` — Pro Pass selected, $9.00, one-month pass action
+3. `iap-review/pro-pass.jpg` — Pro Pass selected, $9.00, one-month pass action; 1242 × 2688
 
-All three are 1320 × 2868 JPEG files without alpha. Temporary Debug-only capture flags and fixed review prices were removed from the app source after capture. The files are ready for upload to their matching App Store Connect records.
+Monthly and Annual are 1320 × 2868 JPEG files. Pro Pass is 1242 × 2688 because its consumable IAP form rejected the newer 6.9-inch size; 1242 × 2688 is an accepted iPhone screenshot size. All three have no alpha channel. Temporary Debug-only capture flags and fixed review prices were removed from the app source after capture. The three files were uploaded to their matching App Store Connect records by September 10, 2026.
