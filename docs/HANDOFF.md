@@ -255,9 +255,11 @@ and confirmed immediate Pro activation plus persistence after relaunch. The firs
 TestFlight setup detail: **Media & Purchases** must be signed out before the Sandbox Apple Account
 selected under **Developer** is used. Account-deletion verification is explicitly parked. The
 three Sandbox Apple Accounts remain StoreKit-only test identities. App Store Connect still needs
-selection of the final build and the final privacy questionnaire. Build `1.0 (4)` is processed,
-**Ready to Submit**, assigned to the internal group, installed from TestFlight, and confirmed in the
-app as **Version 1.0 (4)**.
+selection of the final build and the final privacy questionnaire. The external TestFlight group
+**ColorSense Beta** was created on 2026-09-10 and intentionally has zero testers and zero builds
+until the public Privacy and Support pages are ready. Build `1.0 (4)` is processed, **Ready to
+Submit**, assigned to the internal group, installed from TestFlight, and confirmed in the app as
+**Version 1.0 (4)**.
 
 ## Chris has feedback and new features to discuss
 

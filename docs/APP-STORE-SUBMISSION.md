@@ -156,6 +156,9 @@ expire after 90 days either way.
 Beta App Review is a real review. It is lighter than App Store review but it is a person opening the
 app, and the two things that fail it here are the two that would fail the full review.
 
+- [x] **Create the external TestFlight group.** **ColorSense Beta** was created on 2026-09-10 and
+      intentionally remains at zero testers and zero builds until the public Privacy and Support
+      pages are ready for Beta App Review.
 - [x] **Provide the validated demo account in Beta App Review, and say the app needs one.** The
       Free review account was created, tested and saved in the app-level App Review Information on
       2026-09-10. The same credentials, contact details and reviewer note were saved in TestFlight's
