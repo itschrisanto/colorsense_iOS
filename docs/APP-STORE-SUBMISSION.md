@@ -113,16 +113,16 @@ purchase path also passed on the physical iPhone: a fresh Monthly purchase activ
 without Restore and remained Pro after force-quit and relaunch. The user explicitly parked account
 deletion on 2026-09-09. The three IAP review screenshots were captured, verified and uploaded to
 their matching App Store Connect records by 2026-09-10. A dedicated Free demo account was also
-validated on-device, and its credentials, contact information and reviewer note were saved only in
-the app-level App Review Information. External TestFlight information and the remaining submission
-metadata are the next review-readiness work.
+validated on-device. Its credentials, contact information and reviewer notes were saved only in
+App Store Connect for both app-level review and Beta App Review. The external TestFlight group and
+the remaining submission metadata are the next review-readiness work.
 
 ---
 
 ## 2b. TestFlight external testing, and the review it needs (drafted 2026-09-09)
 
-Internal testing is running. **External testing is a separate gate and nothing here is drafted for
-it yet**, which is easy to miss because internal builds skip it entirely: internal testers (up to
+Internal testing is running. **External testing is a separate gate**, which is easy to miss because
+internal builds skip it entirely: internal testers (up to
 100, each needing a real App Store Connect role) get builds in minutes, while external testers (up
 to 10,000, by email or public link) cost a **Beta App Review on every significant build**. Builds
 expire after 90 days either way.
@@ -130,10 +130,10 @@ expire after 90 days either way.
 Beta App Review is a real review. It is lighter than App Store review but it is a person opening the
 app, and the two things that fail it here are the two that would fail the full review.
 
-- [ ] **Provide the validated demo account in Beta App Review, and say the app needs one.** The
+- [x] **Provide the validated demo account in Beta App Review, and say the app needs one.** The
       Free review account was created, tested and saved in the app-level App Review Information on
-      2026-09-10. Copy the same credentials into TestFlight's Beta App Review Information when the
-      first external group is prepared; credentials must remain outside the repository. This is the
+      2026-09-10. The same credentials, contact details and reviewer note were saved in TestFlight's
+      Beta App Review Information the same day; credentials remain outside the repository. This is the
       same requirement section 3a raises for the IAP records, and it bites harder here: a reviewer
       who cannot sign in cannot reach Library, Subscription, saved palettes or anything Pro.
       **It is a mechanism, not a nicety** (noted 2026-09-09, when parking it was considered): the
@@ -148,15 +148,14 @@ app, and the two things that fail it here are the two that would fail the full r
       repository. Onboarding's "Maybe later" exit
       means the app is usable without an account, so say that too, or the reviewer may assume the
       gate is harder than it is. The repository intentionally does not record the credentials.
-- [ ] **Write the Beta App Description.** What ColorSense is, in a sentence or two, for someone who
-      has never seen it. Draw from section 5's drafted metadata rather than writing a second
-      description that can drift from it.
-- [ ] **Write "What to Test" for the build being sent.** This is per build and should name what
-      actually changed, not repeat the description. For the current build that is the StoreKit
-      purchase paths and Restore, since those are the newest and least exercised.
-- [ ] **Set the feedback email to `hello@colorsense.online`**, the vault's contact address in
+- [x] **Write the Beta App Description.** A concise feature description drawn from section 5 was
+      saved in TestFlight Test Information on 2026-09-10.
+- [x] **Write "What to Test" for the build being sent.** Build `1.0 (3)` already has focused
+      StoreKit purchase and Restore instructions, matching the newest repair and acceptance tests.
+- [x] **Set the feedback email to `hello@colorsense.online`**, the vault's contact address in
       section 12, not a personal address. It is the same address About's "Email us" row already
-      uses, so a tester who replies and a tester who taps the row reach the same inbox.
+      uses, so a tester who replies and a tester who taps the row reach the same inbox. Saved in
+      TestFlight Test Information on 2026-09-10.
 - [ ] **Confirm the privacy policy URL resolves** and covers the app. It is
       `https://colorsense.online/privacy-policy`, and section 9 already records that the page
       **never mentions mobile or iOS**. A beta reviewer checks that the policy covers what they are

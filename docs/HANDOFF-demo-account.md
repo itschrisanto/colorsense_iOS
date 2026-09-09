@@ -2,9 +2,8 @@
 
 Completed for the app-level review record on 2026-09-10. A dedicated Free Clerk account was created
 and validated through a returning sign-in on the physical device. Its credentials, review contact
-information and a reviewer note were saved directly in App Store Connect. The credentials are
-intentionally absent from this repository. The same account still needs to be entered in Beta App
-Review Information when external TestFlight testing is prepared.
+information and reviewer notes were saved directly in App Store Connect for both the app-level
+review and Beta App Review. The credentials are intentionally absent from this repository.
 
 ## Why it is not optional
 
@@ -14,8 +13,8 @@ the paywall and stops there, and In-App Purchase is precisely what they have to 
 the app. Leaving App Store Connect's sign-in-required field empty while a core flow needs a login is
 a routine "Information Needed" rejection and a full round trip.
 
-It unblocked the app-level App Review Information and the three IAP records. Copying the same
-credentials into Beta App Review remains for external TestFlight testing.
+It unblocked the app-level App Review Information, the three IAP records and Beta App Review for
+external TestFlight testing.
 
 ## The account must be Free, and this is the part that is easy to get wrong
 
@@ -52,10 +51,9 @@ Two ways an account acquires Pro without anyone intending it, both worth avoidin
 
 ## Where the credentials go, and where they must not
 
-App Store Connect only: the app-level **App Review Information** now has the sign-in-required box,
-credentials, contact information and reviewer note. The three IAP records have their product notes.
-Copy the credentials to Beta App Review when external TestFlight testing is prepared, and keep a
-copy in a password manager.
+App Store Connect only: the app-level and Beta **App Review Information** sections now have the
+sign-in-required box, credentials, contact information and reviewer notes. The three IAP records
+have their product notes. Keep a separate copy in a password manager.
 
 **Never commit them.** Not to this repo, not to a doc, not to a comment. `Config/Secrets.xcconfig` is
 gitignored and is for build values, not review credentials, so it is not the right home either.
