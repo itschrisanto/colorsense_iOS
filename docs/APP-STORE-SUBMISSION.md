@@ -466,10 +466,13 @@ bought.
       build 4. Its Release archive and App Store-signed IPA passed locally on 2026-09-10, and Apple
       completed processing and assigned it to the internal group. PostHog confirmation of the
       build-4 dSYM in Symbol sets remains.
-- [x] **Re-check `PrivacyInfo.xcprivacy` for build 4.** It covers the whole package
-      graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
-      so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan
-      only runs server-side at upload, so the first upload is the real test.
+- [ ] **Re-check `PrivacyInfo.xcprivacy` in the next release build.** Build 4 passed Apple's visible
+      processing checks, but questionnaire preparation on 2026-09-10 found that the manifest omitted
+      the Apple purchase history retained by the server and classified crash diagnostics under
+      Analytics instead of App Functionality. The source is corrected. The next archive must contain
+      linked Purchase History for App Functionality and the corrected crash purpose. ClerkKit,
+      ClerkKitUI and Nuke ship no manifest of their own and are linked statically, so their API use
+      is ours to declare; PostHog and PhoneNumberKit ship their own manifests.
       **Checked again 2026-09-10 and still accurate**, against the resolved versions rather than from
       memory: clerk-ios `1.5.1` (the version the manifest itself names, so Clerk has not moved),
       Nuke `13.2.0`, PhoneNumberKit `5.0.8`, posthog-ios `3.71.2`. Searching the SPM checkouts for
@@ -543,6 +546,8 @@ Must match the app and every bundled SDK. Answers, with the reasoning:
 - Contact Info — email address, name. Clerk, for authentication.
 - User Content — saved palettes and color names, via `/api/saved-palettes`.
 - Identifiers — user ID.
+- Purchases — Apple purchase history. The verified signed transaction is retained and bound to the
+  account so the server can grant and restore the correct Pro entitlement.
 
 **Data not linked to the user:**
 - Usage Data — Product Interaction, Other Usage Data. PostHog, using only its random installation
@@ -556,6 +561,11 @@ Must match the app and every bundled SDK. Answers, with the reasoning:
 
 **Photos are never collected.** The library is read on device to build the picker and to extract a
 palette; no image is uploaded, copied or retained.
+
+The source privacy manifest was corrected on 2026-09-10 before completing this questionnaire: it
+now includes linked Purchase History for App Functionality and classifies crash diagnostics as App
+Functionality, matching Apple's category definitions and PostHog's bundled crash-report manifest.
+This source change is newer than TestFlight build `1.0 (4)` and must be included in the next upload.
 
 ---
 

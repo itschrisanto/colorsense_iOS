@@ -4,8 +4,8 @@ Requested before updating the public privacy policy and submitting to the App St
 below is from the source, the SDK configuration, the dependency manifest or the database schema.
 Nothing is inferred from UI copy or intent. Where something could not be proved, it says so.
 
-Audited 2026-09-05 against `main` at the Schemes commit. PostHog iOS **3.71.2** (resolved), Clerk
-iOS SDK, no other third-party SDKs.
+Audited 2026-09-05 against `main` at the Schemes commit and updated 2026-09-10 for Apple In-App
+Purchase. PostHog iOS **3.71.2** (resolved), Clerk iOS SDK, no other third-party SDKs.
 
 ## Verdict
 
@@ -115,7 +115,10 @@ collection silently. Session replay is off. Screen tracking is not automatic; th
   values and a name the user typed. Linked to the account by design; that is the feature.
 - **Plan** — a read of `/api/me` with the bearer token.
 - **Feedback** — `{name, email, message}` to `/api/feedback`, all typed by the user on that form.
-- **Nothing else.** No image, no analytics, no device identifier.
+- **Apple purchase record** — Apple's signed transaction, submitted with a Clerk bearer token to
+  `/api/iap/apple/transactions`. The backend verifies and retains its transaction, product and date
+  fields against the ColorSense account to grant and restore Pro.
+- **Nothing else.** No image, analytics payload or device identifier goes to the ColorSense API.
 
 The app never posts the email address, name or profile image to the ColorSense API. The server
 derives the user from the Clerk token.
@@ -171,6 +174,7 @@ and not before.)*
 | Name | Yes | No | App functionality (account) | Yes |
 | User ID | Yes | No | App functionality (account) | Yes |
 | User content (saved palettes) | Yes | No | App functionality | Yes |
+| Purchase history | Yes | No | App functionality (Pro entitlement) | Yes |
 | Product interaction | No | No | Analytics | Yes, opt-out in app |
 | Other usage data | No | No | Analytics | Yes, opt-out in app |
 | Crash data | No | No | App functionality (diagnostics) | Yes, follows the same opt-out |

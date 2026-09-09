@@ -265,6 +265,13 @@ until the public Privacy and Support pages are ready. Build `1.0 (4)` is process
 Submit**, assigned to the internal group, installed from TestFlight, and confirmed in the app as
 **Version 1.0 (4)**.
 
+While preparing App Store Connect's privacy questionnaire on 2026-09-10, a release-manifest gap was
+found before any answers were selected: the server retains Apple's signed purchase record and binds
+it to the ColorSense account to calculate Pro, so Purchase History is collected and linked. The
+source privacy manifest now declares linked Purchase History for App Functionality and classifies
+crash diagnostics as App Functionality. Build `1.0 (4)` predates that correction; the next uploaded
+build must contain it before external testing or App Review.
+
 ## Chris has feedback and new features to discuss
 
 Take them, but know the ground rules before you agree to anything.

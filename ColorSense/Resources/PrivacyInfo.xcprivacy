@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<!--
-	  Privacy manifest. Apple's automated check runs at upload, so this has to be right before
-	  the first App Store Connect build, not before release.
+	  Privacy manifest. Apple's automated check runs at upload, so this has to be right in every
+	  App Store Connect build, not patched at release time.
 
-	  It covers the whole package graph, not just ColorSense's own code. Of the three packages
-	  that ship in the binary, only PhoneNumberKit carries its own manifest; ClerkKit/ClerkKitUI
-	  1.5.1 and Nuke both ship none (verified by searching the SPM checkouts). SPM links them
-	  statically into the app binary, so their API use becomes ours to declare — there is nowhere
-	  else for it to be declared. Re-check this whenever a package version moves: if a later
-	  release adds its own manifest, the matching entry below becomes redundant.
+	  It covers the whole package graph, not just ColorSense's own code. PostHog and PhoneNumberKit
+	  carry their own manifests; ClerkKit/ClerkKitUI 1.5.1 and Nuke ship none (verified by searching
+	  the SPM checkouts). SPM links the latter into the app binary, so their API use becomes ours to
+	  declare — there is nowhere else for it to be declared. Re-check this whenever a package
+	  version moves: if a later release adds its own manifest, the matching entry below becomes
+	  redundant.
 	-->
 
 	<!--
@@ -101,6 +101,23 @@
 			</array>
 		</dict>
 		<!--
+		  Apple purchase history retained by the ColorSense server to verify ownership and calculate
+		  the account's current Pro entitlement. The authenticated transaction submission includes
+		  Apple's signed transaction, product and dates; the server binds it to the ColorSense account.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!--
 		  Fatal crash reports sent through PostHog on the next launch, which is what
 		  `errorTrackingConfig.autoCapture = true` in AnalyticsService turns on. Reports contain
 		  stack traces and technical app/device diagnostics, carry only PostHog's random
@@ -116,7 +133,7 @@
 			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
 	</array>
