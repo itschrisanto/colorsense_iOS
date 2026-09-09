@@ -272,6 +272,15 @@ source privacy manifest now declares linked Purchase History for App Functionali
 crash diagnostics as App Functionality. Build `1.0 (4)` predates that correction; the next uploaded
 build must contain it before external testing or App Review.
 
+The same questionnaire pass found a second gap before answers were selected. The Feedback form's
+stored messages are Customer Support data, and production PostHog events carried IP-derived country
+data on every iOS event plus city data on some. The manifest now declares Customer Support, while
+`AnalyticsService` applies PostHog's `$geoip_disable: true` to every allowed product and crash event.
+PostHog project `590983` was also changed to `anonymize_ips: true` and read back as enabled on
+2026-09-10. After the next build is launched, query fresh events and confirm that `$geoip_*`
+properties are absent and IP data is anonymized before omitting Coarse Location from App Store
+Connect.
+
 ## Chris has feedback and new features to discuss
 
 Take them, but know the ground rules before you agree to anything.

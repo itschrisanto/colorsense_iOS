@@ -67,6 +67,21 @@ enum AnalyticsService {
     }
 
     private static let optOutKey = "analytics.optedOut"
+    private static let allowedEvents = Set(Event.allCases.map(\.rawValue) + ["$exception"])
+
+    /// Applies the last privacy gate before PostHog queues an event.
+    ///
+    /// PostHog Cloud otherwise enriches client events from the request IP. ColorSense has no use
+    /// for location analytics, so every accepted event explicitly disables that enrichment.
+    static func privacyFilteredProperties(
+        eventName: String,
+        properties: [String: Any]
+    ) -> [String: Any]? {
+        guard allowedEvents.contains(eventName) else { return nil }
+        var properties = properties
+        properties["$geoip_disable"] = true
+        return properties
+    }
 
     /// Whether the reader has switched analytics off. Defaults to false — on — which is the norm
     /// for anonymous product analytics, and the alternative collects almost nothing and so
@@ -106,9 +121,13 @@ enum AnalyticsService {
         // Defense in depth: only events named by this app and the one SDK-owned crash event can
         // reach PostHog. This blocks lifecycle, survey and every other `$...` event if a future SDK
         // release changes a default or installs a new integration.
-        let allowedEvents = Set(Event.allCases.map(\.rawValue) + ["$exception"])
         config.setBeforeSend { event in
-            allowedEvents.contains(event.event) ? event : nil
+            guard let properties = privacyFilteredProperties(
+                eventName: event.event,
+                properties: event.properties
+            ) else { return nil }
+            event.properties = properties
+            return event
         }
 
         // Retention is counted per *person*, and the default `.identifiedOnly` gives anonymous

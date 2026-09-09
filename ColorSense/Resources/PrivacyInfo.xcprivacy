@@ -101,6 +101,22 @@
 			</array>
 		</dict>
 		<!--
+		  Messages typed into the in-app Feedback form, including bug reports and help requests. The
+		  form also sends the name and email address displayed beside the message so Chris can reply.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCustomerSupport</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!--
 		  Apple purchase history retained by the ColorSense server to verify ownership and calculate
 		  the account's current Pro entitlement. The authenticated transaction submission includes
 		  Apple's signed transaction, product and dates; the server binds it to the ColorSense account.

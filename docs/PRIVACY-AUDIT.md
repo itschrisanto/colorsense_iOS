@@ -174,6 +174,7 @@ and not before.)*
 | Name | Yes | No | App functionality (account) | Yes |
 | User ID | Yes | No | App functionality (account) | Yes |
 | User content (saved palettes) | Yes | No | App functionality | Yes |
+| Customer support (feedback messages) | Yes | No | App functionality | Yes |
 | Purchase history | Yes | No | App functionality (Pro entitlement) | Yes |
 | Product interaction | No | No | Analytics | Yes, opt-out in app |
 | Other usage data | No | No | Analytics | Yes, opt-out in app |
@@ -182,6 +183,14 @@ and not before.)*
 
 **Photos are not collected** and must not be declared as collected. The library is read on device
 and nothing leaves it.
+
+**GeoIP correction, 2026-09-10:** a production PostHog query found IP-derived country properties on
+all historical iOS events and city properties on some of them. ColorSense does not use location
+analytics. `AnalyticsService` now applies `$geoip_disable: true` to every event that passes its
+allowlist, including `$exception`. PostHog project `590983` was also changed to
+`anonymize_ips: true` and read back as enabled on 2026-09-10. The next uploaded build must verify
+that fresh events no longer carry `$geoip_*` properties and that IP data is anonymized before Coarse
+Location is omitted from App Store Connect.
 
 Permission strings present and correct in `project.yml`: `NSCameraUsageDescription`,
 `NSPhotoLibraryUsageDescription`, `NSPhotoLibraryAddUsageDescription`. The privacy manifest declares

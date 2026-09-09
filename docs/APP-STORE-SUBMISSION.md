@@ -544,7 +544,8 @@ Must match the app and every bundled SDK. Answers, with the reasoning:
 
 **Data linked to the user** (through the Clerk account):
 - Contact Info — email address, name. Clerk, for authentication.
-- User Content — saved palettes and color names, via `/api/saved-palettes`.
+- User Content — saved palettes and color names, via `/api/saved-palettes`; Customer Support — the
+  name, email and message explicitly submitted through the Feedback form.
 - Identifiers — user ID.
 - Purchases — Apple purchase history. The verified signed transaction is retained and bound to the
   account so the server can grant and restore the correct Pro entitlement.
@@ -563,9 +564,15 @@ Must match the app and every bundled SDK. Answers, with the reasoning:
 palette; no image is uploaded, copied or retained.
 
 The source privacy manifest was corrected on 2026-09-10 before completing this questionnaire: it
-now includes linked Purchase History for App Functionality and classifies crash diagnostics as App
-Functionality, matching Apple's category definitions and PostHog's bundled crash-report manifest.
-This source change is newer than TestFlight build `1.0 (4)` and must be included in the next upload.
+now includes linked Purchase History and Customer Support for App Functionality and classifies
+crash diagnostics as App Functionality, matching Apple's category definitions and PostHog's bundled
+crash-report manifest. A production query also found IP-derived country data on every historical
+iOS event and city data on some. ColorSense does not use location analytics, so the source now adds
+PostHog's `$geoip_disable: true` processing property to every allowed product and crash event. These
+source changes are newer than TestFlight build `1.0 (4)` and must be included in the next upload.
+PostHog project `590983` was also changed to `anonymize_ips: true` on 2026-09-10 and read back as
+enabled. After the next upload, verify that fresh events contain no `$geoip_*` enrichment and only
+anonymized IP data before leaving Coarse Location out of the questionnaire.
 
 ---
 
