@@ -119,7 +119,8 @@ Internal**. The privacy questionnaire and remaining release blockers still apply
       error, marked it **Ready to Submit**, and assigned it to **ColorSense Internal**. Chris then
       installed it from TestFlight on the physical iPhone and confirmed the app's About screen
       reports **Version 1.0 (4)**. The Subscription screen also loaded and showed the expected
-      current plan. App Store Connect's Build Metadata reports **Binary State: Validated** and
+      current plan. Focused **What to Test** instructions are saved on the build. App Store
+      Connect's Build Metadata reports **Binary State: Validated** and
       **Includes Symbols: Yes**, with the expected bundle ID, version, build number, Sign in with
       Apple entitlement, `beta-reports-active: true`, `get-task-allow: false` and no visible
       processing or privacy warning.
@@ -182,8 +183,8 @@ app, and the two things that fail it here are the two that would fail the full r
       gate is harder than it is. The repository intentionally does not record the credentials.
 - [x] **Write the Beta App Description.** A concise feature description drawn from section 5 was
       saved in TestFlight Test Information on 2026-09-10.
-- [x] **Write "What to Test" for the build being sent.** Build `1.0 (3)` already has focused
-      StoreKit purchase and Restore instructions, matching the newest repair and acceptance tests.
+- [x] **Write "What to Test" for the build being sent.** Build `1.0 (4)` received focused
+      Subscription accessibility, feature sweep, purchase and Restore instructions on 2026-09-10.
 - [x] **Set the feedback email to `hello@colorsense.online`**, the vault's contact address in
       section 12, not a personal address. It is the same address About's "Email us" row already
       uses, so a tester who replies and a tester who taps the row reach the same inbox. Saved in

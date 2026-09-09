@@ -232,7 +232,9 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
   and build `4`, confirming the production analytics path. The exported IPA remains available
   locally. App Store Connect Build Metadata reports **Binary State: Validated**, **Includes
   Symbols: Yes**, all expected signing entitlements and no visible processing or privacy warning;
-  its UI does not display the aggregated privacy-manifest report itself.
+  its UI does not display the aggregated privacy-manifest report itself. Build 4 also has focused
+  Subscription accessibility, feature sweep, purchase and Restore instructions saved in **What to
+  Test**.
 
 Physical-device accessibility follow-up completed on 2026-09-10 with build 4 on the connected
 iPhone 17 Pro Max at the largest accessibility text setting. The signed-in account **Continue** and
