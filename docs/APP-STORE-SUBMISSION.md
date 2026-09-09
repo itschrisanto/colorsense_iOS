@@ -118,7 +118,8 @@ Internal**. The privacy questionnaire and remaining release blockers still apply
       Connect accepted the upload at 05:34 UTC, completed processing without an upload warning or
       error, marked it **Ready to Submit**, and assigned it to **ColorSense Internal**. Chris then
       installed it from TestFlight on the physical iPhone and confirmed the app's About screen
-      reports **Version 1.0 (4)**.
+      reports **Version 1.0 (4)**. The Subscription screen also loaded and showed the expected
+      current plan.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
