@@ -1,7 +1,7 @@
 # ColorSense iOS — App Store submission
 
 The reference for getting this app into review, and the record of why each decision was made.
-Written 2026-09-05 and updated 2026-09-08 after the first TestFlight upload.
+Written 2026-09-05 and updated through 2026-09-10 after the first internal TestFlight pass.
 
 **Facts here that belong to the brand — pricing, positioning, handles, contact — are owned by the
 vault** (`Claude Skill.md`), not by this file. Where copy is drafted below it is drafted *from* the
@@ -13,22 +13,22 @@ vault; if the two ever disagree, the vault wins and this file is stale.
 
 **The shared backend is in production.** The Express API at `colorsense.online/api`, Postgres
 through Drizzle, Clerk auth on the production instance, and PostHog analytics with error tracking
-serve both clients. The StoreKit 2 client is implemented behind a release flag; Apple purchase
-reconciliation on the backend and verified account deletion are still required.
+serve both clients. StoreKit purchase reconciliation and Version 2 notification verification have
+passed against Apple's Sandbox. Verified account deletion and a real refund/revocation lifecycle
+test are still required before App Store submission.
 iOS is a client of the same stack the web app uses, verified end to end on a physical iPhone: email
 and Google sign-in, saving a palette to the account, and the palette appearing on colorsense.online.
 
 **The app is built.** Seven tools ship: Extractor, Contrast, Health, SVG Recolor, Visualizer,
 Schemes and Library, plus onboarding, the palette workspace, Account, About and Feedback.
-137 tests across 26 suites pass.
+138 tests across 26 suites pass.
 
 **Apple Developer Program enrollment is active.** Automatic provisioning now produces signed Debug
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
-uploaded. Build `1.0 (1)` finished processing and its main feature, StoreKit purchase and entitlement
-persistence tests passed. Build `1.0 (2)`, which fixes the remaining restore-path failure, was
-uploaded on 2026-09-09, finished processing, and passed the physical-device Restore check.
-Review information, the privacy questionnaire and the
-remaining release blockers still apply. See section 2.
+uploaded. Build `1.0 (3)` finished processing and passed fresh Monthly purchase, immediate
+activation, entitlement persistence and Restore Purchases checks on a physical iPhone. Review
+credentials and TestFlight information are saved. The privacy questionnaire and remaining release
+blockers still apply. See section 2.
 
 ---
 
@@ -117,6 +117,17 @@ validated on-device. Its credentials, contact information and reviewer notes wer
 App Store Connect for both app-level review and Beta App Review. The external TestFlight group and
 the remaining submission metadata are the next review-readiness work.
 
+### Current go/no-go decision — 2026-09-10
+
+- **Internal TestFlight: go.** Build `1.0 (3)` is already distributed internally and can accept more
+  App Store Connect users as internal testers.
+- **External TestFlight: prepare, then hold Beta App Review.** Create the external group and add the
+  intended testers, but do not submit its first build for Beta App Review until the privacy-policy
+  and support URLs serve the correct public pages and the pending Subscription accessibility patch
+  is either included in a numbered build or deliberately discarded.
+- **App Store Review: hold.** Verified backend account deletion, correct public legal/support pages,
+  the final App Privacy answers and a real refund/revocation entitlement test remain.
+
 ---
 
 ## 2b. TestFlight external testing, and the review it needs (drafted 2026-09-09)
@@ -157,9 +168,11 @@ app, and the two things that fail it here are the two that would fail the full r
       uses, so a tester who replies and a tester who taps the row reach the same inbox. Saved in
       TestFlight Test Information on 2026-09-10.
 - [ ] **Confirm the privacy policy URL resolves** and covers the app. It is
-      `https://colorsense.online/privacy-policy`, and section 9 already records that the page
-      **never mentions mobile or iOS**. A beta reviewer checks that the policy covers what they are
-      testing, so this is not only an App Store submission concern.
+      `https://colorsense.online/privacy-policy`. Checked directly on 2026-09-10: the route returns
+      the same product/SEO landing content as the homepage, with no privacy policy, data practices,
+      retention/deletion terms, mobile/iOS coverage or third-party disclosures. A beta reviewer
+      checks the policy for what they are testing, so this is not only an App Store submission
+      concern.
 
 Two things that are already true and worth not re-deriving:
 
@@ -224,7 +237,7 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       1242 × 2688 size because its consumable IAP form rejected the newer 6.9-inch dimensions.
       A dedicated Free demo account was created, verified through a returning sign-in, and saved in
       the app-level App Review Information on 2026-09-10.
-- [ ] Add a signed-transaction endpoint and Apple subscription lifecycle handling to the shared
+- [x] Add a signed-transaction endpoint and core Apple purchase reconciliation to the shared
       backend. Keep `GET /api/me` as the source of truth and make transaction processing idempotent.
       The implementation brief is `docs/replit-storekit-backend-handoff.md`. Replit reported the
       transaction and account-token routes implemented in development on 2026-09-07. The production
@@ -257,6 +270,10 @@ consumable does not appear in `Transaction.currentEntitlements` after it is fini
       Status then reported `SUCCESS`, the callback returned `200`, JWS and bundle ID verification
       passed, and the `TEST` event changed no transaction or entitlement counts. The notification
       transport and verification blocker is closed.
+- [ ] Exercise a real Sandbox renewal/refund/revocation lifecycle notification and confirm it
+      changes the stored grant and `GET /api/me` exactly once. Apple's successful `TEST`
+      notification proves transport, JWS and bundle validation, but it carries no signed
+      transaction and therefore does not prove entitlement mutation for refunds or revocations.
 - [x] Generate a separate **In-App Purchase key** in Users and Access → Integrations → In-App
       Purchase, then put its private key, key ID and issuer ID in Replit Secrets. The key was
       generated, its one-time `.p8` download was secured, and the required secret values were added
@@ -419,6 +436,10 @@ bought.
       because a signed-in phone renders the shorter paid layout and can never show the taller one.
       That is the same trap that hid the onboarding exit falling off the bottom of the screen, so
       reach for that flag whenever this screen is checked on a device.
+      **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is currently a
+      local uncommitted change and is not in TestFlight build `1.0 (3)`. Before external testing,
+      either keep it and upload build 4 with its matching dSYM, or discard it and correct this
+      paragraph. Do not submit a binary while the source-of-truth decision is unresolved.
 - [ ] **Re-check `PrivacyInfo.xcprivacy` if any package version moved.** It covers the whole package
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan
@@ -456,8 +477,8 @@ secondary categories; 4+ age rating; content-rights confirmation; privacy-policy
 keywords; support and marketing URLs; copyright; and manual release. Promotional text remains blank.
 The app download is free and public in all 175 countries or regions. Automatic distribution on Mac
 and Apple Vision Pro is off because the iPhone build has not been tested there. Six approved iPhone
-screenshots were uploaded in order on 2026-09-07. The build, review credentials and final privacy
-questionnaire remain unset.
+screenshots were uploaded in order on 2026-09-07. Build `1.0 (3)` is processed; app-level and Beta
+App Review credentials are saved. The final privacy questionnaire remains unset.
 
 **Keywords** (100 characters, comma separated, no spaces after commas, no words already in the name
 or subtitle): `palette,hex,wcag,contrast,accessibility,designer,swatch,brand,photo,extract,svg,mockup`
@@ -636,10 +657,18 @@ public wording.
       three tables, and `requireAuth`/`optionalAuth` recreate the user row lazily, so the webhook
       alone leaves a resurrection race that can also fire a Loops welcome email at somebody who just
       deleted their account.
-- [ ] **The web privacy policy never mentions mobile or iOS.** It is substantively accurate — same
-      Clerk instance, same API, same data — but a reviewer checks that the policy covers the app.
-      The website Terms also describe only the browser tool and omit accounts and App Store billing.
-      Use `docs/replit-website-legal-handoff.md` for both pages when the Replit side is updated.
+- [ ] **Publish the actual mobile-aware privacy policy.** Direct verification on 2026-09-10 found
+      that `https://colorsense.online/privacy-policy` serves the same marketing/SEO landing page as
+      `/`, so no privacy policy is publicly available at the configured URL. The final policy must
+      cover the iOS app, accounts, third-party services, retention and deletion. The in-app Terms
+      link at `https://colorsense.online/terms` has the same routing/content failure and currently
+      opens the marketing landing page instead of terms covering accounts and App Store billing. Use
+      `docs/replit-website-legal-handoff.md` for both pages when the Replit side is updated.
+- [ ] **Publish a real support/contact page and point Support URL to it.** Checked on 2026-09-10:
+      `https://colorsense.online` serves the marketing/SEO landing page and its rendered content
+      exposes no support contact information. App Store Connect currently uses that URL as Support
+      URL. The final page should give users a direct way to reach `hello@colorsense.online` and
+      cover app support; then update the App Store Connect field if the final path differs.
 - [x] **Add "Leave a review" to the About screen** (2026-09-09). The App Store record exists, so the
       condition it was waiting on is met. It is the third row in About's "Reach us" group, ordered
       after Send feedback and Email us so the three run from the most private way to say something
