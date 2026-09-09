@@ -49,9 +49,12 @@ Dark mode and the default size were both already correct and are unchanged.
   instead. That satisfies a different requirement but drops the answer to "am I buying this twice?"
   on a screen that requires an account before it will sell anything. Left alone because you are in
   the file. See the status note at the top of `docs/SUBSCRIPTION-REDESIGN-BRIEF.md`.
-- **The scroll check on a device.** The simulator cannot scroll, so "purchase and exit controls stay
-  reachable" at accessibility sizes is still unverified on hardware. At those sizes the hero fills
-  more than a full screen, so this is a real check rather than a formality.
+- ~~**The scroll check on a device.**~~ **Done 2026-09-09**, and worth knowing how. A signed-in
+  phone shows the shorter **paid** layout, so the taller free-state paywall cannot be reached on the
+  developer's own device at all. Launching with your `-iap-review-monthly` flag forces it, and on a
+  physical iPhone 17 Pro Max at a large accessibility size the free state scrolls to its purchase
+  button, Restore Purchases and the legal links, with Done still reachable. Your capture mode paid
+  for itself twice over here.
 
 ## One thing to carry into your own work
 

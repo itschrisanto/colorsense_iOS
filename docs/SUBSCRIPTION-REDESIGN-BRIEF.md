@@ -15,8 +15,18 @@
 > the reason CLAUDE.md flags the App/Website benefits split as the part of Coolors' paywall worth
 > borrowing.
 >
-> Still unevidenced: the accessibility-size and dark-appearance sweep of this specific screen, which
-> the interaction requirements below ask for.
+> **The accessibility and dark sweep is now done (2026-09-09) and found one defect.** Dark and the
+> default size were already correct. At accessibility-extra-large the hero's decorative chips were
+> landing on the paragraph, covering the first character of "Create, refine and export"; they now
+> hide at accessibility sizes. Simulator evidence in `.build/subscription-sweep/`.
+>
+> Confirmed afterwards on a physical iPhone 17 Pro Max at a large accessibility size: About and the
+> **paid** state read correctly, and the **free** state scrolls to its purchase button, Restore
+> Purchases and the legal links with Done still reachable. The free state had to be forced with the
+> `-iap-review-monthly` capture flag, because a signed-in phone renders the shorter paid layout and
+> can never show the taller one. That is the same trap that hid the onboarding exit falling off the
+> bottom of the screen, recorded in CLAUDE.md; it is worth reaching for that flag whenever this
+> screen is checked on a device.
 
 Requested by Chris on 2026-09-07. Implement after the StoreKit notification work is complete.
 The reference is a playful subscription sheet with a decorative hero, mascot, benefit list,

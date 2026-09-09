@@ -380,6 +380,20 @@ bought.
       content in the scroll fallback. Evidence: `.build/release-prep/se-*.png`.
 - [ ] **Physical-device follow-up:** verify scrolling through the accessibility hero content and
       tapping each exit. Simulator screenshots prove visibility, not touch or scroll behavior.
+      **Still open for the onboarding plan beat**, which is what this item is about. The equivalent
+      check on the **Subscription** screen was completed on 2026-09-09; see below.
+- [x] **Subscription screen swept at accessibility sizes and in dark (2026-09-09).** Dark and the
+      default size were already correct. One defect found and fixed: the hero's decorative chips
+      are positioned at fixed fractions of a hero that grows with its own type, so at
+      accessibility-extra-large they landed on the paragraph, covering the first character of
+      "Create, refine and export". They now hide at accessibility sizes rather than moving, since no
+      fixed position stays clear at every size. Simulator evidence in `.build/subscription-sweep/`.
+      Confirmed on a physical iPhone 17 Pro Max: About and the paid state read correctly, and the
+      free state scrolls to its purchase button, Restore Purchases and the legal links with Done
+      reachable. **The free state had to be forced with the `-iap-review-monthly` capture flag**,
+      because a signed-in phone renders the shorter paid layout and can never show the taller one.
+      That is the same trap that hid the onboarding exit falling off the bottom of the screen, so
+      reach for that flag whenever this screen is checked on a device.
 - [ ] **Re-check `PrivacyInfo.xcprivacy` if any package version moved.** It covers the whole package
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan

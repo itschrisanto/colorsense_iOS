@@ -2,18 +2,30 @@ import SwiftUI
 import Testing
 @testable import ColorSense
 
-/// The two rendering tests pass a deliberately generous `loadTimeout`.
+/// The two rendering tests pass a deliberately huge `loadTimeout`. It is a stuck-load guard here,
+/// not a performance assertion, and it should not be tuned down to "something reasonable".
 ///
-/// They drive a real WKWebView, and a cold WebKit process competing with the rest of the suite is
-/// slow to start: measured at 18.6s alone against a 31.7s timeout under load, which made them fail
-/// at random. The production default stays 30s, because that one is a person waiting for artwork.
+/// They drive real WKWebViews, and simulator WebKit startup is wildly variable. Measured on this
+/// machine, same tests, nothing else running: `allVisualizerScenesProduceNonemptyPNGImages` took
+/// **74s once and 291s another time**, and `pngContainsArtworkNotABlankWebView` has ranged 18.6s to
+/// a timeout. A 30s budget failed constantly; 180s still failed once under load. Anything derived
+/// from a typical run will fail on an atypical one, so the budget is set far above any observed
+/// value instead.
+///
+/// The underlying cost is that `allVisualizerScenes…` builds a **new `SvgPNGRenderer`, and so a new
+/// `WKWebView`, for every scene** — twenty web views in a loop. Reusing one renderer would cut this
+/// dramatically and is the real fix if this suite ever needs to be fast, but it would need a
+/// production API change, so it is deliberately left alone.
+///
+/// The production default stays 30s. That one is a person waiting for artwork, and raising it would
+/// make a real failure take minutes to report.
 @MainActor
 @Suite("SVG and image exports", .serialized)
 struct SvgExportTests {
     private let fixture = ##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><rect width="100" height="100" fill="#ff0000"/><rect x="100" width="100" height="100" fill="#0000ff"/></svg>"##
 
     @Test func pngContainsArtworkNotABlankWebView() async throws {
-        let renderer = SvgPNGRenderer(document: .init(svg: fixture, name: "test"), loadTimeout: .seconds(180))
+        let renderer = SvgPNGRenderer(document: .init(svg: fixture, name: "test"), loadTimeout: .seconds(900))
         let data = try await renderer.pngData()
         let image = try #require(UIImage(data: data)?.cgImage)
         #expect(image.width == 2048)
@@ -26,7 +38,7 @@ struct SvgExportTests {
     @Test func allVisualizerScenesProduceNonemptyPNGImages() async throws {
         for scene in VisualizerScene.allCases {
             let svg = VisualizerSVG.document(scene, palette: ExtractedPalette.sample.colors.map(\.hex))
-            let renderer = SvgPNGRenderer(document: .init(svg: svg, name: scene.title), loadTimeout: .seconds(180))
+            let renderer = SvgPNGRenderer(document: .init(svg: svg, name: scene.title), loadTimeout: .seconds(900))
             let data = try await renderer.pngData()
             let image = try #require(UIImage(data: data)?.cgImage)
             #expect(image.width == 2048)

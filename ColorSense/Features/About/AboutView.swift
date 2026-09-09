@@ -262,10 +262,17 @@ struct AboutView: View {
     ///
     /// They are authored at exactly this size, and like the SF Symbols beside them they do not
     /// scale with Dynamic Type. That is the existing behaviour of this list, not a new decision.
+    ///
+    /// `resizable()` is what makes the frame authoritative rather than decorative. A plain `Image`
+    /// draws at its natural size and **overflows a frame rather than being fitted by it**, so the
+    /// row would silently break if the assets were ever regenerated at a different point size.
+    /// They happen to match today; this makes that a coincidence the view no longer depends on.
     private func link(_ title: String, asset: String, _ url: String) -> some View {
         linkRow(title, url) {
             Image(asset)
                 .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
                 .frame(width: 22, height: 22)
         }
     }
