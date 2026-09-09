@@ -119,7 +119,10 @@ Internal**. The privacy questionnaire and remaining release blockers still apply
       error, marked it **Ready to Submit**, and assigned it to **ColorSense Internal**. Chris then
       installed it from TestFlight on the physical iPhone and confirmed the app's About screen
       reports **Version 1.0 (4)**. The Subscription screen also loaded and showed the expected
-      current plan.
+      current plan. App Store Connect's Build Metadata reports **Binary State: Validated** and
+      **Includes Symbols: Yes**, with the expected bundle ID, version, build number, Sign in with
+      Apple entitlement, `beta-reports-active: true`, `get-task-allow: false` and no visible
+      processing or privacy warning.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
@@ -594,7 +597,9 @@ showing a scene; SVG Recolor.
       verify `$exception` arrives symbolicated, both reliability tiles move, and the Discord
       issue-created alert fires. **Remove the crash trigger before external distribution.**
 - [ ] Read Apple's server-side privacy-manifest report and resolve any warning. That report is the
-      authoritative aggregation, not our copy of it.
+      authoritative aggregation, not our copy of it. Build 4 is **Validated** and App Store Connect
+      displays no processing or privacy warning in Test Information or Build Metadata, but those
+      pages do not expose the aggregated report itself.
 - [ ] Retention stays sparse until a second weekly cohort interval has elapsed. Expected, not a
       setup failure.
 
