@@ -136,7 +136,9 @@ app, and the two things that fail it here are the two that would fail the full r
       exercise to approve the app. App Store Connect has a sign-in-required field for this; leaving
       it empty while a core flow needs a login is a routine "Information Needed" rejection and a
       full round trip. The screenshots are the exception and genuinely need no account, because the
-      `-iap-review-*` capture flag reaches that screen directly. Onboarding's "Maybe later" exit
+      `-iap-review-*` capture flag reaches that screen directly.
+      **Spec: `docs/HANDOFF-demo-account.md`** — it must be a **Free** account, and it cannot be
+      created from the repo side. Onboarding's "Maybe later" exit
       means the app is usable without an account, so say that too, or the reviewer may assume the
       gate is harder than it is. Nothing in this repo records a demo account today.
 - [ ] **Write the Beta App Description.** What ColorSense is, in a sentence or two, for someone who
