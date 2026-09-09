@@ -28,9 +28,9 @@ and Release builds. The App Store Connect record exists and its six approved iPh
 uploaded. Build `1.0 (3)` finished processing and passed fresh Monthly purchase, immediate
 activation, entitlement persistence and Restore Purchases checks on a physical iPhone. Review
 credentials and TestFlight information are saved. Build `1.0 (4)`, containing the Subscription
-accessibility fix, now has a verified Release archive and App Store-signed IPA; Apple accepted the
-upload and began processing it on 2026-09-10. The privacy questionnaire and remaining release
-blockers still apply. See section 2.
+accessibility fix, now has a verified Release archive and App Store-signed IPA. Apple accepted and
+processed the upload on 2026-09-10; it is **Ready to Submit** and assigned to **ColorSense
+Internal**. The privacy questionnaire and remaining release blockers still apply. See section 2.
 
 ---
 
@@ -115,7 +115,8 @@ blockers still apply. See section 2.
       app binary and dSYM share UUID `49F6D3A0-76BB-3874-8C1A-8977C894AF9A`. The PostHog CLI
       accepted that dSYM for `online.colorsense.ios@1.0+4` without error. Dashboard confirmation
       remains. The IPA is retained at `.build/testflight/export-1.0-4/ColorSense.ipa`. App Store
-      Connect accepted the upload at 05:34 UTC and reported that package processing had begun.
+      Connect accepted the upload at 05:34 UTC, completed processing without an upload warning or
+      error, marked it **Ready to Submit**, and assigned it to **ColorSense Internal**.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
@@ -130,9 +131,8 @@ the remaining submission metadata are the next review-readiness work.
 
 ### Current go/no-go decision — 2026-09-10
 
-- **Internal TestFlight: go.** Build `1.0 (3)` is already distributed internally and can accept more
-  App Store Connect users as internal testers. Apple accepted build `1.0 (4)` as its accessibility
-  replacement on 2026-09-10; wait for processing and then assign it to the internal group.
+- **Internal TestFlight: go.** Build `1.0 (4)` is processed, **Ready to Submit**, and assigned to
+  **ColorSense Internal**. It can accept more App Store Connect users as internal testers.
 - **External TestFlight: prepare, then hold Beta App Review.** Create the external group and add the
   intended testers, but do not submit its first build for Beta App Review until the privacy-policy
   and support URLs serve the correct public pages. The Subscription accessibility patch is now part
@@ -454,8 +454,8 @@ bought.
       reach for that flag whenever this screen is checked on a device.
       **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is included in
       build 4. Its Release archive and App Store-signed IPA passed locally on 2026-09-10, and Apple
-      accepted the upload for processing. Processing, internal-group assignment and PostHog
-      dashboard confirmation remain before it replaces TestFlight build `1.0 (3)`.
+      completed processing and assigned it to the internal group. PostHog dashboard confirmation
+      remains.
 - [x] **Re-check `PrivacyInfo.xcprivacy` for build 4.** It covers the whole package
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan

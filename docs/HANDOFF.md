@@ -224,8 +224,9 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
   privacy manifests, Sign in with Apple, `beta-reports-active`, and `get-task-allow` disabled. The
   app binary and dSYM UUID both equal `49F6D3A0-76BB-3874-8C1A-8977C894AF9A`. The PostHog CLI
   accepted the upload for `online.colorsense.ios@1.0+4` without error; confirm it in the dashboard
-  after processing. App Store Connect accepted the build-4 upload at 05:34 UTC on 2026-09-10 and
-  reported that package processing had begun. The exported IPA remains available locally.
+  after processing. App Store Connect accepted the build-4 upload at 05:34 UTC on 2026-09-10,
+  completed processing, marked it **Ready to Submit**, and assigned it to **ColorSense Internal**.
+  The exported IPA remains available locally.
 
 Physical-device accessibility follow-up completed on 2026-09-10 with build 4 on the connected
 iPhone 17 Pro Max at the largest accessibility text setting. The signed-in account **Continue** and
@@ -250,8 +251,8 @@ and confirmed immediate Pro activation plus persistence after relaunch. The firs
 TestFlight setup detail: **Media & Purchases** must be signed out before the Sandbox Apple Account
 selected under **Developer** is used. Account-deletion verification is explicitly parked. The
 three Sandbox Apple Accounts remain StoreKit-only test identities. App Store Connect still needs
-selection of the final build and the final privacy questionnaire. Apple accepted build `1.0 (4)`
-for processing; assign it to the internal group once processing finishes.
+selection of the final build and the final privacy questionnaire. Build `1.0 (4)` is processed,
+**Ready to Submit**, and assigned to the internal group.
 
 ## Chris has feedback and new features to discuss
 
