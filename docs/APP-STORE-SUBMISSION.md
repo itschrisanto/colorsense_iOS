@@ -115,6 +115,43 @@ deletion on 2026-09-09. The current independent work is completing the IAP revie
 
 ---
 
+## 2b. TestFlight external testing, and the review it needs (drafted 2026-09-09)
+
+Internal testing is running. **External testing is a separate gate and nothing here is drafted for
+it yet**, which is easy to miss because internal builds skip it entirely: internal testers (up to
+100, each needing a real App Store Connect role) get builds in minutes, while external testers (up
+to 10,000, by email or public link) cost a **Beta App Review on every significant build**. Builds
+expire after 90 days either way.
+
+Beta App Review is a real review. It is lighter than App Store review but it is a person opening the
+app, and the two things that fail it here are the two that would fail the full review.
+
+- [ ] **Provide a demo account, and say the app needs one.** This is the same blocker section 3a
+      raises for the IAP records, and it bites harder here: a reviewer who cannot sign in cannot
+      reach Library, Subscription, saved palettes or anything Pro. Onboarding's "Maybe later" exit
+      means the app is usable without an account, so say that too, or the reviewer may assume the
+      gate is harder than it is. Nothing in this repo records a demo account today.
+- [ ] **Write the Beta App Description.** What ColorSense is, in a sentence or two, for someone who
+      has never seen it. Draw from section 5's drafted metadata rather than writing a second
+      description that can drift from it.
+- [ ] **Write "What to Test" for the build being sent.** This is per build and should name what
+      actually changed, not repeat the description. For the current build that is the StoreKit
+      purchase paths and Restore, since those are the newest and least exercised.
+- [ ] **Set the feedback email to `hello@colorsense.online`**, the vault's contact address in
+      section 12, not a personal address. It is the same address About's "Email us" row already
+      uses, so a tester who replies and a tester who taps the row reach the same inbox.
+- [ ] **Confirm the privacy policy URL resolves** and covers the app. It is
+      `https://colorsense.online/privacy-policy`, and section 9 already records that the page
+      **never mentions mobile or iOS**. A beta reviewer checks that the policy covers what they are
+      testing, so this is not only an App Store submission concern.
+
+Two things that are already true and worth not re-deriving:
+
+- **No purchase copy problem.** Guideline 3.1.1 applies in beta as well, and the app already routes
+  every Pro tier through In-App Purchase and names no outside checkout.
+- **Sign in with Apple is live**, so guideline 4.8 is satisfied for the account screen, which is
+  what previously made the account beat a rejection risk on its own.
+
 ## 3. StoreKit, and why it gates submission
 
 `Services/ProStore.swift` is the client seam; every screen offering Pro already calls through it.
@@ -447,7 +484,10 @@ logical size matches, with the status bar cleaned up.
       files are 1290 x 2796 RGB PNGs without transparency, accepted by the 6.9" display slot in
       filename order: `01-palette`, `02-contrast`, `03-health`, `04-visualizer`, `05-svg`,
       `06-schemes`. App Store Connect shows 6 of 10 and derives the 6.5" set from them.
-- [ ] 6.5" iPhone — 1242 x 2688, only if targeting that display class explicitly
+- [x] 6.5" iPhone — 1242 x 2688. **Not needed, closed 2026-09-09.** The line above already records
+      that App Store Connect derives the 6.5" set from the uploaded 6.9" images, and nothing here
+      targets that display class explicitly. It was left open as a conditional rather than a task;
+      resolving it stops it reading as outstanding work on the run up to beta.
 
 **No iPad set is required, and that is deliberate.** The app is iPhone-only for 1.0
 (`TARGETED_DEVICE_FAMILY: "1"`), so App Store Connect asks for no 13" iPad captures. If iPad support
