@@ -196,7 +196,7 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    App Store questionnaire in the order section 8c gives. The copy-ready Replit website brief for
    both legal pages is `docs/replit-website-legal-handoff.md`.
 6. **Keep version numbers aligned.** The first App Store version and `MARKETING_VERSION` are `1.0`.
-   `CURRENT_PROJECT_VERSION` is `4` for the Subscription accessibility build and must increment on
+   `CURRENT_PROJECT_VERSION` is `5` for the privacy-correction build and must increment on
    **every** later upload — App Store Connect rejects a reused build number, and PostHog binds each
    dSYM to the release those numbers name.
 

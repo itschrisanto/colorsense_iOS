@@ -413,13 +413,13 @@ bought.
 ## 4. Settle before uploading
 
 - [x] **Decide the real version number.** The first App Store version and `MARKETING_VERSION` are
-      both `1.0`; `CURRENT_PROJECT_VERSION` is `4`. Both are hand-edited in `project.yml`; nothing
+      both `1.0`; `CURRENT_PROJECT_VERSION` is `5`. Both are hand-edited in `project.yml`; nothing
       bumps them automatically.
 - [x] **Increment `CURRENT_PROJECT_VERSION` on every upload**, including re-uploads of the same
       marketing version. Two independent reasons: App Store Connect rejects a reused build number,
       and PostHog binds each uploaded dSYM to the release these numbers identify, so two builds at
       one version collide and either fail the build or silently attach the wrong symbols. The next
-      validation upload is set to `1.0 (4)` in `project.yml`.
+      replacement privacy-validation build is set to `1.0 (5)` in `project.yml`.
 - [x] **`posthog-cli` is authenticated, and the upload is proved end to end (2026-09-05).**
       `Config/PostHogCLI.env` holds a personal API key and the project ID; it is gitignored and
       untracked, verified both ways. A real Release build with `CODE_SIGNING_ALLOWED=NO` created the
