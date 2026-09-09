@@ -27,8 +27,9 @@ Schemes and Library, plus onboarding, the palette workspace, Account, About and 
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
 uploaded. Build `1.0 (3)` finished processing and passed fresh Monthly purchase, immediate
 activation, entitlement persistence and Restore Purchases checks on a physical iPhone. Review
-credentials and TestFlight information are saved. The privacy questionnaire and remaining release
-blockers still apply. See section 2.
+credentials and TestFlight information are saved. Build `1.0 (4)`, containing the Subscription
+accessibility fix, now has a verified local Release archive and App Store-signed IPA ready to
+upload. The privacy questionnaire and remaining release blockers still apply. See section 2.
 
 ---
 
@@ -64,8 +65,8 @@ blockers still apply. See section 2.
 - [x] Create the App Store Connect record. Created 2026-09-06 as **ColorSense: Palette Studio**
       under Chrisanto Mendez; Apple ID `6809134374`, bundle ID `online.colorsense.ios`, SKU
       `colorsense-ios-001`, primary language English (U.S.), Full Access.
-- [x] Create the StoreKit products (section 3). The records were created on 2026-09-07; review
-      review screenshot uploads remain; the three final captures are prepared locally.
+- [x] Create the StoreKit products (section 3). The records were created on 2026-09-07, and the
+      three final product-specific review screenshots were uploaded by 2026-09-10.
 - [x] Produce a signed Release archive and App Store Connect export. The preflight archive and IPA
       were created on 2026-09-06 with automatic signing; nothing was uploaded.
 - [x] Upload and verify the matching PostHog dSYM for TestFlight build `1.0+1` (2026-09-08).
@@ -105,6 +106,15 @@ blockers still apply. See section 2.
       (2026-09-09). Purchase and persistence passed in build 1; after updating to build `1.0 (2)`,
       Chris confirmed “your purchase restored.” Build 2 completed processing and internal distribution.
       TestFlight automatically uses Apple's sandbox environment.
+- [x] Archive and export build `1.0 (4)` with the Subscription accessibility repair
+      (2026-09-10). All 139 tests across 26 suites passed first. The signed Release archive and
+      App Store Connect IPA both succeeded locally. The exported app uses Apple Distribution and
+      the App Store provisioning profile, carries Sign in with Apple and `beta-reports-active`,
+      has `get-task-allow = false`, and embeds four privacy manifests with tracking disabled. Its
+      app binary and dSYM share UUID `49F6D3A0-76BB-3874-8C1A-8977C894AF9A`. The PostHog CLI
+      accepted that dSYM for `online.colorsense.ios@1.0+4` without error. Dashboard confirmation
+      remains after upload. The IPA is retained at `.build/testflight/export-1.0-4/ColorSense.ipa`;
+      it has not been uploaded to App Store Connect.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
@@ -120,7 +130,8 @@ the remaining submission metadata are the next review-readiness work.
 ### Current go/no-go decision — 2026-09-10
 
 - **Internal TestFlight: go.** Build `1.0 (3)` is already distributed internally and can accept more
-  App Store Connect users as internal testers.
+  App Store Connect users as internal testers. Build `1.0 (4)` is locally ready to upload as its
+  accessibility replacement.
 - **External TestFlight: prepare, then hold Beta App Review.** Create the external group and add the
   intended testers, but do not submit its first build for Beta App Review until the privacy-policy
   and support URLs serve the correct public pages. The Subscription accessibility patch is now part
@@ -390,7 +401,7 @@ bought.
 ## 4. Settle before uploading
 
 - [x] **Decide the real version number.** The first App Store version and `MARKETING_VERSION` are
-      both `1.0`; `CURRENT_PROJECT_VERSION` is `1`. Both are hand-edited in `project.yml`; nothing
+      both `1.0`; `CURRENT_PROJECT_VERSION` is `4`. Both are hand-edited in `project.yml`; nothing
       bumps them automatically.
 - [x] **Increment `CURRENT_PROJECT_VERSION` on every upload**, including re-uploads of the same
       marketing version. Two independent reasons: App Store Connect rejects a reused build number,
@@ -440,19 +451,19 @@ bought.
       because a signed-in phone renders the shorter paid layout and can never show the taller one.
       That is the same trap that hid the onboarding exit falling off the bottom of the screen, so
       reach for that flag whenever this screen is checked on a device.
-      **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is included in the
-      build-4 source. Build 4 still needs its Release archive, upload and matching dSYM verification
-      before it can replace TestFlight build `1.0 (3)`.
-- [ ] **Re-check `PrivacyInfo.xcprivacy` if any package version moved.** It covers the whole package
+      **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is included in
+      build 4. Its Release archive and App Store-signed IPA passed locally on 2026-09-10; upload and
+      PostHog dashboard confirmation remain before it replaces TestFlight build `1.0 (3)`.
+- [x] **Re-check `PrivacyInfo.xcprivacy` for build 4.** It covers the whole package
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan
       only runs server-side at upload, so the first upload is the real test.
-      **Checked 2026-09-09 and still accurate**, against the resolved versions rather than from
+      **Checked again 2026-09-10 and still accurate**, against the resolved versions rather than from
       memory: clerk-ios `1.5.1` (the version the manifest itself names, so Clerk has not moved),
       Nuke `13.2.0`, PhoneNumberKit `5.0.8`, posthog-ios `3.71.2`. Searching the SPM checkouts for
       `PrivacyInfo.xcprivacy` finds none in clerk-ios or Nuke, one in PhoneNumberKit, and two under
-      posthog-ios (its own plus the bundled PHPLCrashReporter). That is exactly what the manifest
-      assumes. Left unchecked because it has to be re-run whenever a version moves, not ticked once.
+      posthog-ios (its own plus the bundled PHPLCrashReporter). The exported app embeds all four,
+      and the app manifest declares tracking disabled. Repeat this check if any package moves.
 
 ---
 

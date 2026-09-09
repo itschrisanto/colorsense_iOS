@@ -178,10 +178,10 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
 3. **Finish the three In-App Purchase review records.** App Store Connect was rechecked on
    2026-09-09. Monthly, Annual and Pro Pass are available in all 175 countries or regions, inherit
    the parent app's **App Store software** tax category, and now have final product-specific review
-   notes. Capture three clean Free-account **Account → Subscription** screens with Monthly, Annual
-   and Pro Pass selected respectively, upload each to its matching review record, and create the
-   demo account referenced by the saved notes and app-level App Review Information. Do not add any
-   product for review until those inputs and the final build are ready.
+   notes. Their three clean Free-account **Account → Subscription** review screenshots were uploaded
+   to the matching records on 2026-09-10. The dedicated Free demo account was validated on-device;
+   its credentials and contact information are saved only in App Store Connect. Do not add any
+   product for review until the final build is selected for submission.
 4. **Fix account deletion.** The app calls Clerk's `user.delete()` and nothing else, so the
    ColorSense Postgres row and every saved palette survive. This is a backend job — a verified Clerk
    `user.deleted` webhook — and the in-app copy currently claims otherwise. The implementation brief
@@ -219,6 +219,12 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
   Both signed apps carry Sign in with Apple; the export also carries `beta-reports-active` and has
   `get-task-allow` disabled. Build `1.0 (1)` was accepted by App Store Connect on 2026-09-08, and
   its exact archived dSYM is verified in PostHog.
+- **Build 4 release package:** all 139 tests across 26 suites passed on 2026-09-10. The local
+  `1.0 (4)` Release archive and App Store-signed IPA succeeded with StoreKit enabled, four embedded
+  privacy manifests, Sign in with Apple, `beta-reports-active`, and `get-task-allow` disabled. The
+  app binary and dSYM UUID both equal `49F6D3A0-76BB-3874-8C1A-8977C894AF9A`. The PostHog CLI
+  accepted the upload for `online.colorsense.ios@1.0+4` without error; confirm it in the dashboard
+  after App Store upload. The IPA remains local and has not been uploaded.
 
 Remaining local follow-up: physical-device verification of accessibility scrolling and exit taps.
 The **ColorSense Internal** TestFlight group was created on 2026-09-08 with automatic distribution,
@@ -241,7 +247,8 @@ and confirmed immediate Pro activation plus persistence after relaunch. The firs
 TestFlight setup detail: **Media & Purchases** must be signed out before the Sandbox Apple Account
 selected under **Developer** is used. Account-deletion verification is explicitly parked. The
 three Sandbox Apple Accounts remain StoreKit-only test identities. App Store Connect still needs review
-information and the final privacy questionnaire.
+selection of the final build and the final privacy questionnaire. Build `1.0 (4)` is ready locally
+to replace build 3 once upload is authorized.
 
 ## Chris has feedback and new features to discuss
 
