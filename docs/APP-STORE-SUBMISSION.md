@@ -21,7 +21,7 @@ and Google sign-in, saving a palette to the account, and the palette appearing o
 
 **The app is built.** Seven tools ship: Extractor, Contrast, Health, SVG Recolor, Visualizer,
 Schemes and Library, plus onboarding, the palette workspace, Account, About and Feedback.
-138 tests across 26 suites pass.
+139 tests across 26 suites pass.
 
 **Apple Developer Program enrollment is active.** Automatic provisioning now produces signed Debug
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
@@ -123,8 +123,8 @@ the remaining submission metadata are the next review-readiness work.
   App Store Connect users as internal testers.
 - **External TestFlight: prepare, then hold Beta App Review.** Create the external group and add the
   intended testers, but do not submit its first build for Beta App Review until the privacy-policy
-  and support URLs serve the correct public pages and the pending Subscription accessibility patch
-  is either included in a numbered build or deliberately discarded.
+  and support URLs serve the correct public pages. The Subscription accessibility patch is now part
+  of the build-4 source.
 - **App Store Review: hold.** Verified backend account deletion, correct public legal/support pages,
   the final App Privacy answers and a real refund/revocation entitlement test remain.
 
@@ -396,7 +396,7 @@ bought.
       marketing version. Two independent reasons: App Store Connect rejects a reused build number,
       and PostHog binds each uploaded dSYM to the release these numbers identify, so two builds at
       one version collide and either fail the build or silently attach the wrong symbols. The next
-      validation upload is set to `1.0 (3)` in `project.yml`.
+      validation upload is set to `1.0 (4)` in `project.yml`.
 - [x] **`posthog-cli` is authenticated, and the upload is proved end to end (2026-09-05).**
       `Config/PostHogCLI.env` holds a personal API key and the project ID; it is gitignored and
       untracked, verified both ways. A real Release build with `CODE_SIGNING_ALLOWED=NO` created the
@@ -424,6 +424,10 @@ bought.
       tapping each exit. Simulator screenshots prove visibility, not touch or scroll behavior.
       **Still open for the onboarding plan beat**, which is what this item is about. The equivalent
       check on the **Subscription** screen was completed on 2026-09-09; see below.
+      The interactive simulator pass was repeated at accessibility-extra-large on 2026-09-10:
+      Account's **Maybe later** and the plan beat's purchase, Restore Purchases and **Not now**
+      controls were all exposed to accessibility, and tapping **Not now** returned to the palette.
+      Keep this item open only for the physical-device touch/scroll confirmation.
 - [x] **Subscription screen swept at accessibility sizes and in dark (2026-09-09).** Dark and the
       default size were already correct. One defect found and fixed: the hero's decorative chips
       are positioned at fixed fractions of a hero that grows with its own type, so at
@@ -436,10 +440,9 @@ bought.
       because a signed-in phone renders the shorter paid layout and can never show the taller one.
       That is the same trap that hid the onboarding exit falling off the bottom of the screen, so
       reach for that flag whenever this screen is checked on a device.
-      **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is currently a
-      local uncommitted change and is not in TestFlight build `1.0 (3)`. Before external testing,
-      either keep it and upload build 4 with its matching dSYM, or discard it and correct this
-      paragraph. Do not submit a binary while the source-of-truth decision is unresolved.
+      **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is included in the
+      build-4 source. Build 4 still needs its Release archive, upload and matching dSYM verification
+      before it can replace TestFlight build `1.0 (3)`.
 - [ ] **Re-check `PrivacyInfo.xcprivacy` if any package version moved.** It covers the whole package
       graph: ClerkKit/ClerkKitUI and Nuke ship no manifest of their own and are linked statically,
       so their API use is ours to declare. PostHog and PhoneNumberKit ship their own. Apple's scan

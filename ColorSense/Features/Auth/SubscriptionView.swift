@@ -412,7 +412,24 @@ private struct SubscriptionHero: View {
 }
 
 private struct HeroColorConfetti: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
+        // The chips sit at fixed fractions of the hero, so they do not move as the hero grows with
+        // the type inside it. At accessibility sizes the headline and paragraph expand into the
+        // corners the chips occupy and the decoration lands on the words: measured at
+        // accessibility-extra-large, the teal chip covered the first character of "Create, refine
+        // and export" and the yellow one sat inside the same paragraph.
+        //
+        // The decoration yields rather than being repositioned, because there is no fixed position
+        // that stays clear at every size, and a reader at accessibility sizes is asking for words
+        // rather than confetti. The hero keeps its gradient and Lauma, so nothing reads as missing.
+        if !typeSize.isAccessibilitySize {
+            chips
+        }
+    }
+
+    private var chips: some View {
         GeometryReader { proxy in
             Group {
                 chip(BrandColor.coral, width: 54, height: 22, angle: -14)
