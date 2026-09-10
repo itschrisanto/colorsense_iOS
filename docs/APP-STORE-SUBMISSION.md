@@ -31,12 +31,11 @@ credentials and TestFlight information are saved. Build `1.0 (4)`, containing th
 accessibility fix, now has a verified Release archive and App Store-signed IPA. Apple accepted and
 processed the upload on 2026-09-10; it is **Ready to Submit** and assigned to **ColorSense
 Internal**. The privacy questionnaire and remaining release blockers still apply. See section 2.
-Build `1.0 (5)`, containing the corrected privacy manifest and PostHog GeoIP controls, **was
-uploaded on 2026-09-10 and its final processing state is unconfirmed.** Apple accepted the upload
-session, the package passed local export, and it entered App Store Connect's analysis stage
-including the private-API scan with no warning or error. The session ended before transport and
-server-side validation finished, so **whether it completed processing has to be read in App Store
-Connect** — it cannot be checked from this machine, which holds no App Store Connect API key.
+Build `1.0 (5)`, containing the corrected privacy manifest and PostHog GeoIP controls, is
+**uploaded and processed**, confirmed directly in App Store Connect on 2026-09-10. Build Uploads
+shows **Complete**; the build is **Ready to Submit**, assigned to **ColorSense Internal**, with
+one tester invited. This resolves the earlier interrupted-upload uncertainty. Its build ID is
+`3a00ed51-2d1d-4276-b455-f3f4bcb22ed9`.
 
 Its archive was verified locally on 2026-09-10, against
 `.build/testflight/ColorSense-1.0-5.xcarchive`:
@@ -154,7 +153,8 @@ Its archive was verified locally on 2026-09-10, against
       Functionality and disables tracking. The app binary and dSYM share UUID
       `323B94E5-A987-3111-A492-EC7A6300A442`. PostHog reports the same UUID under release
       `online.colorsense.ios@1.0+5`, with no failure reason. The IPA is retained at
-      `.build/testflight/export-1.0-5-verified/ColorSense.ipa`; it has not been uploaded.
+      `.build/testflight/export-1.0-5-verified/ColorSense.ipa`. Upload and processing are confirmed
+      complete in App Store Connect; build 5 is Ready to Submit and assigned to ColorSense Internal.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
@@ -169,8 +169,8 @@ the remaining submission metadata are the next review-readiness work.
 
 ### Current go/no-go decision — 2026-09-10
 
-- **Internal TestFlight: go.** Build `1.0 (4)` is processed, **Ready to Submit**, and assigned to
-  **ColorSense Internal**. Build `1.0 (5)` is verified locally and ready to replace it after upload.
+- **Internal TestFlight: go.** Build `1.0 (5)` is processed, **Ready to Submit**, and assigned to
+  **ColorSense Internal**, confirmed directly in App Store Connect on 2026-09-10.
   The group can accept more App Store Connect users as internal testers.
 - **External TestFlight: prepare, then hold Beta App Review.** Create the external group and add the
   intended testers, but do not submit its first build for Beta App Review until the privacy-policy
@@ -547,8 +547,8 @@ and Apple Vision Pro is off because the iPhone build has not been tested there. 
 screenshots were uploaded in order on 2026-09-07. Build `1.0 (3)` is processed; app-level and Beta
 App Review credentials are saved. The App Privacy data types and all ten per-type answer flows were
 completed in App Store Connect on 2026-09-10 but intentionally remain unpublished until the public
-privacy-policy route is correct and fresh build-5 events pass the PostHog GeoIP check. Build 5 now
-contains the matching source manifest and PostHog controls.
+privacy-policy route is correct. The build-5 PostHog GeoIP check passed on 2026-09-10: a fresh
+`app_opened` carried the suppression flag, no location enrichment and no stored `$ip` value.
 
 **Keywords** (100 characters, comma separated, no spaces after commas, no words already in the name
 or subtitle): `palette,hex,wcag,contrast,accessibility,designer,swatch,brand,photo,extract,svg,mockup`
@@ -588,7 +588,7 @@ Support, Other User Content, User ID and Purchases use App Functionality, are li
 are not used for tracking. Product Interaction and Other Usage Data use Analytics, are not linked
 and are not used for tracking. Crash Data and Other Diagnostic Data use App Functionality, are not
 linked and are not used for tracking. Every other data type is unselected. Do not publish until the
-public privacy policy is fixed and the next build passes the GeoIP verification below.
+public privacy policy is fixed. The build-5 GeoIP verification below has passed.
 
 **Data linked to the user** (through the Clerk account):
 - Contact Info — email address, name. Clerk, for authentication.
@@ -617,10 +617,11 @@ crash diagnostics as App Functionality, matching Apple's category definitions an
 crash-report manifest. A production query also found IP-derived country data on every historical
 iOS event and city data on some. ColorSense does not use location analytics, so the source now adds
 PostHog's `$geoip_disable: true` processing property to every allowed product and crash event. These
-source changes are embedded in the verified build `1.0 (5)` IPA, which is ready but not yet uploaded.
+source changes are embedded in build `1.0 (5)`, now uploaded and processed in TestFlight.
 PostHog project `590983` was also changed to `anonymize_ips: true` on 2026-09-10 and read back as
-enabled. After the next upload, verify that fresh events contain no `$geoip_*` enrichment and only
-anonymized IP data before leaving Coarse Location out of the questionnaire.
+enabled. The live build-5 check passed later that day: a fresh `app_opened` event carried
+`$geoip_disable: true`, contained none of the checked country, city, latitude or longitude fields,
+and stored no `$ip` value. Coarse Location can remain omitted from the questionnaire.
 
 ---
 

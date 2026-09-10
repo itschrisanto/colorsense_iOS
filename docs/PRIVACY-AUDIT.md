@@ -188,9 +188,13 @@ and nothing leaves it.
 all historical iOS events and city properties on some of them. ColorSense does not use location
 analytics. `AnalyticsService` now applies `$geoip_disable: true` to every event that passes its
 allowlist, including `$exception`. PostHog project `590983` was also changed to
-`anonymize_ips: true` and read back as enabled on 2026-09-10. The next uploaded build must verify
-that fresh events no longer carry `$geoip_*` properties and that IP data is anonymized before Coarse
-Location is omitted from App Store Connect.
+`anonymize_ips: true` and read back as enabled on 2026-09-10.
+
+**Live follow-up, 2026-09-10:** the check passed against TestFlight build `1.0 (5)`. A fresh
+`app_opened` event arrived at `2026-09-10T03:30:13.088Z`. It carried `$geoip_disable: true`, had no
+country code, country name, city, latitude or longitude properties, and stored no `$ip` value. A
+separate read-only project API check reconfirmed `anonymize_ips: true`. This closes the runtime
+GeoIP and IP-storage verification required before omitting Coarse Location from App Store Connect.
 
 Permission strings present and correct in `project.yml`: `NSCameraUsageDescription`,
 `NSPhotoLibraryUsageDescription`, `NSPhotoLibraryAddUsageDescription`. The privacy manifest declares

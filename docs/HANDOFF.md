@@ -243,7 +243,10 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
   Functionality and disables tracking. The app binary and dSYM UUID both equal
   `323B94E5-A987-3111-A492-EC7A6300A442`; PostHog has that exact symbol set under
   `online.colorsense.ios@1.0+5` with no failure reason. The IPA remains local at
-  `.build/testflight/export-1.0-5-verified/ColorSense.ipa` and has not been uploaded.
+  `.build/testflight/export-1.0-5-verified/ColorSense.ipa`. App Store Connect was checked directly
+  on 2026-09-10: upload **Complete**, build **Ready to Submit**, assigned to **ColorSense Internal**,
+  with one tester invited. Build ID: `3a00ed51-2d1d-4276-b455-f3f4bcb22ed9`. This supersedes
+  the earlier local-only and interrupted-upload notes.
 
 Physical-device accessibility follow-up completed on 2026-09-10 with build 4 on the connected
 iPhone 17 Pro Max at the largest accessibility text setting. The signed-in account **Continue** and
@@ -286,14 +289,15 @@ stored messages are Customer Support data, and production PostHog events carried
 data on every iOS event plus city data on some. The manifest now declares Customer Support, while
 `AnalyticsService` applies PostHog's `$geoip_disable: true` to every allowed product and crash event.
 PostHog project `590983` was also changed to `anonymize_ips: true` and read back as enabled on
-2026-09-10. After the next build is launched, query fresh events and confirm that `$geoip_*`
-properties are absent and IP data is anonymized before omitting Coarse Location from App Store
+2026-09-10. The fresh-event check passed against TestFlight build `1.0 (5)` later that day: an
+`app_opened` event carried `$geoip_disable: true`, contained no checked country, city, latitude or
+longitude enrichment and stored no `$ip` value. Coarse Location can remain omitted from App Store
 Connect.
 
 The App Privacy questionnaire was then fully configured, including every per-type follow-up, in App Store Connect on 2026-09-10 with
 the data types, purposes, identity linkage and no-tracking answers recorded in section 6 of
 `docs/APP-STORE-SUBMISSION.md`. It remains deliberately unpublished until the public privacy-policy
-route is correct and the replacement build passes that fresh-event GeoIP check.
+route is correct; the replacement build's fresh-event GeoIP check has passed.
 
 ## Chris has feedback and new features to discuss
 
