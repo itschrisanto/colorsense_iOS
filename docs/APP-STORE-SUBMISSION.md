@@ -31,8 +31,26 @@ credentials and TestFlight information are saved. Build `1.0 (4)`, containing th
 accessibility fix, now has a verified Release archive and App Store-signed IPA. Apple accepted and
 processed the upload on 2026-09-10; it is **Ready to Submit** and assigned to **ColorSense
 Internal**. The privacy questionnaire and remaining release blockers still apply. See section 2.
-Build `1.0 (5)`, containing the corrected privacy manifest and PostHog GeoIP controls, has a
-verified Release archive and local App Store-signed IPA ready for upload. It has not been uploaded.
+Build `1.0 (5)`, containing the corrected privacy manifest and PostHog GeoIP controls, **was
+uploaded on 2026-09-10 and its final processing state is unconfirmed.** Apple accepted the upload
+session, the package passed local export, and it entered App Store Connect's analysis stage
+including the private-API scan with no warning or error. The session ended before transport and
+server-side validation finished, so **whether it completed processing has to be read in App Store
+Connect** — it cannot be checked from this machine, which holds no App Store Connect API key.
+
+Its archive was verified locally on 2026-09-10, against
+`.build/testflight/ColorSense-1.0-5.xcarchive`:
+
+- `CFBundleShortVersionString` `1.0`, `CFBundleVersion` `5`, team `L53K68TJHL`.
+- **The `-iap-review-*` screenshot scaffolding is absent from the shipped binary**, checked with
+  `strings` rather than by trusting that it was removed from source, which is what section 3a asks
+  for. It is also gone from the source tree.
+- `ColorSense.app.dSYM` is present, so PostHog has symbols to bind to this release.
+- `PrivacyInfo.xcprivacy` is at the bundle root.
+- The production analytics configuration shipped: host `https://us.i.posthog.com`, project key
+  present with the expected `phc_` prefix.
+- The Clerk key is `pk_live_`, so Clerk telemetry stays off and the privacy manifest stays true. A
+  development key here would silently start telemetry and make that manifest wrong.
 
 ---
 
