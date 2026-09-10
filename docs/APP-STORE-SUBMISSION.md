@@ -433,6 +433,11 @@ launch flags that supplied fixed review prices and a forced Free state. Those ca
 their fixed price data were removed from the app source on 2026-09-09; only the final JPEG assets
 remain. Before the submission archive, grep the Release source and product for `iap-review` as a
 final guard against capture scaffolding entering the build.
+**Run for build `1.0 (5)` on 2026-09-10 and clean**: `strings` over the archived Release binary at
+`.build/testflight/ColorSense-1.0-5.xcarchive` returns no `iap-review` occurrence, and the source
+tree returns none either. Note the documented dev flags `-show-onboarding` and `-sample-palette` do
+still appear in the binary; that is deliberate and long-standing, so do not read them as a failure
+of this check.
 
 **One sentence in the preamble is a judgment call, not a fact to copy blindly.** Explaining that the
 entitlement lives on the backend is what makes the sign-in requirement look deliberate rather than
