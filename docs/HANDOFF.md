@@ -1,6 +1,6 @@
 # ColorSense iOS — handoff
 
-Written 2026-09-05 and updated 2026-09-07. Chris's Apple Developer Program enrollment is active.
+Written 2026-09-05 and updated through 2026-09-10. Chris's Apple Developer Program enrollment is active.
 This is what you need to pick the project up.
 
 ## Read these first, in this order
@@ -24,8 +24,8 @@ This is what you need to pick the project up.
 
 The latest remote handoff before today's local checkpoint is `81f69b2`. The 2026-09-06 and
 2026-09-07 implementation, StoreKit, privacy, appearance, export and submission-preparation work is
-captured in the next local checkpoint commit. **135 tests across 26 suites pass**, most recently
-rerun during the 2026-09-07 StoreKit work (0 failed, 0 skipped). Also on the remote:
+captured in later local checkpoint commits. **142 tests pass**, most recently rerun during the
+2026-09-10 privacy-control work (0 failed). Also on the remote:
 `diagnostics/photo-picker-repro`, a reproduction harness for the photo
 picker — bring it back only if that screen misbehaves again.
 
@@ -235,6 +235,15 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
   its UI does not display the aggregated privacy-manifest report itself. Build 4 also has focused
   Subscription accessibility, feature sweep, purchase and Restore instructions saved in **What to
   Test**.
+- **Build 5 privacy-validation package:** all 142 tests passed before the version-only build-number
+  bump. The `1.0 (5)` Release archive and local App Store-signed IPA succeeded on 2026-09-10. The
+  exported app uses Apple Distribution, carries Sign in with Apple and `beta-reports-active`, has
+  `get-task-allow` disabled, and embeds all four privacy manifests. Its app manifest includes linked
+  Purchase History and Customer Support for App Functionality, classifies Crash Data under App
+  Functionality and disables tracking. The app binary and dSYM UUID both equal
+  `323B94E5-A987-3111-A492-EC7A6300A442`; PostHog has that exact symbol set under
+  `online.colorsense.ios@1.0+5` with no failure reason. The IPA remains local at
+  `.build/testflight/export-1.0-5-verified/ColorSense.ipa` and has not been uploaded.
 
 Physical-device accessibility follow-up completed on 2026-09-10 with build 4 on the connected
 iPhone 17 Pro Max at the largest accessibility text setting. The signed-in account **Continue** and
@@ -281,7 +290,7 @@ PostHog project `590983` was also changed to `anonymize_ips: true` and read back
 properties are absent and IP data is anonymized before omitting Coarse Location from App Store
 Connect.
 
-The App Privacy questionnaire was then fully configured in App Store Connect on 2026-09-10 with
+The App Privacy questionnaire was then fully configured, including every per-type follow-up, in App Store Connect on 2026-09-10 with
 the data types, purposes, identity linkage and no-tracking answers recorded in section 6 of
 `docs/APP-STORE-SUBMISSION.md`. It remains deliberately unpublished until the public privacy-policy
 route is correct and the replacement build passes that fresh-event GeoIP check.

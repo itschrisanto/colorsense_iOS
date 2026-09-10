@@ -21,7 +21,7 @@ and Google sign-in, saving a palette to the account, and the palette appearing o
 
 **The app is built.** Seven tools ship: Extractor, Contrast, Health, SVG Recolor, Visualizer,
 Schemes and Library, plus onboarding, the palette workspace, Account, About and Feedback.
-139 tests across 26 suites pass.
+142 tests pass.
 
 **Apple Developer Program enrollment is active.** Automatic provisioning now produces signed Debug
 and Release builds. The App Store Connect record exists and its six approved iPhone screenshots are
@@ -31,6 +31,8 @@ credentials and TestFlight information are saved. Build `1.0 (4)`, containing th
 accessibility fix, now has a verified Release archive and App Store-signed IPA. Apple accepted and
 processed the upload on 2026-09-10; it is **Ready to Submit** and assigned to **ColorSense
 Internal**. The privacy questionnaire and remaining release blockers still apply. See section 2.
+Build `1.0 (5)`, containing the corrected privacy manifest and PostHog GeoIP controls, has a
+verified Release archive and local App Store-signed IPA ready for upload. It has not been uploaded.
 
 ---
 
@@ -124,6 +126,17 @@ Internal**. The privacy questionnaire and remaining release blockers still apply
       **Includes Symbols: Yes**, with the expected bundle ID, version, build number, Sign in with
       Apple entitlement, `beta-reports-active: true`, `get-task-allow: false` and no visible
       processing or privacy warning.
+- [x] Archive and export the replacement privacy-validation build `1.0 (5)` (2026-09-10). All 142
+      tests passed before the version-only build-number bump. The Release archive
+      and local App Store Connect IPA exported successfully. The exported app uses Apple
+      Distribution and the App Store provisioning profile, carries Sign in with Apple and
+      `beta-reports-active`, and has `get-task-allow = false`. It embeds the app, PostHog,
+      PHPLCrashReporter and PhoneNumberKit privacy manifests. The app manifest includes linked
+      Purchase History and Customer Support for App Functionality, classifies Crash Data under App
+      Functionality and disables tracking. The app binary and dSYM share UUID
+      `323B94E5-A987-3111-A492-EC7A6300A442`. PostHog reports the same UUID under release
+      `online.colorsense.ios@1.0+5`, with no failure reason. The IPA is retained at
+      `.build/testflight/export-1.0-5-verified/ColorSense.ipa`; it has not been uploaded.
 
 Verification through 2026-09-09: the physical-device feature sweep and build-1 StoreKit purchase
 and persistence checks passed. Build 2's signed Release archive passed locally, its matching dSYM
@@ -139,7 +152,8 @@ the remaining submission metadata are the next review-readiness work.
 ### Current go/no-go decision — 2026-09-10
 
 - **Internal TestFlight: go.** Build `1.0 (4)` is processed, **Ready to Submit**, and assigned to
-  **ColorSense Internal**. It can accept more App Store Connect users as internal testers.
+  **ColorSense Internal**. Build `1.0 (5)` is verified locally and ready to replace it after upload.
+  The group can accept more App Store Connect users as internal testers.
 - **External TestFlight: prepare, then hold Beta App Review.** Create the external group and add the
   intended testers, but do not submit its first build for Beta App Review until the privacy-policy
   and support URLs serve the correct public pages. The Subscription accessibility patch is now part
@@ -465,21 +479,21 @@ bought.
       reach for that flag whenever this screen is checked on a device.
       **Release bookkeeping:** the small `HeroColorConfetti` accessibility patch is included in
       build 4. Its Release archive and App Store-signed IPA passed locally on 2026-09-10, and Apple
-      completed processing and assigned it to the internal group. PostHog confirmation of the
-      build-4 dSYM in Symbol sets remains.
-- [ ] **Re-check `PrivacyInfo.xcprivacy` in the next release build.** Build 4 passed Apple's visible
+      completed processing and assigned it to the internal group. Build 5 supersedes its symbol
+      check, and the matching build-5 symbol set is verified in PostHog below.
+- [x] **Re-check `PrivacyInfo.xcprivacy` in the next release build.** Build 4 passed Apple's visible
       processing checks, but questionnaire preparation on 2026-09-10 found that the manifest omitted
       the Apple purchase history retained by the server and classified crash diagnostics under
-      Analytics instead of App Functionality. The source is corrected. The next archive must contain
-      linked Purchase History for App Functionality and the corrected crash purpose. ClerkKit,
+      Analytics instead of App Functionality. Build 5's exported app now contains linked Purchase
+      History and Customer Support for App Functionality and the corrected crash purpose. ClerkKit,
       ClerkKitUI and Nuke ship no manifest of their own and are linked statically, so their API use
       is ours to declare; PostHog and PhoneNumberKit ship their own manifests.
       **Checked again 2026-09-10 and still accurate**, against the resolved versions rather than from
       memory: clerk-ios `1.5.1` (the version the manifest itself names, so Clerk has not moved),
       Nuke `13.2.0`, PhoneNumberKit `5.0.8`, posthog-ios `3.71.2`. Searching the SPM checkouts for
       `PrivacyInfo.xcprivacy` finds none in clerk-ios or Nuke, one in PhoneNumberKit, and two under
-      posthog-ios (its own plus the bundled PHPLCrashReporter). The exported app embeds all four,
-      and the app manifest declares tracking disabled. Repeat this check if any package moves.
+      posthog-ios (its own plus the bundled PHPLCrashReporter). Build 5's exported app embeds all
+      four, and the app manifest declares tracking disabled. Repeat this check if any package moves.
 
 ---
 
@@ -508,9 +522,10 @@ keywords; support and marketing URLs; copyright; and manual release. Promotional
 The app download is free and public in all 175 countries or regions. Automatic distribution on Mac
 and Apple Vision Pro is off because the iPhone build has not been tested there. Six approved iPhone
 screenshots were uploaded in order on 2026-09-07. Build `1.0 (3)` is processed; app-level and Beta
-App Review credentials are saved. The App Privacy data types and per-type answers were configured
-on 2026-09-10 but intentionally remain unpublished until the public privacy-policy route is correct
-and a replacement build contains the matching source manifest and PostHog controls.
+App Review credentials are saved. The App Privacy data types and all ten per-type answer flows were
+completed in App Store Connect on 2026-09-10 but intentionally remain unpublished until the public
+privacy-policy route is correct and fresh build-5 events pass the PostHog GeoIP check. Build 5 now
+contains the matching source manifest and PostHog controls.
 
 **Keywords** (100 characters, comma separated, no spaces after commas, no words already in the name
 or subtitle): `palette,hex,wcag,contrast,accessibility,designer,swatch,brand,photo,extract,svg,mockup`
@@ -579,7 +594,7 @@ crash diagnostics as App Functionality, matching Apple's category definitions an
 crash-report manifest. A production query also found IP-derived country data on every historical
 iOS event and city data on some. ColorSense does not use location analytics, so the source now adds
 PostHog's `$geoip_disable: true` processing property to every allowed product and crash event. These
-source changes are newer than TestFlight build `1.0 (4)` and must be included in the next upload.
+source changes are embedded in the verified build `1.0 (5)` IPA, which is ready but not yet uploaded.
 PostHog project `590983` was also changed to `anonymize_ips: true` on 2026-09-10 and read back as
 enabled. After the next upload, verify that fresh events contain no `$geoip_*` enrichment and only
 anonymized IP data before leaving Coarse Location out of the questionnaire.
@@ -619,8 +634,9 @@ showing a scene; SVG Recolor.
       `app_opened` reaches the dashboard. Confirmed 2026-09-10 after installing the uploaded build
       from TestFlight: PostHog received recent `app_opened` events from `posthog-ios` on iOS with
       application version `1.0` and build `4`.
-- [x] Verify the dSYM appears in PostHog Symbol sets. Confirmed 2026-09-08 for
-      `online.colorsense.ios@1.0+1`; PostHog reports the archive UUID as uploaded with no failure.
+- [x] Verify the dSYM appears in PostHog Symbol sets. Confirmed again 2026-09-10 for
+      `online.colorsense.ios@1.0+5`; PostHog reports UUID
+      `323B94E5-A987-3111-A492-EC7A6300A442`, matching the archive, with no failure reason.
 - [ ] Trigger one controlled crash in an internal build, relaunch so the stored report uploads, and
       verify `$exception` arrives symbolicated, both reliability tiles move, and the Discord
       issue-created alert fires. **Remove the crash trigger before external distribution.**
