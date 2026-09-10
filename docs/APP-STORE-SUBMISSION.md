@@ -173,12 +173,12 @@ the remaining submission metadata are the next review-readiness work.
   **ColorSense Internal**, confirmed directly in App Store Connect on 2026-09-10.
   The group can accept more App Store Connect users as internal testers.
 - **External TestFlight: prepare, then hold Beta App Review.** Create the external group and add the
-  intended testers, but do not submit its first build for Beta App Review until the privacy-policy
-  and support URLs serve the correct public pages. The Subscription accessibility patch is now part
-  of the build-4 source.
-- **App Store Review: hold.** Verified backend account deletion, correct public legal/support pages,
+  intended testers, but do not submit its first build for Beta App Review until the public Privacy
+  Policy and Terms are final. The Support URL now points to the verified About-page contact form.
+  The Subscription accessibility patch is part of the build-4 source.
+- **App Store Review: hold.** Verified backend account deletion, final public legal pages,
   publication of the configured App Privacy answers and a real refund/revocation entitlement test
-  remain.
+  remain. The support destination is complete.
 
 ---
 
@@ -533,7 +533,7 @@ Never "Colorsense", "Color Sense", or "ColorSense.online" in copy.
 | Primary category | Graphics & Design |
 | Secondary category | Photo & Video |
 | Age rating | 4+ |
-| Support URL | https://colorsense.online |
+| Support URL | https://colorsense.online/about |
 | Marketing URL | https://colorsense.online |
 | Privacy Policy URL | https://colorsense.online/privacy-policy |
 | Copyright | 2026 Chrisanto Mendez |
@@ -754,18 +754,18 @@ public wording.
       three tables, and `requireAuth`/`optionalAuth` recreate the user row lazily, so the webhook
       alone leaves a resurrection race that can also fire a Loops welcome email at somebody who just
       deleted their account.
-- [ ] **Publish the actual mobile-aware privacy policy.** Direct verification on 2026-09-10 found
-      that `https://colorsense.online/privacy-policy` serves the same marketing/SEO landing page as
-      `/`, so no privacy policy is publicly available at the configured URL. The final policy must
-      cover the iOS app, accounts, third-party services, retention and deletion. The in-app Terms
-      link at `https://colorsense.online/terms` has the same routing/content failure and currently
-      opens the marketing landing page instead of terms covering accounts and App Store billing. Use
-      `docs/replit-website-legal-handoff.md` for both pages when the Replit side is updated.
-- [ ] **Publish a real support/contact page and point Support URL to it.** Checked on 2026-09-10:
-      `https://colorsense.online` serves the marketing/SEO landing page and its rendered content
-      exposes no support contact information. App Store Connect currently uses that URL as Support
-      URL. The final page should give users a direct way to reach `hello@colorsense.online` and
-      cover app support; then update the App Store Connect field if the final path differs.
+- [ ] **Finalise the mobile-aware Privacy Policy and Terms of Service.** Direct browser verification
+      on 2026-09-10 confirmed that `https://colorsense.online/privacy-policy` now serves a real policy
+      covering the website, Chrome extension and iOS app. Before it is final, change its displayed
+      revision date to the actual deployment date and replace the conditional iOS-purchase sentence
+      with the shipping StoreKit behavior. `https://colorsense.online/terms` still serves the old
+      May 7 website-only Terms of Use and does not cover accounts, sync or App Store billing. Use
+      `docs/replit-website-legal-handoff.md` for the remaining work. Account-deletion wording must
+      change only after the backend deletion lifecycle is proved end to end.
+- [x] **Point the App Store Support URL to the existing About-page contact surface** (2026-09-10).
+      `https://colorsense.online/about` was checked directly and provides both
+      `hello@colorsense.online` and a contact form. App Store Connect version 1.0 now saves that URL
+      as Support URL; the Marketing URL remains `https://colorsense.online`.
 - [x] **Add "Leave a review" to the About screen** (2026-09-09). The App Store record exists, so the
       condition it was waiting on is met. It is the third row in About's "Reach us" group, ordered
       after Send feedback and Email us so the three run from the most private way to say something
