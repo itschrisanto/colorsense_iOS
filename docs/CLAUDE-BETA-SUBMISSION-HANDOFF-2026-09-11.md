@@ -20,10 +20,10 @@ Apple IDs, Clerk IDs, tokens or private keys in the repository.
 
 - Build `1.0 (6)` was archived and uploaded successfully on 2026-09-11.
 - App Store Connect accepted the upload and began processing it.
-- Build 6 was submitted for the first external TestFlight Beta App Review and currently shows
-  **Waiting for Review**.
-- The external group is intended for the owner's brother, whose iPhone/Apple Account has not used
-  ColorSense. After approval, use that device for the Hide My Email acceptance test.
+- Build 6 passed its first external TestFlight Beta App Review (`APPROVED`, read through the App
+  Store Connect API on 2026-09-12) and is `IN_BETA_TESTING` for internal and external testers.
+- The external `Apple Sign-In Test` group's single tester reads `INSTALLED`, and the Hide My Email
+  acceptance test has passed on that device. See section 1.
 - The build-6 archive is
   `.build/testflight/ColorSense-1.0-6.xcarchive`.
 - App and dSYM UUID match:
@@ -79,19 +79,33 @@ Do not guess if Apple's UI presents a materially different choice.
 
 ## Remaining release blockers, in order
 
-### 1. Sign in with Apple — Hide My Email
+### 1. Sign in with Apple — Hide My Email: **passed 2026-09-12**
 
-Wait for TestFlight Beta App Review approval. The brother's device must confirm ColorSense is not
-already listed under Settings → Apple Account → Sign in with Apple. Then:
+Run on an external tester's device whose Apple Account had never authorized ColorSense:
 
-1. Install build 6 from the emailed external TestFlight invitation.
-2. Choose Continue with Apple and **Hide My Email**.
-3. Complete account creation.
-4. Save a palette and confirm it appears in Library.
-5. Confirm ColorSense email reaches the real inbox through Apple's private relay address.
-6. Sign out, sign back in with Apple, and confirm the same palette/account returns.
+0. First authorization confirmed. Apple's sheet read "Create an account for ColorSense", which it
+   shows only to an Apple Account that has not authorized the app; a returning account sees
+   "Sign in". That is stronger evidence than the Settings list.
+1. Build 6 installed from the external TestFlight invitation; the API reports the tester as
+   `INSTALLED`.
+2. Continue with Apple, **Hide My Email** selected.
+3. Account creation completed.
+4. A palette saved and appeared in Library.
+5. ColorSense email reached the real inbox through Apple's private relay.
+6. Signing out and back in with Apple returned the same account and palette.
 
-Do not request or record the brother's Apple password, verification code or relay address.
+Steps 2 to 6 were observed on the device and reported by Chris; step 0 and 1 were also read
+independently (the sheet, and the API). No password, code, relay address or Apple Account address
+was recorded, and the tester's screenshot was deliberately not saved.
+
+This closes case 3 of the matrix in `docs/replit-sign-in-with-apple-handoff.md`, the last of its
+seven cases still open. Sign in with Apple is therefore no longer a guideline 4.8 blocker.
+
+**One adjacent question the matrix does not cover:** deleting an account that was *created* with
+Sign in with Apple. Apple expects apps offering Sign in with Apple to revoke the user's Apple tokens
+through its REST API when the account is deleted. Deletion itself was verified on 2026-09-11, but
+not on an Apple-created account, and whether Clerk's user deletion (which `DELETE /api/account`
+calls) revokes the Apple token is unconfirmed. Worth asking Replit before submission.
 
 ### 2. StoreKit refund/revocation lifecycle
 
@@ -122,8 +136,8 @@ TestFlight to confirm About reports `Version 1.0 (6)`.
 
 Recheck the final metadata, screenshots, Support URL, age rating, App Review notes and demo account.
 Attach Monthly, Annual and Pro Pass to the same submission only when the submitted build is
-selected. Do not press the final App Store **Submit for Review** until Hide My Email, StoreKit
-lifecycle and privacy answers are complete.
+selected. Do not press the final App Store **Submit for Review** until the StoreKit lifecycle test
+and the privacy answers are complete. (Hide My Email was the third gate and passed on 2026-09-12.)
 
 Verified through the API on 2026-09-11: Support URL `colorsense.online/about`, marketing URL set,
 demo account and contact details and review notes all present, age rating `FOUR_PLUS` with no
@@ -155,11 +169,22 @@ it, and neither is in build 6:
    internal-only crash trigger, verification that the symbolicated `$exception` arrives after
    relaunch, and **removal of that trigger before any external or App Store distribution**.
 
-**Do not cut build 7 yet.** Uploading a new build means a fresh Beta App Review for the external
-group, which would delay the Hide My Email test that build 6 is already queued for. Let build 6
-clear review, run the Hide My Email and StoreKit lifecycle tests on it, then batch both items above
-into build 7 before App Store submission. Bump `CURRENT_PROJECT_VERSION` to `7` when that happens;
-it is still `6` today.
+**The reason for waiting has gone.** Build 7 was held so a new upload would not force a fresh Beta
+App Review and delay the Hide My Email test. That test passed on build 6 on 2026-09-12, so the
+delete-button fix can go into a build whenever it suits.
+
+**Corrected 2026-09-12: the two items cannot share one build**, as this section said the day before.
+
+- The crash check needs a temporary trigger, and the rule is that it is removed before any external
+  or App Store distribution. A build carrying it cannot be the build that is submitted.
+- PostHog files each dSYM under the build number. A trigger build and a clean build at the same
+  number would be a symbol-set conflict, which fails the Release build (see CLAUDE.md on
+  `POSTHOG_SKIP_ON_CONFLICT`, and do not reach for it).
+
+So the choice is between two builds, an **internal-only** trigger build followed by a clean
+submission build one number higher, or dropping the crash check for 1.0, since it verifies
+monitoring rather than the app. Either way the submission build carries the delete-button fix and
+no trigger. That choice is Chris's. `CURRENT_PROJECT_VERSION` is still `6`.
 
 ## Non-blockers
 

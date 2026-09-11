@@ -74,13 +74,16 @@ Its archive was verified locally on 2026-09-10, against
       `docs/replit-sign-in-with-apple-handoff.md` for the test matrix.
 - [x] Confirm the Apple option reaches Apple's native authorization sheet on the physical iPhone.
       Both **Share My Email** and **Hide My Email** were presented on 2026-09-07. Completing sign-in,
-      Clerk/API access, returning-user behavior and cancellation passed; Hide My Email and the
-      relay-email flow remain to test. Cancellation was verified in TestFlight build `1.0 (2)` on
-      2026-09-09: the native sheet reached Face ID, cancelling returned control without signing in,
-      an error, or a stuck loading state. The same device shows Apple's returning-user sheet but
-      ColorSense is absent from the Apple Account's revocation list, so its first-authorization
-      Share/Hide choice cannot be safely reset there. Complete Hide My Email and relay delivery
-      with the first external tester whose Apple Account has never authorized ColorSense.
+      Clerk/API access, returning-user behavior and cancellation passed. Cancellation was verified
+      in TestFlight build `1.0 (2)` on 2026-09-09: the native sheet reached Face ID, cancelling
+      returned control without signing in, an error, or a stuck loading state. The same device
+      shows Apple's returning-user sheet but ColorSense is absent from the Apple Account's
+      revocation list, so its first-authorization Share/Hide choice could not be safely reset there.
+- [x] Complete the first-user **Hide My Email** path and relay delivery (2026-09-12), on build 6 on
+      an external tester's device whose Apple Account had never authorized ColorSense. Apple's sheet
+      read "Create an account", confirming first authorization. Account creation, a saved palette
+      in Library, a ColorSense email reaching the real inbox through the private relay, and
+      sign-out/sign-in returning the same account all passed. No tester address was recorded.
 - [x] Complete the first-user **Share My Email** path on the physical iPhone (2026-09-07). Apple
       authorization completed, the app reached its signed-in Account state, account data loaded,
       and a test palette saved and appeared in Library. This proves the Apple-created Clerk session
@@ -88,7 +91,7 @@ Its archive was verified locally on 2026-09-10, against
 - [x] Complete the returning-user Apple path on the physical iPhone (confirmed 2026-09-07).
       Signing out and choosing Continue with Apple reopened the same ColorSense account, and the
       previously saved palette remained in Library. Cancellation also passed in TestFlight build
-      `1.0 (2)`; Hide My Email and relay delivery remain.
+      `1.0 (2)`, and Hide My Email with relay delivery passed on build 6 on 2026-09-12.
 - [x] Create the App Store Connect record. Created 2026-09-06 as **ColorSense: Palette Studio**
       under Chrisanto Mendez; Apple ID `6809134374`, bundle ID `online.colorsense.ios`, SKU
       `colorsense-ios-001`, primary language English (U.S.), Full Access.

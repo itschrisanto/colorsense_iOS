@@ -134,9 +134,14 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    TestFlight build `1.0 (2)` on 2026-09-09: the Apple sheet reached Face ID and cancelling returned
    control without signing in or trapping the UI. That phone still receives Apple's returning-user
    sheet, but ColorSense is absent from its Apple Account revocation list; do not sign the main
-   phone out of iCloud to force a reset. Complete Hide My Email and relay delivery with the first
-   external tester whose Apple Account has never authorized ColorSense, using the matrix in
-   `docs/replit-sign-in-with-apple-handoff.md`.
+   phone out of iCloud to force a reset. **Hide My Email and relay delivery passed on 2026-09-12**
+   on build 6, on an external tester's device whose Apple Account had never authorized ColorSense
+   (Apple's sheet read "Create an account", which it shows only on first authorization). Account
+   creation, a saved palette in Library, relay email reaching the real inbox, and sign-out/sign-in
+   returning the same account all passed. That closes the last of the seven cases in
+   `docs/replit-sign-in-with-apple-handoff.md`, so this item is **done**. One adjacent question is
+   open: whether deleting an Apple-created account revokes its Apple token, which Apple expects;
+   see section 1 of the beta handoff doc.
 2. **Deploy StoreKit server reconciliation.** The StoreKit 2 client now loads localized products,
    purchases monthly, annual and the consumable pass, retries unfinished delivery, and provides
    Restore Purchases. It fetches the backend-issued app-account UUID before every new purchase and
@@ -217,12 +222,14 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    `CURRENT_PROJECT_VERSION` is `6` for the account-deletion build and must increment on
    **every** later upload — App Store Connect rejects a reused build number, and PostHog binds each
    dSYM to the release those numbers name.
-7. **Build 7 is already owed, and is deliberately not cut yet** (decided 2026-09-11). Two fixes are
-   queued for it: the destructive delete button, which renders coral in build 6 because
-   `PrimaryActionButtonStyle` ignores `.tint()`, and the controlled PostHog crash/symbolication
-   check with its temporary trigger. Cutting build 7 now would force a fresh Beta App Review for the
-   external group and delay the Hide My Email test build 6 is queued for, so let build 6 finish
-   review first. `docs/CLAUDE-BETA-SUBMISSION-HANDOFF-2026-09-11.md` section 5 has the detail.
+7. **Build 7 is owed, and nothing now holds it back** (decided 2026-09-11, updated 2026-09-12).
+   The destructive delete button renders coral in build 6 because `PrimaryActionButtonStyle`
+   ignores `.tint()`; the fix is committed and needs a build. It was held only so a new upload would
+   not delay the Hide My Email test, which has since passed. The controlled PostHog
+   crash/symbolication check **cannot ride in the same build**: its trigger must never reach an
+   external or App Store build, and PostHog binds symbols to the build number. It needs its own
+   internal-only build, or it is dropped for 1.0.
+   `docs/CLAUDE-BETA-SUBMISSION-HANDOFF-2026-09-11.md` section 5 has the detail.
 
 ## Release preparation completed 2026-09-06
 

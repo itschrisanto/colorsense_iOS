@@ -37,10 +37,12 @@ unblocked; the canonical checklist remains under "Distributing to testers" below
    the shared backend before finishing, unfinished transactions retry on launch, and Restore
    Purchases is available. Keep `STOREKIT_PURCHASES_ENABLED = NO` until Replit deploys
    `docs/replit-storekit-backend-handoff.md` and sandbox reconciliation passes.
-2. **Sign in with Apple still needs end-to-end testing.** Paid-team Debug and distribution profiles
-   carry the entitlement. Apple credentials and the native bundle were configured in the existing
-   Replit-managed production Clerk tenant on 2026-09-07, with Apple and Google both enabled.
-   Guideline 4.8 still blocks submission until the real Apple flow is verified.
+2. **Sign in with Apple is verified end to end (2026-09-12).** Paid-team Debug and distribution
+   profiles carry the entitlement, and Apple and Google are both enabled in the existing
+   Replit-managed production Clerk tenant. All seven cases in
+   `docs/replit-sign-in-with-apple-handoff.md` have passed, the last being Hide My Email with relay
+   delivery on an external tester's first-time install of build 6. Guideline 4.8 no longer blocks
+   submission. Still unconfirmed: whether deleting an Apple-created account revokes its Apple token.
 
 **Settle at finalisation, before submitting.**
 
@@ -132,8 +134,9 @@ Still open:
   build reached Apple's native sheet and showed Share My Email and Hide My Email. The Share My Email
   authorization completed, Account loaded, and a palette saved and appeared in Library through the
   production API. Returning sign-in also passed: signing out and choosing Continue with Apple
-  reopened the same account with the saved palette still in Library. Cancellation, Hide My Email,
-  relay delivery and deletion remain.
+  reopened the same account with the saved palette still in Library. Cancellation passed on
+  2026-09-09, account deletion on 2026-09-11, and Hide My Email with relay delivery on 2026-09-12,
+  so this is done apart from the Apple token-revocation question noted at the top of this file.
 - **Google sign-in works** — `online.colorsense.ios://callback` is allowlisted on the production
   Clerk instance and was verified end to end on Chris's physical iPhone.
 - **`clerk.colorsense.online` fails TLS** — worked around by the proxy on both platforms, but
@@ -539,10 +542,10 @@ replaces the earlier webhook plan. The native app now calls that endpoint, prese
 `CLERK_WEBHOOK_SIGNING_SECRET`.
 
 For the current beta/App Review continuation, read
-`docs/CLAUDE-BETA-SUBMISSION-HANDOFF-2026-09-11.md` before acting. It records build 6's upload and
-TestFlight review state, the completed deletion evidence, exact App Privacy declarations, remaining
-Hide My Email and StoreKit lifecycle tests, and the build-6 PostHog UUID that still needs dashboard
-confirmation.
+`docs/CLAUDE-BETA-SUBMISSION-HANDOFF-2026-09-11.md` before acting. It records build 6's approved
+external beta, the completed deletion and Hide My Email evidence, exact App Privacy declarations,
+the remaining StoreKit lifecycle test, and why the delete-button fix and the crash check need
+separate builds.
 
 ## The primary button, and the one place the app fails its own checker
 
@@ -2040,8 +2043,13 @@ environment's enabled social providers. It does not use the browser OAuth redire
 Apple-side provisioning for `online.colorsense.ios` is verified in signed Debug and distribution
 products. The native bundle and Apple credentials were saved in the existing Replit-managed
 production Clerk tenant on 2026-09-07, and its SSO pane showed Apple enabled beside Google. Do not
-add a custom Apple button; the remaining work is to test ClerkKitUI's native flow end to end on a
-physical device, including relay email and backend account behavior.
+add a custom Apple button. ClerkKitUI's native flow has now been tested end to end on physical
+devices, including Hide My Email and relay email delivery (2026-09-12).
+
+**Apple's first-authorization sheet is the test for a clean first run.** It reads "Create an
+account for ColorSense" only when that Apple Account has never authorized the app, and "Sign in"
+once it has. That is more reliable than the Settings ▸ Apple Account ▸ Sign in with Apple list,
+which on Chris's phone omitted ColorSense even though the phone got the returning-user sheet.
 
 There is no public API to hide a single social provider from `AuthView`; providers come straight
 from the environment. Hiding the Google button would mean replacing `AuthView` with a custom
