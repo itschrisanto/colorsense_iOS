@@ -106,6 +106,8 @@ Sign in with Apple. Apple expects apps offering Sign in with Apple to revoke the
 through its REST API when the account is deleted. Deletion itself was verified on 2026-09-11, but
 not on an Apple-created account, and whether Clerk's user deletion (which `DELETE /api/account`
 calls) revokes the Apple token is unconfirmed. Worth asking Replit before submission.
+Give Replit `docs/replit-apple-token-revocation-handoff.md`; it contains the inspection,
+implementation boundaries, acceptance test and required evidence for closing this item.
 
 ### 2. StoreKit refund/revocation lifecycle
 
@@ -199,4 +201,3 @@ delete-button fix and the App Store Connect API tooling, so the earlier warning 
 worktree no longer applies. The standing rules still do: inspect `git status` and `git diff --check`
 before any commit, do not reset or discard existing changes, and increment
 `CURRENT_PROJECT_VERSION` above `6` before any future upload.
-

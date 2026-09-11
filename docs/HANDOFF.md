@@ -141,7 +141,8 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    returning the same account all passed. That closes the last of the seven cases in
    `docs/replit-sign-in-with-apple-handoff.md`, so this item is **done**. One adjacent question is
    open: whether deleting an Apple-created account revokes its Apple token, which Apple expects;
-   see section 1 of the beta handoff doc.
+   see section 1 of the beta handoff doc and give Replit
+   `docs/replit-apple-token-revocation-handoff.md` to verify and close it.
 2. **Deploy StoreKit server reconciliation.** The StoreKit 2 client now loads localized products,
    purchases monthly, annual and the consumable pass, retries unfinished delivery, and provides
    Restore Purchases. It fetches the backend-issued app-account UUID before every new purchase and
