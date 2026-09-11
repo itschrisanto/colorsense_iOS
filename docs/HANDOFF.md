@@ -1,6 +1,6 @@
 # ColorSense iOS — handoff
 
-Written 2026-09-05 and updated through 2026-09-10. Chris's Apple Developer Program enrollment is active.
+Written 2026-09-05 and updated through 2026-09-12. Chris's Apple Developer Program enrollment is active.
 This is what you need to pick the project up.
 
 ## Read these first, in this order
@@ -139,10 +139,12 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    (Apple's sheet read "Create an account", which it shows only on first authorization). Account
    creation, a saved palette in Library, relay email reaching the real inbox, and sign-out/sign-in
    returning the same account all passed. That closes the last of the seven cases in
-   `docs/replit-sign-in-with-apple-handoff.md`, so this item is **done**. One adjacent question is
-   open: whether deleting an Apple-created account revokes its Apple token, which Apple expects;
-   see section 1 of the beta handoff doc and give Replit
-   `docs/replit-apple-token-revocation-handoff.md` to verify and close it.
+   `docs/replit-sign-in-with-apple-handoff.md`, so this item is **done**. The adjacent Apple-token
+   deletion question is also resolved: on 2026-09-12 the nonce-bound production flow returned the
+   app to Sign In only after exact deletion success, and ColorSense was then absent from the test
+   phone's Sign in with Apple list. That directly proves automatic upstream revocation. The native
+   and backend implementation is recorded in `docs/replit-apple-token-revocation-handoff.md`;
+   retain the explicit manual fallback, whose forced-failure UI path is not yet exercised.
 2. **Deploy StoreKit server reconciliation.** The StoreKit 2 client now loads localized products,
    purchases monthly, annual and the consumable pass, retries unfinished delivery, and provides
    Restore Purchases. It fetches the backend-issued app-account UUID before every new purchase and
@@ -214,6 +216,11 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    local deletion with one tombstone, and stale-identity non-resurrection. Synthetic data was
    cleaned up. Direct inspection of the original production rows is unavailable without its
    deleted Clerk ID; the recreated Google account has a different ID and must not be substituted.
+   On 2026-09-12, the expanded Apple path also passed in production using a purpose-made account:
+   iOS completed nonce-bound Apple reauthorization, received exact deletion success, returned to
+   Sign In, and ColorSense disappeared from the device's Sign in with Apple list. Automatic Apple
+   revocation is verified. The manual-revocation fallback remains implemented but needs a forced
+   backend-failure UI test.
    **Do not change `/api/saved-palettes` or `/api/me` contracts.**
 5. **Re-run the privacy audit** against the final archived build, then publish the configured App
    Privacy answers in the order section 8c gives. Replit's September 11 Privacy Policy and Terms of

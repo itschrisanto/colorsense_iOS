@@ -8,6 +8,10 @@
 > backend suite subsequently passed forced `502`, retry/idempotency and stale-identity protection
 > (9/9 tests). Direct inspection of the original production rows is unavailable without the
 > deleted identity's Clerk ID.
+> **Post-archive production acceptance, 2026-09-12:** a purpose-made production Sign in with Apple
+> account passed nonce-bound deletion using iOS commit `15abba0`: the app signed out after exact
+> backend success and ColorSense disappeared from the device's Sign in with Apple list, directly
+> verifying upstream Apple revocation. Re-run the audit on the archive containing this commit.
 
 Requested before updating the public privacy policy and submitting to the App Store. Every finding
 below is from the source, the SDK configuration, the dependency manifest or the database schema.
@@ -19,8 +23,9 @@ against build `1.0 (6)` on 2026-09-11. PostHog iOS **3.71.2** and Clerk iOS **1.
 ## Verdict
 
 **The iOS privacy claims now match the shipping code and observed production behavior.** The former
-account-deletion blocker is closed at the user-visible level. App Store submission still depends on
-the release checklist, including backend-only deletion fault tests and StoreKit lifecycle work.
+account-deletion blocker, including automatic Apple authorization revocation, is closed. App Store
+submission still depends on the release checklist, including the forced manual-fallback UI check,
+final-build audit and StoreKit lifecycle work.
 
 ---
 

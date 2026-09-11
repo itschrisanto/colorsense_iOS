@@ -42,7 +42,11 @@ unblocked; the canonical checklist remains under "Distributing to testers" below
    Replit-managed production Clerk tenant. All seven cases in
    `docs/replit-sign-in-with-apple-handoff.md` have passed, the last being Hide My Email with relay
    delivery on an external tester's first-time install of build 6. Guideline 4.8 no longer blocks
-   submission. Still unconfirmed: whether deleting an Apple-created account revokes its Apple token.
+   submission. Production nonce-bound account deletion also passed on 2026-09-12: the app obtained
+   a fresh Apple authorization, the backend revoked it before deletion, the app returned to Sign In
+   only after exact success, and ColorSense disappeared from the phone's Sign in with Apple list.
+   The automatic revocation blocker is closed; the explicit manual-fallback UI still needs a forced
+   failure test before final acceptance.
 
 **Settle at finalisation, before submitting.**
 
@@ -135,8 +139,9 @@ Still open:
   authorization completed, Account loaded, and a palette saved and appeared in Library through the
   production API. Returning sign-in also passed: signing out and choosing Continue with Apple
   reopened the same account with the saved palette still in Library. Cancellation passed on
-  2026-09-09, account deletion on 2026-09-11, and Hide My Email with relay delivery on 2026-09-12,
-  so this is done apart from the Apple token-revocation question noted at the top of this file.
+  2026-09-09, account deletion on 2026-09-11, Hide My Email with relay delivery on 2026-09-12, and
+  nonce-bound Apple token revocation during deletion on 2026-09-12. The automatic path is done;
+  only the deliberately forced manual-fallback UI test remains.
 - **Google sign-in works** — `online.colorsense.ios://callback` is allowlisted on the production
   Clerk instance and was verified end to end on Chris's physical iPhone.
 - **`clerk.colorsense.online` fails TLS** — worked around by the proxy on both platforms, but

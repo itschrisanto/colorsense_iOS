@@ -4,6 +4,14 @@
 **Priority:** App Store submission blocker  
 **Owner:** Replit-managed ColorSense backend and production Clerk tenant
 
+> **Completed automatic path, 2026-09-12.** Replit deployed nonce-bound Apple reauthorization and
+> revocation, and iOS commit `15abba0` implemented the native contract. A purpose-made production
+> Apple account completed deletion on a physical iPhone; the app returned to Sign In only after
+> exact backend success, and ColorSense was absent from Settings > Sign in with Apple immediately
+> afterward. Verdict: **programmatic Apple revocation verified — submission item closed.** The
+> TN3194 manual fallback remains implemented; its forced-failure UI path is a separate outstanding
+> acceptance check.
+
 ## Objective
 
 Determine whether the existing authenticated `DELETE /api/account` flow revokes the Apple

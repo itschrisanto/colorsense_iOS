@@ -14,8 +14,9 @@ vault; if the two ever disagree, the vault wins and this file is stale.
 **The shared backend is in production.** The Express API at `colorsense.online/api`, Postgres
 through Drizzle, Clerk auth on the production instance, and PostHog analytics with error tracking
 serve both clients. StoreKit purchase reconciliation and Version 2 notification verification have
-passed against Apple's Sandbox. Verified account deletion and a real refund/revocation lifecycle
-test are still required before App Store submission.
+passed against Apple's Sandbox. Production account deletion, including automatic Apple-token
+revocation, is verified. A real StoreKit refund/revocation lifecycle test is still required before
+App Store submission.
 iOS is a client of the same stack the web app uses, verified end to end on a physical iPhone: email
 and Google sign-in, saving a palette to the account, and the palette appearing on colorsense.online.
 
@@ -92,6 +93,12 @@ Its archive was verified locally on 2026-09-10, against
       Signing out and choosing Continue with Apple reopened the same ColorSense account, and the
       previously saved palette remained in Library. Cancellation also passed in TestFlight build
       `1.0 (2)`, and Hide My Email with relay delivery passed on build 6 on 2026-09-12.
+- [x] Revoke Sign in with Apple during account deletion (confirmed 2026-09-12). A purpose-made
+      production Apple account completed the nonce-bound native reauthorization flow. The app
+      returned to Sign In only after `200 {"deleted":true}`, and ColorSense was absent from the
+      device's Sign in with Apple list immediately afterward. This directly verifies automatic
+      upstream revocation. The retry/manual-revocation fallback is implemented but its forced-error
+      UI path remains an acceptance check.
 - [x] Create the App Store Connect record. Created 2026-09-06 as **ColorSense: Palette Studio**
       under Chrisanto Mendez; Apple ID `6809134374`, bundle ID `online.colorsense.ios`, SKU
       `colorsense-ios-001`, primary language English (U.S.), Full Access.
@@ -177,7 +184,7 @@ validated on-device. Its credentials, contact information and reviewer notes wer
 App Store Connect for both app-level review and Beta App Review. The external TestFlight group and
 the remaining submission metadata are the next review-readiness work.
 
-### Current go/no-go decision — 2026-09-10
+### Current go/no-go decision — 2026-09-12
 
 - **Internal TestFlight: go.** Build `1.0 (5)` is processed, **Ready to Submit**, and assigned to
   **ColorSense Internal**, confirmed directly in App Store Connect on 2026-09-10.
@@ -186,9 +193,10 @@ the remaining submission metadata are the next review-readiness work.
   intended testers, but do not submit its first build for Beta App Review until the public Privacy
   Policy and Terms are final. The Support URL now points to the verified About-page contact form.
   The Subscription accessibility patch is part of the build-4 source.
-- **App Store Review: hold.** Verified backend account deletion, final public legal pages,
-  publication of the configured App Privacy answers and a real refund/revocation entitlement test
-  remain. The support destination is complete.
+- **App Store Review: hold.** Backend account deletion and automatic Apple revocation are verified.
+  Publication of the configured App Privacy answers, a real StoreKit refund/revocation entitlement
+  test, the forced Apple manual-fallback UI check, and the final-build audit remain. The public legal
+  pages and support destination are complete.
 
 ---
 
