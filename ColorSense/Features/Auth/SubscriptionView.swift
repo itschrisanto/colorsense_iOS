@@ -1,5 +1,9 @@
 import SwiftUI
 import ClerkKit
+#if DEBUG
+import StoreKit
+import UIKit
+#endif
 
 /// The effective plan comes from `GET /api/me`, while StoreKit supplies products and localized
 /// prices. The backend verifies every transaction before this screen reports success.
@@ -100,7 +104,7 @@ struct SubscriptionView: View {
             .opacity(productInfo[selectedProduct] == nil || isBusy ? 0.58 : 1)
 
             Text(selectedProduct == .pass
-                 ? "One month of Pro. This purchase does not renew."
+                 ? "31 days of Pro. This purchase does not renew."
                  : "Subscription renews automatically until canceled.")
                 .font(BrandFont.ui(12))
                 .foregroundStyle(.secondary)
@@ -148,6 +152,16 @@ struct SubscriptionView: View {
             }
             .buttonStyle(.secondaryAction)
             .disabled(isBusy)
+
+            #if DEBUG
+            Button("Test Sandbox Refund", systemImage: "arrow.uturn.backward.circle") {
+                requestSandboxRefund()
+            }
+            .font(BrandFont.ui(14, weight: .medium))
+            .foregroundStyle(.red)
+            .disabled(isBusy)
+            .accessibilityHint("Opens Apple's refund request sheet for the active Sandbox subscription")
+            #endif
 
             footer
         }
@@ -254,7 +268,7 @@ struct SubscriptionView: View {
                 ? "7 days free, then renews monthly"
                 : "Renews monthly until canceled"
         case .annual: return "A full year of Pro, billed yearly"
-        case .pass: return "One month of Pro, no renewal"
+        case .pass: return "31 days of Pro, no renewal"
         }
     }
 
@@ -279,7 +293,7 @@ struct SubscriptionView: View {
             }
 
             HStack(spacing: 26) {
-                Link("Terms", destination: URL(string: "https://colorsense.online/terms")!)
+                Link("Terms of Service", destination: URL(string: "https://colorsense.online/terms")!)
                 Link("Privacy", destination: URL(string: "https://colorsense.online/privacy-policy")!)
             }
             .font(BrandFont.ui(13, weight: .medium))
@@ -360,6 +374,48 @@ struct SubscriptionView: View {
             }
         }
     }
+
+    #if DEBUG
+    /// Debug-only acceptance seam for Apple's real Sandbox refund lifecycle. Release builds do not
+    /// compile this control, so it cannot appear in TestFlight or the App Store.
+    private func requestSandboxRefund() {
+        Task { @MainActor in
+            guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }) else {
+                message = "The App Store refund sheet is unavailable right now."
+                return
+            }
+
+            var candidates: [StoreKit.Transaction] = []
+            for await result in StoreKit.Transaction.all {
+                guard case .verified(let transaction) = result,
+                      transaction.productID == ProProduct.monthly.rawValue
+                        || transaction.productID == ProProduct.annual.rawValue,
+                      transaction.revocationDate == nil else { continue }
+                candidates.append(transaction)
+            }
+
+            guard let transaction = candidates.max(by: { $0.purchaseDate < $1.purchaseDate }) else {
+                message = "No verified Sandbox Monthly or Annual transaction was found for the current Sandbox Apple Account."
+                return
+            }
+
+            do {
+                switch try await transaction.beginRefundRequest(in: scene) {
+                case .success:
+                    message = "The Sandbox refund was submitted. Reopen this screen after Apple processes it."
+                case .userCancelled:
+                    break
+                @unknown default:
+                    message = "The App Store returned an unknown refund status."
+                }
+            } catch {
+                message = "The Sandbox refund request could not be opened."
+            }
+        }
+    }
+    #endif
 }
 
 private struct SubscriptionHero: View {

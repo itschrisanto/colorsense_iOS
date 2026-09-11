@@ -1,16 +1,26 @@
 # ColorSense iOS — privacy audit
 
+> **Final archive update, 2026-09-11:** audited Release archive
+> `.build/testflight/ColorSense-1.0-6.xcarchive`. The native app uses authenticated
+> `DELETE /api/account`, and a destructive production-iPhone test passed deletion, automatic
+> sign-out, relaunch, signed-out tools and fresh Google reauthentication with no restored saved
+> data. Replit reports local deletion, tombstoning and Clerk identity deletion. Its controlled
+> backend suite subsequently passed forced `502`, retry/idempotency and stale-identity protection
+> (9/9 tests). Direct inspection of the original production rows is unavailable without the
+> deleted identity's Clerk ID.
+
 Requested before updating the public privacy policy and submitting to the App Store. Every finding
 below is from the source, the SDK configuration, the dependency manifest or the database schema.
 Nothing is inferred from UI copy or intent. Where something could not be proved, it says so.
 
-Audited 2026-09-05 against `main` at the Schemes commit and updated 2026-09-10 for Apple In-App
-Purchase. PostHog iOS **3.71.2** (resolved), Clerk iOS SDK, no other third-party SDKs.
+Audited 2026-09-05 against `main`, updated 2026-09-10 for Apple In-App Purchase, and reconciled
+against build `1.0 (6)` on 2026-09-11. PostHog iOS **3.71.2** and Clerk iOS **1.5.1** are resolved.
 
 ## Verdict
 
-**Not safe to publish as proposed — one claim fails.** Account deletion does not delete server-side
-data, and the app currently tells users that it does. Everything else audited is accurate.
+**The iOS privacy claims now match the shipping code and observed production behavior.** The former
+account-deletion blocker is closed at the user-visible level. App Store submission still depends on
+the release checklist, including backend-only deletion fault tests and StoreKit lifecycle work.
 
 ---
 
@@ -18,56 +28,33 @@ data, and the app currently tells users that it does. Everything else audited is
 
 | # | Proposed claim | Status | Evidence | Data sent, and where | Change needed | Policy wording | Apple label |
 |---|---|---|---|---|---|---|---|
-| 1 | Photos stay on the device, used only to extract colours, never uploaded or retained | **Accurate** | The whole app has exactly three outbound call sites: `SavedPaletteService` (2) and `FeedbackService` (1). None takes an image, image data, metadata or filename. `PhotoSourcePicker`, `PhotoExtractor`, `ColorExtractionService` and `CameraPicker` contain no networking at all | Nothing | None | "Photos you choose from your library, and photos you take with the camera in the app, stay on your device. They are used only to work out the colours in them, and are never uploaded to ColorSense or anyone else." | Photos: **not collected** |
+| 1 | Photos stay on the device, used only to extract colours, never uploaded or retained | **Accurate** | The app's four direct `URLSession` call sites are confined to `SavedPaletteService` (2), `FeedbackService` (1) and `AccountDeletionService` (1). None takes an image, image data, metadata or filename. `PhotoSourcePicker`, `PhotoExtractor`, `ColorExtractionService` and `CameraPicker` contain no networking at all | Nothing | None | "Photos you choose from your library, and photos you take with the camera in the app, stay on your device. They are used only to work out the colours in them, and are never uploaded to ColorSense or anyone else." | Photos: **not collected** |
 | 2 | Palette extraction and WCAG contrast run entirely on device | **Accurate** | `ColorExtractionService` (k-means), `ContrastCalculator`, `PaletteHealth`, `ColorScheme`, `ColorHarmony`, `SvgRecolor`, `VisualizerScenes` are all pure Swift with no network calls | Nothing | None | "Working out a palette, checking contrast, scoring a palette and generating colour schemes all happen on your phone. No image or colour value is sent to a server for these." | n/a |
 | 3 | Analytics are pseudonymous and not connected to a ColorSense account | **Accurate** | `identify`, `alias` and `group` appear nowhere in the app — only in comments. `personProfiles = .always` keeps a profile against PostHog's own random install ID, which is not an account identifier | Event name plus counts and closed enum values, to PostHog | None | See wording below | Product Interaction, Other Usage Data: **not linked**, not for tracking |
 | 4 | Analytics can be turned off under Account, and that stops the SDK | **Accurate** | `isOptedOut` persists in `UserDefaults`; the setter calls PostHog's own `optOut()` / `optIn()`. Critically `config.optOut = isOptedOut` is set **before** `PostHogSDK.shared.setup(config)`, so an opted-out install sends nothing at all, including the `app_opened` event captured immediately after setup | Nothing while opted out | None | "You can turn analytics off in the app under Account. That switches the analytics SDK itself off rather than only stopping ColorSense from recording events, and it is remembered between launches." | Optional, user can opt out |
 | 5 | Crash reports contain technical diagnostics only | **Partially accurate — must be qualified** | `errorTrackingConfig.autoCapture = true` captures unhandled errors and native crashes; `exceptionSteps.enabled = false` means no breadcrumb trail. But an exception's *message* is not controlled by us, and a Swift error surfaced from a file name, a URL or a decoding failure could carry user-derived text | Stack traces, device model, OS version, exception type and message, to PostHog | None required, but **do not claim reports never contain user content** | "If the app crashes we receive a crash report containing stack traces and technical details such as device model and operating system version. We do not attach your photos, palettes or colour values to these reports. Crash reports can include the text of the error itself, which in rare cases may mention a file name." | Crash Data, Other Diagnostic Data: **not linked** |
-| 6 | No advertising SDKs, no cross-app tracking | **Accurate** | Only two packages ship: `clerk-ios` and `posthog-ios`. No `AdSupport`, `AppTrackingTransparency`, `ASIdentifierManager`, `advertisingIdentifier`, Firebase, Adjust, AppsFlyer, Branch or Google Mobile Ads anywhere. `PrivacyInfo.xcprivacy` declares `NSPrivacyTracking` **false** | n/a | None | "The ColorSense app contains no advertising and no tracking software. Google Analytics and Google AdSense run on the ColorSense website only, and are not present in the app." | Used for tracking: **No** |
+| 6 | No advertising SDKs, no cross-app tracking | **Accurate** | The direct SDK integrations are Clerk and PostHog; Nuke and PhoneNumberKit are resolved Clerk dependencies. No `AdSupport`, `AppTrackingTransparency`, `ASIdentifierManager`, `advertisingIdentifier`, Firebase, Adjust, AppsFlyer, Branch or Google Mobile Ads appears in the app. `PrivacyInfo.xcprivacy` declares `NSPrivacyTracking` **false** | n/a | None | "The ColorSense app contains no advertising and no tracking software. Google Analytics and Google AdSense run on the ColorSense website only, and are not present in the app." | Used for tracking: **No** |
 | 7 | An account is optional | **Accurate** | Onboarding's account ask has a "Maybe later" exit. Extractor, Contrast, Health, Schemes, SVG Recolor and Visualizer all work signed out. Only saving to the account and the Library require sign-in | Bearer token from Clerk | None | "An account is optional. The colour tools work without one. Signing in lets you save palettes to your account so they appear on colorsense.online too." | Contact Info, Identifiers, User Content: **linked** |
-| 8 | Sign in with Apple is available | **Not implemented** | The entitlement is attached to Release only, and is not provisioned. Live methods are email and Google | n/a | Do not mention Apple by name until it ships | Use "supported third-party sign-in providers" | n/a |
-| 9 | Deleting your account removes your saved palettes | **INACCURATE — blocks publication** | See below | n/a | **Backend fix required** | Do not publish until fixed | n/a |
+| 8 | Sign in with Apple is available | **Accurate** | Build 6 carries the production Sign in with Apple entitlement. New-account, returning-account and cancellation flows passed on physical devices; Hide My Email relay remains an acceptance-test item | Apple identity data handled through Clerk | Complete Hide My Email relay testing | The deployed policy may name Apple | Contact Info and User ID already declared |
+| 9 | Deleting your account removes your saved palettes | **Accurate in the tested production flow** | `DeleteAccountView` calls authenticated `DELETE /api/account` and signs out only after `{deleted:true}`. A production iPhone deletion followed by Google reauthentication restored none of the deleted saved data | Clerk token and account identifier; no user content is added to the request | Complete backend fault injection/direct database verification | The deployed September 11 deletion wording matches the tested flow | n/a |
 
 ---
 
-## The one mismatch: account deletion
+## Resolved mismatch: account deletion
 
-**The app's own copy is currently false.** `DeleteAccountView` tells the user:
+The original audit found that `DeleteAccountView` called Clerk's `user.delete()` directly, leaving
+server-side ColorSense rows behind. That implementation has been replaced.
 
-> "Deleting your account removes your saved palettes and profile from ColorSense. This can't be
-> undone, and it applies everywhere — the web app too."
+Build 6 calls the server-owned, authenticated `DELETE /api/account` lifecycle. Replit reports that
+the endpoint deletes agreed local data, writes a permanent Clerk-ID tombstone under the same
+advisory lock as provisioning, and then deletes the Clerk identity. The client treats `502` as a
+partial identity-deletion failure and preserves the session so the operation can be retried safely.
 
-What the code actually does is call Clerk's `user.delete()`. That removes the Clerk identity and
-nothing else. The chain then breaks:
-
-- `savedPalettesTable.userId` references `usersTable.id` with `onDelete: "cascade"`, so **if** the
-  ColorSense user row were deleted, the palettes would go with it. That part is correct.
-- **Nothing deletes that row.** There is no Clerk webhook route registered in the api-server's
-  router list, no `user.deleted` handler, and no `db.delete(usersTable)` call anywhere in the
-  server or the shared db package. The only `db.delete` on palettes is the per-palette
-  `DELETE /saved-palettes/:id` endpoint.
-
-So after a user deletes their account from the app or the website, their ColorSense database row and
-every saved palette remain. The cascade is armed and never fires.
-
-**This must be fixed before submission**, on the backend, not in the app. Apple expects an in-app
-account deletion to actually delete the account's data, and the policy we are about to publish would
-be describing behaviour that does not exist.
-
-The fix is a Clerk `user.deleted` webhook that deletes the corresponding `usersTable` row, letting
-the existing cascade remove the palettes. **Do not change the `/api/saved-palettes` or `/api/me`
-response contracts while doing it — the iOS app depends on both.**
-
-Until that lands there are two honest options, and it is Chris's call:
-
-1. **Fix the backend** and keep the app's copy as it is. Preferred, and it is the only option that
-   makes the claim true.
-2. **Soften the in-app copy** to say the sign-in identity is removed and that saved palettes are
-   deleted on request via hello@colorsense.online. Accurate, but a worse experience and still a
-   weak answer for App Review.
-
-I have not changed the copy, because either choice is a product decision and shipping a quietly
-weakened promise is worse than an explicit one.
+A purpose-made production account with a saved palette was deleted from an iPhone. The app signed
+out, remained signed out after force-quit/relaunch, and continued to provide the signed-out tools.
+Google reauthentication produced an empty account and restored none of the deleted saved data.
+Focused client tests cover success, `401`, `502`, malformed success and transport failure. Direct
+database inspection and forced backend partial-failure/idempotency checks remain outstanding.
 
 ---
 
@@ -118,6 +105,8 @@ collection silently. Session replay is off. Screen tracking is not automatic; th
 - **Apple purchase record** — Apple's signed transaction, submitted with a Clerk bearer token to
   `/api/iap/apple/transactions`. The backend verifies and retains its transaction, product and date
   fields against the ColorSense account to grant and restore Pro.
+- **Account deletion** — an authenticated `DELETE /api/account` request. It carries the Clerk bearer
+  token needed to identify the account and no additional user content.
 - **Nothing else.** No image, analytics payload or device identifier goes to the ColorSense API.
 
 The app never posts the email address, name or profile image to the ColorSense API. The server
@@ -161,8 +150,11 @@ derives the user from the Clerk token.
 > so they also appear on colorsense.online. Authentication is handled by Clerk, and we receive the
 > email address and name on the account together with an account identifier.
 
-*(The account deletion paragraph is deliberately missing. Add it once the backend cleanup exists,
-and not before.)*
+> **Account deletion.** You can permanently delete your account from Account settings in the iOS
+> app. This removes your ColorSense profile, saved palettes, linked feature data and sign-in
+> identity across the app and website. Some purchase, accounting, security and independently
+> subscribed mailing records may be retained where required. Deleting the account does not cancel
+> an active Apple or website subscription, which must be cancelled separately.
 
 ---
 
@@ -202,10 +194,9 @@ Permission strings present and correct in `project.yml`: `NSCameraUsageDescripti
 
 ---
 
-## Must fix before submission
+## Remaining verification before submission
 
-1. **Account deletion does not delete server-side data.** Backend Clerk `user.deleted` webhook, or
-   an explicit deletion endpoint. Blocks the deletion claim entirely.
-2. **Do not name Sign in with Apple** in the policy or the listing until it is provisioned and live.
+1. Complete Sign in with Apple Hide My Email and relay-delivery acceptance testing.
+2. Complete the StoreKit renewal/refund/revocation lifecycle check tracked in the submission guide.
 
-Nothing else found. No code changes were required on the iOS side, and none were made.
+No new privacy-label category was introduced by the account-deletion endpoint.

@@ -37,6 +37,13 @@ shows **Complete**; the build is **Ready to Submit**, assigned to **ColorSense I
 one tester invited. This resolves the earlier interrupted-upload uncertainty. Its build ID is
 `3a00ed51-2d1d-4276-b455-f3f4bcb22ed9`.
 
+Build `1.0 (6)`, containing the server-owned account-deletion flow, corrected StoreKit Pro Pass
+wording and redesigned deletion confirmation, was uploaded successfully on 2026-09-11 and entered
+App Store Connect processing. All 145 tests passed first. Its Release archive is
+`.build/testflight/ColorSense-1.0-6.xcarchive`; the app and dSYM share UUID
+`3AB2578C-A17B-349B-AD08-5D9D4E27D661`, the app privacy manifest is present, and no review-only
+scaffolding appears in the binary.
+
 Its archive was verified locally on 2026-09-10, against
 `.build/testflight/ColorSense-1.0-5.xcarchive`:
 
@@ -222,12 +229,9 @@ app, and the two things that fail it here are the two that would fail the full r
       section 12, not a personal address. It is the same address About's "Email us" row already
       uses, so a tester who replies and a tester who taps the row reach the same inbox. Saved in
       TestFlight Test Information on 2026-09-10.
-- [ ] **Confirm the privacy policy URL resolves** and covers the app. It is
-      `https://colorsense.online/privacy-policy`. Checked directly on 2026-09-10: the route returns
-      the same product/SEO landing content as the homepage, with no privacy policy, data practices,
-      retention/deletion terms, mobile/iOS coverage or third-party disclosures. A beta reviewer
-      checks the policy for what they are testing, so this is not only an App Store submission
-      concern.
+- [x] **Confirm the privacy policy URL resolves and covers the app.** Cache-bypassed verification on
+      2026-09-11 confirmed that `https://colorsense.online/privacy-policy` serves the September 11
+      mobile-aware policy, including website and in-app iOS account-deletion controls.
 
 Two things that are already true and worth not re-deriving:
 
@@ -450,7 +454,7 @@ bought.
 ## 4. Settle before uploading
 
 - [x] **Decide the real version number.** The first App Store version and `MARKETING_VERSION` are
-      both `1.0`; `CURRENT_PROJECT_VERSION` is `5`. Both are hand-edited in `project.yml`; nothing
+      both `1.0`; `CURRENT_PROJECT_VERSION` is `6`. Both are hand-edited in `project.yml`; nothing
       bumps them automatically.
 - [x] **Increment `CURRENT_PROJECT_VERSION` on every upload**, including re-uploads of the same
       marketing version. Two independent reasons: App Store Connect rejects a reused build number,
@@ -678,12 +682,14 @@ showing a scene; SVG Recolor.
 `docs/PRIVACY-AUDIT.md` is the evidence-backed audit of what the shipping build actually does,
 claim by claim, with the App Store privacy labels and copy-ready policy wording derived from it.
 
-**It found one blocker.** Account deletion calls Clerk's `user.delete()` and nothing else. The
+**It originally found one blocker.** Account deletion called Clerk's `user.delete()` and nothing
+else. The
 `saved_palettes.user_id` foreign key cascades on delete, but nothing ever deletes the ColorSense
 `users` row: there is no Clerk webhook route in the api-server and no `db.delete(usersTable)`
 anywhere. So a deleted account leaves its database row and every saved palette in place, while
-`DeleteAccountView` tells the user their palettes are removed. That claim must not be published,
-and the app should not be submitted, until the backend cleanup exists.
+`DeleteAccountView` told the user their palettes were removed. Replit reported that backend gap
+closed on 2026-09-11, and the native client now uses `DELETE /api/account`; the purpose-made
+production-account verification in section 9 is still required before submission.
 
 Everything else audited came back accurate: photos never leave the device, the colour tools are
 entirely local, analytics are pseudonymous with `identify` never called, the opt-out is set before
@@ -700,15 +706,13 @@ tested against the build intended for submission. `docs/PRIVACY-AUDIT.md` is the
 the final word: it audited a development build, and the audit is to be re-run against the final
 archived Release build and its dependency lockfile.
 
-**1. Fix account deletion (blocker).** Work from `docs/replit-account-deletion-handoff.md`, which
-carries the evidence, the per-table decisions and the acceptance criteria. In summary: add a
-*verified* Clerk `user.deleted` webhook to the
-backend: match the Clerk user to the local Postgres user, delete that row, and confirm the existing
-`saved_palettes.user_id` cascade removes the palettes. Webhook retries must be idempotent, and
-unsigned or invalid requests must be rejected. Test deletion from **both** the iOS app and the
-website, and confirm the Clerk identity, the local profile, the saved palettes and every other
-account-linked row are actually gone. **Preserve the `/api/saved-palettes` and `/api/me` response
-contracts.** Publish no deletion claim until this is proved end to end.
+**1. Verify account deletion (blocker).** The original webhook plan in
+`docs/replit-account-deletion-handoff.md` was superseded on 2026-09-11 by authenticated,
+idempotent `DELETE /api/account`. Replit reports that it deletes and tombstones local data under a
+shared provisioning/deletion lock before deleting the Clerk identity. Test deletion from **both**
+the iOS app and website, and confirm the identity, profile, saved palettes and agreed account-linked
+rows are gone; prove a stale session cannot recreate them. **Preserve the `/api/saved-palettes` and
+`/api/me` response contracts.** Publish no deletion claim until this is proved end to end.
 
 **2. Sign in with Apple.** App ID provisioning, entitlements and profiles are confirmed. Configure
 the Clerk integration and callback, then test new
@@ -746,22 +750,40 @@ public wording.
 
 ## 9. Outside this repo
 
-- [ ] **Add a Clerk `user.deleted` webhook to the api-server** so deleting an account actually
-      deletes the ColorSense user row and, through the existing cascade, its saved palettes. Blocks
-      submission. Do not change the `/api/saved-palettes` or `/api/me` response contracts; the app
-      depends on both. **The implementation brief is `docs/replit-account-deletion-handoff.md`**
-      (written 2026-09-09), which adds two findings the audit did not have: the cascade reaches only
-      three tables, and `requireAuth`/`optionalAuth` recreate the user row lazily, so the webhook
-      alone leaves a resurrection race that can also fire a Loops welcome email at somebody who just
-      deleted their account.
-- [ ] **Finalise the mobile-aware Privacy Policy and Terms of Service.** Direct browser verification
-      on 2026-09-10 confirmed that `https://colorsense.online/privacy-policy` now serves a real policy
-      covering the website, Chrome extension and iOS app. Before it is final, change its displayed
-      revision date to the actual deployment date and replace the conditional iOS-purchase sentence
-      with the shipping StoreKit behavior. `https://colorsense.online/terms` still serves the old
-      May 7 website-only Terms of Use and does not cover accounts, sync or App Store billing. Use
-      `docs/replit-website-legal-handoff.md` for the remaining work. Account-deletion wording must
-      change only after the backend deletion lifecycle is proved end to end.
+- [x] **Verify the Replit account-deletion endpoint end to end from iOS** (completed 2026-09-11).
+      Replit reported
+      authenticated `DELETE /api/account` complete on `audit/backend-hardening` on 2026-09-11. It
+      deletes local account data, writes a permanent SHA-256 tombstone under the same PostgreSQL
+      advisory transaction lock as provisioning, then deletes the Clerk identity; it is idempotent
+      and uses no Clerk webhook. The native app now calls this endpoint instead of Clerk's
+      client-side `user.delete()`, handles `401` and retryable `502` distinctly, clears cached HTTP
+      responses and signs out after an explicit `{ "deleted": true }`. The unauthenticated live
+      endpoint returned the expected `401` on 2026-09-11, and unit coverage was added for the client
+      contract.
+      On 2026-09-11, the focused simulator contract suite passed (3 tests, 0 failures), and the
+      Debug app built, installed and launched successfully on iPhone 17 Pro Max. A destructive
+      production iPhone run then confirmed successful deletion, automatic sign-out, persistence of
+      the signed-out state after force-quit/relaunch, continued signed-out Extractor and WCAG use,
+      and Google reauthentication as an empty account with none of the deleted saved data restored.
+      The deletion sheet was subsequently redesigned to use a compact two-detent layout and a
+      standard destructive alert with explicit Cancel and Delete actions; its focused contract suite
+      remained green (3 tests, 0 failures).
+      Replit then completed controlled development-environment backend verification: forced Clerk
+      failure returned `502`, retry returned `200 { deleted: true }`, repeated local deletion left
+      no user row and exactly one tombstone during the test, and a tombstoned stale identity could
+      not reprovision. All 9 tests and the API build/typecheck passed; the restarted server was
+      healthy and synthetic rows were cleaned up (0 test users, 0 test tombstones). The only
+      unavailable evidence is direct inspection of the original production account's rows because
+      its now-deleted Clerk user ID was not retained in the iOS handoff. Do not substitute the
+      newly recreated Google identity's ID. Do not change `/api/saved-palettes` or `/api/me`.
+- [x] **Publish and verify the final mobile-aware Privacy Policy and Terms of Service** (2026-09-11).
+      Cache-bypassed live asset inspection confirmed that both public routes serve the September 11
+      documents. Privacy names website Account settings, the in-app iOS deletion control and an
+      email privacy request; its retained-record exceptions remain. Terms names both deletion
+      controls and retains the separate-subscription-cancellation warning. The Terms also cover the
+      verified Monthly, Annual, eligibility-limited one-week offer, 31-day consumable Pro Pass,
+      Apple billing/cancellation/refunds, same-account entitlement sync and Standard EULA. Replit
+      reports its typecheck, production build, prerendering and SEO verification passed.
 - [x] **Point the App Store Support URL to the existing About-page contact surface** (2026-09-10).
       `https://colorsense.online/about` was checked directly and provides both
       `hello@colorsense.online` and a contact form. App Store Connect version 1.0 now saves that URL

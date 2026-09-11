@@ -528,10 +528,21 @@ the app. The PostHog project also has exception autocapture enabled. These relea
    sparse until at least a second weekly cohort interval has elapsed; that is expected, not a setup
    failure.
 
-One thing to fix *outside* this repo before external testing: the web privacy policy at
-`/privacy-policy` never mentions mobile or iOS. It is substantively accurate — same Clerk instance,
-same API, same data — but a reviewer checks that the policy covers the app. Deliberately parked
-until the Replit side is being touched anyway.
+Legal/account-deletion update (2026-09-11): Replit deployed new September 11 Privacy Policy and
+Terms of Service pages covering iOS and StoreKit. Live verification confirms both now name website
+and native iOS account-deletion controls. The backend exposes authenticated, idempotent
+`DELETE /api/account`; it deletes and tombstones local data before deleting the Clerk identity and
+replaces the earlier webhook plan. The native app now calls that endpoint, preserves its session on
+`502` for a safe retry, clears cached HTTP responses and signs out only after explicit
+`{ "deleted": true }`. Before external testing, run the purpose-made production-account matrix in
+`docs/APP-STORE-SUBMISSION.md` section 9. Do not revive the obsolete Clerk webhook design or request
+`CLERK_WEBHOOK_SIGNING_SECRET`.
+
+For the current beta/App Review continuation, read
+`docs/CLAUDE-BETA-SUBMISSION-HANDOFF-2026-09-11.md` before acting. It records build 6's upload and
+TestFlight review state, the completed deletion evidence, exact App Privacy declarations, remaining
+Hide My Email and StoreKit lifecycle tests, and the build-6 PostHog UUID that still needs dashboard
+confirmation.
 
 ## The primary button, and the one place the app fails its own checker
 
@@ -1889,7 +1900,45 @@ signing, and optionally `API_BASE_URL` / `CLERK_PROXY_URL` to point at a local a
 split is deliberate. `POSTHOG_API_KEY` in `Secrets.xcconfig` is the project API key the app ships
 with, a client identifier by design. `POSTHOG_CLI_API_KEY` here is a *personal* token that can
 write to the project, used only by the Release dSYM upload. Mixing them would put a real secret in
-a file whose whole point is that it holds shippable values.
+a file whose whole point is that it holds shippable values. That personal token also **reads**, which
+is more useful than its name suggests: `GET /api/projects/<id>/error_tracking/symbol_sets/` on
+`us.i.posthog.com` answers whether a build's dSYM actually landed, with its `failure_reason`, so a
+release's symbols can be confirmed from here rather than from the dashboard by hand. Note
+`POSTHOG_HOST` in `Secrets.xcconfig` is xcconfig, where `//` starts a comment, so the value is
+escaped as `https:/$()/us.i.posthog.com` and has to be unescaped before use.
+
+`Config/AppStoreConnectAPI.env` (gitignored, `.example` beside it) is a **third**, added 2026-09-11.
+It holds only identifiers — `APPLE_ASC_KEY_ID`, `APPLE_ASC_ISSUER_ID` and a path — because the
+private key deliberately does not live in this repo at all, even gitignored. It sits at
+`~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8` (`chmod 600`, directory `700`), which is the
+location Apple's own tooling looks in.
+
+**There are three unrelated Apple key types and confusing them costs an afternoon.** App Store
+Connect splits them across separate pages under Users and Access ▸ Integrations, and they are not
+interchangeable:
+
+- **App Store Connect API** — the team key used for reading build, TestFlight, metadata and
+  In-App Purchase *configuration* state. This is the one this repo's tooling uses. Ours is
+  `4946V2DFSF`, "ColorSense Release Monitoring", role **App Manager**, created 2026-09-11.
+- **In-App Purchase** — `RTPJ8S449Y`, "ColorSense StoreKit Server", downloaded as
+  `SubscriptionKey_RTPJ8S449Y.p8`. It authenticates App Store *Server* API calls and belongs only
+  in Replit Secrets. Do not copy it into this repo or use it for local diagnostics.
+- **Shared Secret** — not used by anything in this repo. It belongs to the legacy `verifyReceipt`
+  flow, and the backend verifies StoreKit 2 JWS through `@apple/app-store-server-library` instead.
+
+One **Issuer ID** covers all of them, and the same value shows on both key pages, so reading it off
+the In-App Purchase page is correct. It lives in `Config/AppStoreConnectAPI.env` rather than here:
+it authenticates nothing without the `.p8`, but there is no reason to commit it.
+
+Two traps, both hit on 2026-09-11. General App Store Connect API access is **not** granted by
+default: that page showed "Permission is required… Request Access" and no team key could exist
+until it was clicked, so a `.p8` found lying around is not evidence of access. And a stray
+`AuthKey_XR63D6KU65.p8` sat loose in `~/Developer/` looking exactly like the real thing while
+authenticating nothing. The two types are told apart by their download names — App Store Connect API
+keys arrive as `AuthKey_<ID>.p8` and In-App Purchase keys as `SubscriptionKey_<ID>.p8` — but that
+name encodes only the Key ID, never the team, so **a correctly-named `AuthKey_*.p8` still proves
+nothing about which account it came from**. Test one against `GET /v1/apps` before trusting it; the
+right answer returns `6809134374`.
 
 **`posthog-cli` is installed at `~/.posthog/posthog-cli`, not globally** (added 2026-09-05). It is
 a symlink into `~/.posthog-npm`, created with `npm install -g @posthog/cli@latest --prefix

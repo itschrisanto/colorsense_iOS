@@ -11,6 +11,8 @@ xcuserdata/
 Config/Secrets.xcconfig
 # posthog-cli's personal API token, used by the Release dSYM upload build phase.
 Config/PostHogCLI.env
+# App Store Connect API key identifiers (the .p8 itself lives outside the repo).
+Config/AppStoreConnectAPI.env
 
 # macOS
 .DS_Store

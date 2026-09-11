@@ -1,5 +1,15 @@
 # Replit handoff: make account deletion actually delete the account
 
+> **Superseded implementation, 2026-09-11.** Replit completed account deletion on branch
+> `audit/backend-hardening` with authenticated `DELETE /api/account`; it deliberately does not use
+> the Clerk webhook designed below. The endpoint deletes and tombstones local data under a shared
+> PostgreSQL advisory transaction lock before deleting the Clerk identity, is idempotent, treats a
+> missing Clerk identity as success, and returns `502` when local deletion succeeded but Clerk
+> deletion must be retried. `CLERK_WEBHOOK_SIGNING_SECRET` is obsolete. Keep the historical analysis
+> below for why local cleanup and resurrection protection are required, but do not implement its
+> webhook design. The current native work and remaining live verification are tracked in
+> `docs/APP-STORE-SUBMISSION.md` section 9.
+
 ## Objective
 
 Deleting a ColorSense account from the iOS app or the website must remove the user's server-side

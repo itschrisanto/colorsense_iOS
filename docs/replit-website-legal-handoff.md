@@ -1,5 +1,12 @@
 # Replit handoff: update the ColorSense Privacy Policy and Terms of Service
 
+> **Completed, 2026-09-11:** both September 11 pages are live. Cache-bypassed asset inspection
+> confirmed Privacy section 11 names website Account settings, the in-app iOS deletion control and
+> email; Terms section 2 names the website and iOS controls and retains the separate-subscription-
+> cancellation warning. Replit reports typecheck, production build, prerendering and SEO checks
+> passed. The account-deletion flow itself still needs the purpose-made production-account test
+> tracked in `docs/APP-STORE-SUBMISSION.md` section 9.
+
 ## Objective
 
 Update and deploy the public legal pages at:

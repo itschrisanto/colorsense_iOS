@@ -11,19 +11,28 @@ import SwiftUI
 /// Note the label colour is **white by house style, not by measurement**. `legibleForeground`
 /// picks black on CORAL, and these buttons deliberately do not follow it. See CLAUDE.md.
 struct PrimaryActionButtonStyle: ButtonStyle {
+    var tint: Color = BrandColor.coral
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(BrandFont.ui(15, weight: .medium))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .foregroundStyle(.white)
-            .background(BrandColor.coral, in: RoundedRectangle(cornerRadius: 13))
+            .background(tint, in: RoundedRectangle(cornerRadius: 13))
             .opacity(configuration.isPressed ? 0.85 : 1)
     }
 }
 
 extension ButtonStyle where Self == PrimaryActionButtonStyle {
     static var primaryAction: PrimaryActionButtonStyle { PrimaryActionButtonStyle() }
+
+    /// Same shape as `.primaryAction`, filled with a different colour. `.tint()` cannot do this:
+    /// this style paints its own background rather than reading the environment tint, which is why
+    /// `DeleteAccountView`'s destructive button needs this rather than `.tint(.red)`.
+    static func primaryAction(tint: Color) -> PrimaryActionButtonStyle {
+        PrimaryActionButtonStyle(tint: tint)
+    }
 }
 
 /// The secondary action: same shape and target as the primary, drawn as an outline.

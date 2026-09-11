@@ -175,30 +175,54 @@ set from it. Build `1.0 (1)` was uploaded successfully on 2026-09-08, completed 
    returned `400`; Replit fixed and deployed the Version 2 handler, then Apple's Sandbox test and
    status APIs reported `SUCCESS`, HTTP `200`, verified JWS/bundle ID and no entitlement changes for
    the `TEST` event. The notification transport and verification blocker is closed.
-3. **Finish the three In-App Purchase review records.** App Store Connect was rechecked on
-   2026-09-09. Monthly, Annual and Pro Pass are available in all 175 countries or regions, inherit
-   the parent app's **App Store software** tax category, and now have final product-specific review
-   notes. Their three clean Free-account **Account → Subscription** review screenshots were uploaded
-   to the matching records on 2026-09-10. The dedicated Free demo account was validated on-device;
-   its credentials and contact information are saved only in App Store Connect. Do not add any
-   product for review until the final build is selected for submission.
-4. **Fix account deletion.** The app calls Clerk's `user.delete()` and nothing else, so the
-   ColorSense Postgres row and every saved palette survive. This is a backend job — a verified Clerk
-   `user.deleted` webhook — and the in-app copy currently claims otherwise. The implementation brief
-   is **`docs/replit-account-deletion-handoff.md`** (2026-09-09); section 8c has the wider plan.
-   Two things in that brief are not in the privacy audit and change the shape of the work: the
-   cascade from `users` reaches only three tables, so Telegram links, voucher redemptions and
-   feedback need explicit decisions rather than being assumed gone; and `requireAuth`/`optionalAuth`
-   create the user row lazily on any authenticated request, so the webhook on its own leaves a race
-   that can recreate the row and fire a Loops welcome email at somebody who just left.
+3. **Finish the three In-App Purchase review records.** All three now report **READY_TO_SUBMIT**
+   (verified through the App Store Connect API on 2026-09-11). They inherit the parent app's
+   **App Store software** tax category and have final product-specific review notes, and their
+   Free-account **Account → Subscription** review screenshots were uploaded on 2026-09-10. The
+   dedicated Free demo account was validated on-device; its credentials and contact information are
+   saved only in App Store Connect. Do not add any product for review until the final build is
+   selected for submission.
+   **The 2026-09-09 recheck recorded here was wrong about availability**, and it mattered: Monthly
+   and Annual each carried an availability record covering 175 territories, but the consumable Pro
+   Pass carried **none at all**, which held it at `MISSING_METADATA` and would have blocked
+   attaching all three to the submission. Everything else on that record (localization, USD price,
+   review screenshot, review note) was already present, so nothing but availability was missing. It
+   was created on 2026-09-11 by mirroring Monthly exactly: the same 175 territories and the same
+   `availableInNewTerritories: false`. Re-verified afterwards at 175 territories and
+   `READY_TO_SUBMIT`. Note the Pass's review screenshot is 1242 x 2688 while Monthly's is
+   1320 x 2868, so the three are not the uniform set described above; Apple accepts both sizes for
+   IAP review screenshots, so this is a cosmetic inconsistency rather than a blocker.
+   A UI recheck is not a substitute for reading the product state: `MISSING_METADATA` is what the
+   API reports and is the thing that actually gates submission.
+4. **Verify the new account-deletion lifecycle.** Replit reported the backend complete on
+   2026-09-11 on `audit/backend-hardening`: authenticated `DELETE /api/account` now owns local
+   cleanup, a permanent Clerk-ID tombstone, concurrency protection and Clerk identity deletion. It
+   is idempotent and replaces the earlier webhook plan. The native app now calls that endpoint
+   instead of Clerk's client-side `user.delete()`, preserves the session on `502` for retry, and
+   warns that account deletion does not cancel subscriptions. Unit coverage was added for the
+   request and `200`/`401`/`502`/invalid/offline handling. On 2026-09-11, the focused simulator suite
+   passed all three discovered tests and the Debug app built and launched. A destructive production
+   iPhone test then passed deletion, automatic sign-out, force-quit/relaunch, signed-out Extractor
+   and WCAG use, and Google reauthentication with none of the deleted saved data restored. Replit's
+   controlled backend suite subsequently passed 9/9: forced `502`, successful retry, idempotent
+   local deletion with one tombstone, and stale-identity non-resurrection. Synthetic data was
+   cleaned up. Direct inspection of the original production rows is unavailable without its
+   deleted Clerk ID; the recreated Google account has a different ID and must not be substituted.
    **Do not change `/api/saved-palettes` or `/api/me` contracts.**
-5. **Re-run the privacy audit** against the final archived build, then finalise the policy and the
-   App Store questionnaire in the order section 8c gives. The copy-ready Replit website brief for
-   both legal pages is `docs/replit-website-legal-handoff.md`.
+5. **Re-run the privacy audit** against the final archived build, then publish the configured App
+   Privacy answers in the order section 8c gives. Replit's September 11 Privacy Policy and Terms of
+   Service are deployed and live verification confirms both now acknowledge the native in-app
+   deletion control. The completed website brief is `docs/replit-website-legal-handoff.md`.
 6. **Keep version numbers aligned.** The first App Store version and `MARKETING_VERSION` are `1.0`.
-   `CURRENT_PROJECT_VERSION` is `5` for the privacy-correction build and must increment on
+   `CURRENT_PROJECT_VERSION` is `6` for the account-deletion build and must increment on
    **every** later upload — App Store Connect rejects a reused build number, and PostHog binds each
    dSYM to the release those numbers name.
+7. **Build 7 is already owed, and is deliberately not cut yet** (decided 2026-09-11). Two fixes are
+   queued for it: the destructive delete button, which renders coral in build 6 because
+   `PrimaryActionButtonStyle` ignores `.tint()`, and the controlled PostHog crash/symbolication
+   check with its temporary trigger. Cutting build 7 now would force a fresh Beta App Review for the
+   external group and delay the Hide My Email test build 6 is queued for, so let build 6 finish
+   review first. `docs/CLAUDE-BETA-SUBMISSION-HANDOFF-2026-09-11.md` section 5 has the detail.
 
 ## Release preparation completed 2026-09-06
 
