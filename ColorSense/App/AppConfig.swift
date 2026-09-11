@@ -28,8 +28,9 @@ enum AppConfig {
         return key
     }
 
-    /// Clerk's Frontend API is reached through the web app's own reverse proxy rather than the
-    /// host encoded in the publishable key.
+    /// Production Clerk's Frontend API is reached through the web app's reverse proxy rather than
+    /// the host encoded in the publishable key. Development instances use their encoded Clerk host
+    /// directly because those hosts have valid TLS and must not be routed through production.
     ///
     /// `clerk.colorsense.online` — the key's own host — does not complete a TLS handshake from
     /// any client tested (iOS, and macOS on two TLS stacks): the connection opens and the server
@@ -40,7 +41,7 @@ enum AppConfig {
     ///
     /// If the custom domain's certificate is ever fixed, this can go away — but while the web
     /// depends on the proxy, iOS should use it too, so both platforms fail and recover together.
-    static var clerkProxyURL: String {
+    static var clerkProxyURL: String? {
         if
             let override = Bundle.main.object(forInfoDictionaryKey: "CLERK_PROXY_URL") as? String,
             !override.isEmpty,
@@ -48,6 +49,11 @@ enum AppConfig {
         {
             return override
         }
+
+        if clerkPublishableKey.hasPrefix("pk_test_") {
+            return nil
+        }
+
         return "https://colorsense.online/api/__clerk"
     }
 
